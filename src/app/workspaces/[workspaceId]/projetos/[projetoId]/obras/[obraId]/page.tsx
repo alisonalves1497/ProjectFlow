@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { MoreHorizontal, PanelRight } from "lucide-react";
+import { PanelRight } from "lucide-react";
 import { auth } from "@/auth";
 import { getObraOrThrow, listObraAccessUsers } from "@/services/obraService";
-import { requireObraAccess } from "@/services/permissions";
+import { requireObraAccess, getWorkspaceRole } from "@/services/permissions";
 import { listDocumentosAgrupadosPorSecao } from "@/services/documentoService";
 import { listDisciplinasComSecoesPorObra, listFases, listTiposDocumento } from "@/services/catalogoService";
 import { listContatosExternos } from "@/services/contatoExternoService";
@@ -13,6 +13,7 @@ import { STATUS_LABELS, type StatusDocumento } from "@/lib/statusGraph";
 import { ObraSwitcher } from "@/components/obra-switcher";
 import { CreateDocumentoDialog } from "../../../../documentos/create-documento-dialog";
 import { DocumentosPainel } from "./documentos-painel";
+import { ObraMaisOpcoes } from "./obra-mais-opcoes";
 
 type Params = {
   params: Promise<{ workspaceId: string; projetoId: string; obraId: string }>;
@@ -46,6 +47,8 @@ export default async function ObraDocumentosPage({ params, searchParams }: Param
   }
 
   const obra = await getObraOrThrow(workspaceId, obraId);
+  const role = await getWorkspaceRole(session.user.id, workspaceId);
+  const canManage = role === "administrador" || role === "coordenador";
   const agrupado = sp.agrupado !== "0";
 
   const [grupos, gruposBase, disciplinasComSecoes, fases, tipos, usuarios, contatos, arvore] = await Promise.all([
@@ -142,9 +145,7 @@ export default async function ObraDocumentosPage({ params, searchParams }: Param
         </div>
         <div className="flex items-center gap-2 justify-self-start sm:justify-self-end">
           <CreateDocumentoDialog workspaceId={workspaceId} projetoId={projetoId} obraId={obraId} disciplinas={disciplinasComSecoes} fases={fases} tipos={tipos} />
-          <button type="button" className="rounded-md border p-1.5 text-muted-foreground hover:bg-accent" title="Mais opções">
-            <MoreHorizontal className="size-4" />
-          </button>
+          {canManage && <ObraMaisOpcoes workspaceId={workspaceId} projetoId={projetoId} obraId={obraId} obraNome={obra.name} />}
           <button type="button" className="rounded-md border p-1.5 text-muted-foreground hover:bg-accent" title="Painel lateral">
             <PanelRight className="size-4" />
           </button>
