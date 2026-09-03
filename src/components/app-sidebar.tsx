@@ -109,22 +109,29 @@ export function AppSidebar({
     });
   }
 
-  function renderGrupoHeader(label: string, icon?: LucideIcon, ativo?: boolean) {
+  // `trailing` reserva sempre a mesma largura (size-6) depois do chevron, esteja vazio ou
+  // não — é isso que mantém o chevron de TODOS os grupos alinhado na mesma coluna, mesmo o
+  // de "Projetos" que tem o botão "+" ali (sem o slot reservado, o "+" empurraria só o
+  // chevron dele pra esquerda, desalinhando da coluna dos outros grupos).
+  function renderGrupoHeader(label: string, icon?: LucideIcon, ativo?: boolean, trailing?: React.ReactNode) {
     const GroupIcon = icon;
     const colapsado = colapsados.has(label);
     return (
-      <button
-        type="button"
-        onClick={() => toggleGrupo(label)}
-        className={cn(
-          "mb-1 flex w-full items-center gap-1 px-2 text-xs font-medium tracking-wide uppercase",
-          ativo ? "text-primary font-semibold" : "text-muted-foreground"
-        )}
-      >
-        {GroupIcon && <GroupIcon className="size-3.5 shrink-0" />}
-        <span className="flex-1 text-left">{label}</span>
-        <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", colapsado && "-rotate-90")} />
-      </button>
+      <div className="mb-1 flex w-full items-center gap-1 px-2 text-xs font-medium tracking-wide uppercase">
+        <button
+          type="button"
+          onClick={() => toggleGrupo(label)}
+          className={cn(
+            "flex min-w-0 flex-1 items-center gap-1",
+            ativo ? "text-primary font-semibold" : "text-muted-foreground"
+          )}
+        >
+          {GroupIcon && <GroupIcon className="size-3.5 shrink-0" />}
+          <span className="flex-1 truncate text-left">{label}</span>
+          <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", colapsado && "-rotate-90")} />
+        </button>
+        <span className="flex size-6 shrink-0 items-center justify-center">{trailing}</span>
+      </div>
     );
   }
 
@@ -194,9 +201,11 @@ export function AppSidebar({
             )}
             {group.label === "Gestão" && (
               <div className="mt-4">
-                <div className="flex items-center">
-                  <div className="flex-1">{renderGrupoHeader("Projetos", FolderKanban, emArvoreDeProjetos)}</div>
-                  {podeGerenciarProjetos && (
+                {renderGrupoHeader(
+                  "Projetos",
+                  FolderKanban,
+                  emArvoreDeProjetos,
+                  podeGerenciarProjetos && (
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         render={
@@ -205,7 +214,7 @@ export function AppSidebar({
                             variant="ghost"
                             size="icon-xs"
                             title="Novo projeto ou importar planilha"
-                            className="mr-1 mb-1 shrink-0 text-primary/40 hover:text-primary"
+                            className="shrink-0 text-primary/40 hover:text-primary"
                           />
                         }
                       >
@@ -224,8 +233,8 @@ export function AppSidebar({
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  )}
-                </div>
+                  )
+                )}
                 {!colapsados.has("Projetos") && (
                   <div className="mt-1">
                     <ProjetosTree workspaceId={workspaceId} arvore={arvore} podeRenomear={podeGerenciarProjetos} />
