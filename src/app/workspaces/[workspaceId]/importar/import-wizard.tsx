@@ -124,7 +124,7 @@ export function ImportWizard({ workspaceId, projetos }: { workspaceId: string; p
       res.data.linhas.map((l) => ({
         ...l,
         incluir: true,
-        disciplinaId: l.disciplinaIdSugerida ?? "",
+        disciplinaId: l.disciplinaIdSugerida ?? CRIAR_NOVO,
       }))
     );
     setEtapa("revisao");
@@ -141,16 +141,19 @@ export function ImportWizard({ workspaceId, projetos }: { workspaceId: string; p
   async function handleConfirmarImportacao() {
     if (!obraId || !faseId) return;
     const selecionadas = linhas.filter((l) => l.incluir);
-    const semDisciplina = selecionadas.filter((l) => !l.disciplinaId);
-    if (semDisciplina.length > 0) {
-      toast.error(`${semDisciplina.length} linha(s) selecionada(s) sem Disciplina definida.`);
-      return;
-    }
     const grupoPorSecao = new Map(grupos.map((g) => [g.secaoExcel, g]));
     const payload: LinhaParaImportar[] = selecionadas.map((l) => {
       const grupo = grupoPorSecao.get(l.secaoExcel);
       const tipoDocumentoId = grupo && grupo.tipoDocumentoId !== CRIAR_NOVO ? grupo.tipoDocumentoId : null;
-      return { descricao: l.descricao, disciplinaId: l.disciplinaId, tipoDocumentoId, tipoNome: l.secaoExcel, faseId };
+      const disciplinaId = l.disciplinaId !== CRIAR_NOVO ? l.disciplinaId : null;
+      return {
+        descricao: l.descricao,
+        disciplinaId,
+        disciplinaNome: l.disciplinaTexto,
+        tipoDocumentoId,
+        tipoNome: l.secaoExcel,
+        faseId,
+      };
     });
     setPending(true);
     const res = await confirmarImportacaoAction(workspaceId, obraId, payload);
@@ -164,7 +167,7 @@ export function ImportWizard({ workspaceId, projetos }: { workspaceId: string; p
   }
 
   const totalSelecionadas = linhas.filter((l) => l.incluir).length;
-  const semDisciplina = linhas.filter((l) => l.incluir && !l.disciplinaId).length;
+  const disciplinasNovas = linhas.filter((l) => l.incluir && l.disciplinaId === CRIAR_NOVO).length;
   const gruposNovos = grupos.filter((g) => g.tipoDocumentoId === CRIAR_NOVO).length;
 
   return (
@@ -286,7 +289,7 @@ export function ImportWizard({ workspaceId, projetos }: { workspaceId: string; p
             </div>
             <p className="text-muted-foreground">
               {linhas.length} linhas encontradas · {totalSelecionadas} selecionadas
-              {semDisciplina > 0 && <span className="text-destructive"> · {semDisciplina} sem Disciplina definida</span>}
+              {disciplinasNovas > 0 && ` · ${disciplinasNovas} vão criar Disciplina nova`}
             </p>
           </div>
 
@@ -352,13 +355,16 @@ export function ImportWizard({ workspaceId, projetos }: { workspaceId: string; p
                       {l.secaoExcel}
                     </TableCell>
                     <TableCell>
-                      <Select value={l.disciplinaId || undefined} onValueChange={(v) => v && atualizarLinha(idx, { disciplinaId: v })}>
-                        <SelectTrigger size="sm" className={!l.disciplinaId ? "border-destructive" : undefined}>
-                          <SelectValue placeholder="—">
-                            {(v: string) => catalogo.disciplinas.find((d) => d.id === v)?.name ?? "—"}
+                      <Select value={l.disciplinaId} onValueChange={(v) => v && atualizarLinha(idx, { disciplinaId: v })}>
+                        <SelectTrigger size="sm" className={l.disciplinaId === CRIAR_NOVO ? "border-amber-500" : undefined}>
+                          <SelectValue>
+                            {(v: string) =>
+                              v === CRIAR_NOVO ? `+ Criar "${l.disciplinaTexto}"` : (catalogo.disciplinas.find((d) => d.id === v)?.name ?? "—")
+                            }
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value={CRIAR_NOVO}>+ Criar &quot;{l.disciplinaTexto}&quot;</SelectItem>
                           {catalogo.disciplinas.map((d) => (
                             <SelectItem key={d.id} value={d.id}>
                               {d.name}

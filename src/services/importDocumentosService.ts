@@ -134,6 +134,21 @@ export function sugerirDisciplinaId(disciplinaTexto: string, disciplinas: { id: 
   return match?.id ?? null;
 }
 
+// Reaproveita uma Disciplina existente com esse nome (comparação normalizada) ou cria
+// uma nova — mesma lógica de garantirTipoDocumento, usada quando o catálogo do
+// workspace ainda não tem a Disciplina que aparece na planilha (ex: workspace novo,
+// sem nenhum catálogo cadastrado ainda).
+export async function garantirDisciplina(workspaceId: string, nome: string): Promise<string> {
+  const existentes = await db.select().from(disciplinas).where(eq(disciplinas.workspaceId, workspaceId));
+  const alvo = normalizar(nome);
+  const match = existentes.find((d) => normalizar(d.name) === alvo || normalizar(d.code) === alvo);
+  if (match) return match.id;
+
+  const code = gerarCodigoTipo(nome, new Set(existentes.map((d) => d.code)));
+  const [created] = await db.insert(disciplinas).values({ id: newId("disc"), workspaceId, code, name: nome }).returning();
+  return created.id;
+}
+
 // A seção numerada do Excel ("1.1 Investigação do Solo...", "1.2 Fundações - 230 kV"...)
 // é usada como o Tipo de documento em si — se já existe um Tipo com esse nome no
 // catálogo, reaproveita; senão, fica marcado pra criar um novo com esse mesmo nome
@@ -209,7 +224,9 @@ async function garantirSecaoPorTipo(obraDisciplinaId: string, tipoNome: string, 
 
 export type LinhaParaImportar = {
   descricao: string;
-  disciplinaId: string;
+  // disciplinaId: null => cria (ou reaproveita por nome) uma Disciplina nova chamada disciplinaNome.
+  disciplinaId: string | null;
+  disciplinaNome: string;
   // tipoDocumentoId: null => cria (ou reaproveita por nome) um Tipo novo chamado tipoNome.
   tipoDocumentoId: string | null;
   tipoNome: string;
@@ -220,8 +237,9 @@ export async function importarDocumentos(workspaceId: string, userId: string, ob
   const criados: string[] = [];
   const erros: { descricao: string; erro: string }[] = [];
 
-  // Caches pra não reconsultar/recriar obraDisciplina, Tipo ou Seção a cada linha do
-  // mesmo grupo.
+  // Caches pra não reconsultar/recriar Disciplina, obraDisciplina, Tipo ou Seção a cada
+  // linha do mesmo grupo.
+  const disciplinaIdPorNome = new Map<string, string>();
   const obraDisciplinaCache = new Map<string, string>();
   const secaoCache = new Map<string, string>();
   const tipoIdPorNome = new Map<string, string>();
@@ -229,11 +247,21 @@ export async function importarDocumentos(workspaceId: string, userId: string, ob
 
   for (const linha of linhas) {
     try {
-      let odId = obraDisciplinaCache.get(linha.disciplinaId);
+      let disciplinaId = linha.disciplinaId;
+      if (!disciplinaId) {
+        const chaveDisc = normalizar(linha.disciplinaNome);
+        disciplinaId = disciplinaIdPorNome.get(chaveDisc) ?? null;
+        if (!disciplinaId) {
+          disciplinaId = await garantirDisciplina(workspaceId, linha.disciplinaNome);
+          disciplinaIdPorNome.set(chaveDisc, disciplinaId);
+        }
+      }
+
+      let odId = obraDisciplinaCache.get(disciplinaId);
       if (!odId) {
-        const od = await garantirObraDisciplina(obraId, linha.disciplinaId);
+        const od = await garantirObraDisciplina(obraId, disciplinaId);
         odId = od.id;
-        obraDisciplinaCache.set(linha.disciplinaId, odId);
+        obraDisciplinaCache.set(disciplinaId, odId);
       }
 
       let tipoDocumentoId = linha.tipoDocumentoId;
@@ -256,7 +284,7 @@ export async function importarDocumentos(workspaceId: string, userId: string, ob
 
       const documento = await createDocumento(workspaceId, userId, {
         obraId,
-        disciplinaId: linha.disciplinaId,
+        disciplinaId,
         secaoId,
         faseId: linha.faseId,
         tipoDocumentoId,
