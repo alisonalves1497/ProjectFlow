@@ -91,6 +91,7 @@ export const documentoCreateSchema = z.object({
 
 export const documentoUpdateSchema = z.object({
   descricao: z.string().trim().min(1).max(500).optional(),
+  codigoCompleto: z.string().trim().min(1).max(120).optional(),
   responsavelId: z.string().trim().min(1).nullable().optional(),
   dataBaseline: z.string().date().nullable().optional(),
   dataReprogramada: z.string().date().nullable().optional(),

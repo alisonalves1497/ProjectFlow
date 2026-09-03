@@ -5,11 +5,12 @@ import { listRevisoesComConferidoPorNome } from "@/services/revisaoService";
 import { listComentarios } from "@/services/comentarioService";
 import { listTimelineComAutorNome } from "@/services/timelineService";
 import { listAnexosPorRevisao } from "@/services/anexoService";
-import { listDisciplinas, listCategoriasConhecimento } from "@/services/catalogoService";
+import { listDisciplinas, listCategoriasConhecimento, listDisciplinasComSecoesPorObra } from "@/services/catalogoService";
 import { nextRevisionSpec, tipoDaRevisao, validNextStatuses, type StatusDocumento } from "@/lib/statusGraph";
 import { StatusBadge } from "@/components/status-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InformacoesGerais } from "./informacoes-gerais";
+import { EditDocumentoDialog } from "./edit-documento-dialog";
 import { RevisoesAccordion } from "./revisoes-accordion";
 import { LinhaDoTempoTab } from "./linha-do-tempo-tab";
 import { AnexosTab } from "./anexos-tab";
@@ -24,15 +25,17 @@ export async function DocumentoDetalheConteudo({ workspaceId, documentoId }: { w
   const documento = await getDocumentoOrThrow(workspaceId, documentoId);
   const obra = await getObraOrThrow(workspaceId, documento.obraId);
 
-  const [revisoes, timeline, disciplinas, obraUsers, fotos, itensConhecimento, categoriasConhecimento] = await Promise.all([
-    listRevisoesComConferidoPorNome(workspaceId, documentoId),
-    listTimelineComAutorNome(workspaceId, documentoId),
-    listDisciplinas(workspaceId),
-    listObraAccessUsers(workspaceId, documento.obraId),
-    listFotosPorDocumento(workspaceId, documentoId),
-    listItensConhecimento(workspaceId, { documentoId }),
-    listCategoriasConhecimento(workspaceId),
-  ]);
+  const [revisoes, timeline, disciplinas, obraUsers, fotos, itensConhecimento, categoriasConhecimento, disciplinasComSecoes] =
+    await Promise.all([
+      listRevisoesComConferidoPorNome(workspaceId, documentoId),
+      listTimelineComAutorNome(workspaceId, documentoId),
+      listDisciplinas(workspaceId),
+      listObraAccessUsers(workspaceId, documento.obraId),
+      listFotosPorDocumento(workspaceId, documentoId),
+      listItensConhecimento(workspaceId, { documentoId }),
+      listCategoriasConhecimento(workspaceId),
+      listDisciplinasComSecoesPorObra(documento.obraId),
+    ]);
 
   const comentariosPorRevisaoEntries = await Promise.all(
     revisoes.map(async (r) => [r.id, await listComentarios(workspaceId, r.id)] as const)
@@ -56,12 +59,27 @@ export async function DocumentoDetalheConteudo({ workspaceId, documentoId }: { w
 
   const disciplinaNome = disciplinas.find((d) => d.id === documento.disciplinaId)?.name ?? "—";
   const responsavelNome = obraUsers.find((u) => u.userId === documento.responsavelId)?.name ?? null;
+  const secoesDaDisciplina = disciplinasComSecoes.find((d) => d.disciplinaId === documento.disciplinaId)?.secoes ?? [];
 
   return (
     <div>
-      <div className="mb-2 flex items-center gap-3">
-        <h1 className="font-mono text-xl font-semibold">{documento.codigoCompleto}</h1>
-        <StatusBadge status={documento.status as StatusDocumento} />
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h1 className="font-mono text-xl font-semibold">{documento.codigoCompleto}</h1>
+          <StatusBadge status={documento.status as StatusDocumento} />
+        </div>
+        <EditDocumentoDialog
+          workspaceId={workspaceId}
+          documentoId={documentoId}
+          descricaoAtual={documento.descricao}
+          codigoAtual={documento.codigoCompleto}
+          secaoIdAtual={documento.secaoId}
+          secoesDaDisciplina={secoesDaDisciplina}
+          dataBaselineAtual={documento.dataBaseline}
+          dataReprogramadaAtual={documento.dataReprogramada}
+          responsavelIdAtual={documento.responsavelId}
+          obraUsers={obraUsers.map((u) => ({ userId: u.userId, name: u.name ?? u.email }))}
+        />
       </div>
       <p className="mb-6 text-muted-foreground">{documento.descricao}</p>
 

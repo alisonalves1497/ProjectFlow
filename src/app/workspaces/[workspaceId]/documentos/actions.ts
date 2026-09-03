@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { ApiError } from "@/lib/errors";
 import {
   documentoCreateSchema,
+  documentoUpdateSchema,
   transicaoStatusSchema,
   comentarioCreateSchema,
   revisaoCreateSchema,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/validators";
 import {
   createDocumento,
+  updateDocumento,
   getDocumentoOrThrow,
   bulkMoverSecao,
   bulkAtribuir,
@@ -163,6 +165,37 @@ async function assertObraAccessForDocumento(userId: string, workspaceId: string,
   const documento = await getDocumentoOrThrow(workspaceId, documentoId);
   await requireObraAccess(userId, workspaceId, documento.obraId);
   return documento;
+}
+
+export async function updateDocumentoAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const documentoId = String(formData.get("documentoId") ?? "");
+
+  try {
+    await assertObraAccessForDocumento(session.user.id, workspaceId, documentoId);
+
+    const responsavelIdRaw = formData.get("responsavelId");
+    const input = documentoUpdateSchema.parse({
+      descricao: formData.get("descricao") || undefined,
+      codigoCompleto: formData.get("codigoCompleto") || undefined,
+      secaoId: formData.get("secaoId") || undefined,
+      dataBaseline: formData.get("dataBaseline") || null,
+      dataReprogramada: formData.get("dataReprogramada") || null,
+      // "" no select significa "sem responsável" — precisa virar null explícito, não some do patch.
+      responsavelId: responsavelIdRaw ? String(responsavelIdRaw) : null,
+    });
+    await updateDocumento(workspaceId, documentoId, input);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };
+    throw err;
+  }
+
+  revalidatePath(`/workspaces/${workspaceId}/documentos/${documentoId}`);
+  return { status: "success" };
 }
 
 export async function transitionStatusAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {

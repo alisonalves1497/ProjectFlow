@@ -203,6 +203,7 @@ export async function updateDocumento(
   documentoId: string,
   patch: {
     descricao?: string;
+    codigoCompleto?: string;
     responsavelId?: string | null;
     dataBaseline?: string | null;
     dataReprogramada?: string | null;
@@ -215,11 +216,21 @@ export async function updateDocumento(
     await assertSecaoMesmaDisciplina(documento, patch.secaoId);
   }
 
-  const [updated] = await db
-    .update(documentos)
-    .set({ ...patch, updatedAt: new Date() })
-    .where(and(eq(documentos.id, documentoId), eq(documentos.workspaceId, workspaceId), isNull(documentos.deletedAt)))
-    .returning();
+  let updated;
+  try {
+    [updated] = await db
+      .update(documentos)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(and(eq(documentos.id, documentoId), eq(documentos.workspaceId, workspaceId), isNull(documentos.deletedAt)))
+      .returning();
+  } catch (err) {
+    // Código editado manualmente pode colidir com outro já existente — o contador
+    // sequencial automático não sabe disso, então a unicidade só é garantida aqui.
+    if (isUniqueViolation(err)) {
+      throw conflict("DOCUMENTO_CODIGO_JA_EXISTE", `Já existe um documento com o código '${patch.codigoCompleto}'.`);
+    }
+    throw err;
+  }
   if (!updated) throw notFound("DOCUMENTO_NOT_FOUND", "Documento não encontrado.");
   return updated;
 }
