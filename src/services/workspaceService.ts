@@ -1,8 +1,9 @@
+import bcrypt from "bcryptjs";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { workspaces, workspaceMembers, users } from "@/db/schema";
 import { newId } from "@/lib/id";
-import { conflict, notFound, ApiError } from "@/lib/errors";
+import { badRequest, conflict, notFound, ApiError } from "@/lib/errors";
 import type { WorkspaceRole } from "./permissions";
 
 // Sistema é single-tenant por decisão de produto: só existe UM workspace no ar. O
@@ -91,9 +92,29 @@ export async function listWorkspaceMembers(workspaceId: string) {
     .where(eq(workspaceMembers.workspaceId, workspaceId));
 }
 
-export async function addWorkspaceMember(workspaceId: string, input: { email: string; role: WorkspaceRole }) {
-  const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, input.email)).limit(1);
-  if (!user) throw notFound("USER_NOT_FOUND", "Nenhum usuário encontrado com este email.");
+// Se o email já tem conta, só adiciona como membro. Se não tem, cria a conta na hora
+// (o administrador/coordenador que está convidando escolhe nome e uma senha provisória
+// — não há fluxo de convite por link/email ainda, então a senha precisa ser repassada
+// pra pessoa por fora do sistema).
+export async function addWorkspaceMember(
+  workspaceId: string,
+  input: { email: string; role: WorkspaceRole; nome?: string; senha?: string }
+) {
+  let [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, input.email)).limit(1);
+
+  if (!user) {
+    if (!input.nome || !input.senha) {
+      throw badRequest(
+        "USUARIO_NOVO_PRECISA_NOME_SENHA",
+        "Esse email ainda não tem conta — informe nome e uma senha provisória pra criar."
+      );
+    }
+    const passwordHash = await bcrypt.hash(input.senha, 10);
+    [user] = await db
+      .insert(users)
+      .values({ id: newId("usr"), name: input.nome, email: input.email, passwordHash })
+      .returning();
+  }
 
   const [existing] = await db
     .select({ id: workspaceMembers.id })

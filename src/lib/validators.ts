@@ -18,6 +18,9 @@ export const workspaceRoleSchema = z.enum(["administrador", "coordenador", "lide
 export const workspaceMemberAddSchema = z.object({
   email: z.string().trim().email(),
   role: workspaceRoleSchema,
+  // Só usados quando o email ainda não tem conta — cria o usuário na hora.
+  nome: z.string().trim().min(1).optional(),
+  senha: z.string().min(6, "A senha provisória precisa ter pelo menos 6 caracteres.").optional(),
 });
 
 export const workspaceMemberRoleUpdateSchema = z.object({

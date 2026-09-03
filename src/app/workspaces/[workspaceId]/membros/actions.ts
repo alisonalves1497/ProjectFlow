@@ -29,6 +29,8 @@ export async function addMemberAction(_prevState: ActionState, formData: FormDat
     input = workspaceMemberAddSchema.parse({
       email: formData.get("email"),
       role: formData.get("role"),
+      nome: formData.get("nome") || undefined,
+      senha: formData.get("senha") || undefined,
     });
   } catch (err) {
     if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };
