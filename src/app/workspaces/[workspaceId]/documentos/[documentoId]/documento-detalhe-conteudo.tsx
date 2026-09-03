@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
 import { getDocumentoOrThrow } from "@/services/documentoService";
 import { getObraOrThrow, listObraAccessUsers } from "@/services/obraService";
 import { listRevisoesComConferidoPorNome } from "@/services/revisaoService";
@@ -8,11 +7,8 @@ import { listTimelineComAutorNome } from "@/services/timelineService";
 import { listAnexosPorRevisao } from "@/services/anexoService";
 import { listDisciplinas, listCategoriasConhecimento, listDisciplinasComSecoesPorObra } from "@/services/catalogoService";
 import { nextRevisionSpec, tipoDaRevisao, validNextStatuses, type StatusDocumento } from "@/lib/statusGraph";
-import { StatusBadge } from "@/components/status-badge";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { InformacoesGerais } from "./informacoes-gerais";
-import { EditDocumentoDialog } from "./edit-documento-dialog";
+import { DocumentoCabecalho } from "./documento-cabecalho";
 import { RevisoesAccordion } from "./revisoes-accordion";
 import { LinhaDoTempoTab } from "./linha-do-tempo-tab";
 import { AnexosTab } from "./anexos-tab";
@@ -66,50 +62,25 @@ export async function DocumentoDetalheConteudo({ workspaceId, documentoId }: { w
 
   return (
     <div>
-      <div className="mb-1.5 flex items-center gap-1.5 text-sm text-muted-foreground">
-        <Link
-          href={`/workspaces/${workspaceId}/projetos/${obra.projetoId}/obras/${documento.obraId}`}
-          className="hover:text-foreground hover:underline"
-        >
-          {obra.name}
-        </Link>
-        <ChevronRight className="size-3.5 shrink-0" />
-        <span>{disciplinaNome}</span>
-        <ChevronRight className="size-3.5 shrink-0" />
-        <span className="font-mono">{documento.codigoCompleto}</span>
-      </div>
-
-      <div className="mb-3 flex items-center gap-2">
-        <Badge variant="outline">{secaoNome}</Badge>
-        <StatusBadge status={documento.status as StatusDocumento} />
-      </div>
-
-      <div className="mb-2 flex items-center gap-3">
-        <h1 className="font-mono text-xl font-bold">{documento.codigoCompleto}</h1>
-        <EditDocumentoDialog
-          workspaceId={workspaceId}
-          documentoId={documentoId}
-          descricaoAtual={documento.descricao}
-          codigoAtual={documento.codigoCompleto}
-          secaoIdAtual={documento.secaoId}
-          secoesDaDisciplina={secoesDaDisciplina}
-          dataBaselineAtual={documento.dataBaseline}
-          dataReprogramadaAtual={documento.dataReprogramada}
-          responsavelIdAtual={documento.responsavelId}
-          obraUsers={obraUsers.map((u) => ({ userId: u.userId, name: u.name ?? u.email }))}
-        />
-      </div>
-      <p className="mb-6 text-foreground">{documento.descricao}</p>
-
-      <div className="mb-8">
-        <InformacoesGerais
-          obraNome={obra.name}
-          disciplinaNome={disciplinaNome}
-          dataBaseline={documento.dataBaseline}
-          dataReprogramada={documento.dataReprogramada}
-          responsavelNome={responsavelNome}
-        />
-      </div>
+      <DocumentoCabecalho
+        workspaceId={workspaceId}
+        documentoId={documentoId}
+        projetoId={obra.projetoId}
+        obraId={documento.obraId}
+        obraNome={obra.name}
+        disciplinaNome={disciplinaNome}
+        codigoCompleto={documento.codigoCompleto}
+        descricao={documento.descricao}
+        status={documento.status as StatusDocumento}
+        secaoId={documento.secaoId}
+        secaoNome={secaoNome}
+        secoesDaDisciplina={secoesDaDisciplina}
+        dataBaseline={documento.dataBaseline}
+        dataReprogramada={documento.dataReprogramada}
+        responsavelId={documento.responsavelId}
+        responsavelNome={responsavelNome}
+        obraUsers={obraUsers.map((u) => ({ userId: u.userId, name: u.name ?? u.email }))}
+      />
 
       <Tabs defaultValue="revisoes">
         <TabsList variant="line" className="mb-6 w-full justify-start border-b">
