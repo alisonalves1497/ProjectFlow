@@ -1,0 +1,30 @@
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
+import { getDocumentoOrThrow } from "@/services/documentoService";
+import { requireObraAccess } from "@/services/permissions";
+import { ApiError } from "@/lib/errors";
+import { ModalDocumentoFrame } from "@/components/modal-documento-frame";
+import { DocumentoDetalheConteudo } from "../../../documentos/[documentoId]/documento-detalhe-conteudo";
+
+type Params = { params: Promise<{ workspaceId: string; documentoId: string }> };
+
+export default async function DocumentoModalPage({ params }: Params) {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+
+  const { workspaceId, documentoId } = await params;
+  const documento = await getDocumentoOrThrow(workspaceId, documentoId);
+
+  try {
+    await requireObraAccess(session.user.id, workspaceId, documento.obraId);
+  } catch (err) {
+    if (err instanceof ApiError) redirect(`/workspaces/${workspaceId}`);
+    throw err;
+  }
+
+  return (
+    <ModalDocumentoFrame>
+      <DocumentoDetalheConteudo workspaceId={workspaceId} documentoId={documentoId} />
+    </ModalDocumentoFrame>
+  );
+}

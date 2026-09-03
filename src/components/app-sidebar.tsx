@@ -1,0 +1,260 @@
+"use client";
+
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { signOut } from "next-auth/react";
+import {
+  LayoutDashboard,
+  CalendarDays,
+  FolderKanban,
+  Truck,
+  Users,
+  UserCog,
+  Printer,
+  Send,
+  ShoppingCart,
+  Camera,
+  BookOpen,
+  Home,
+  ChevronDown,
+  Plus,
+  LogOut,
+  Trash2,
+  type LucideIcon,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { DialogTrigger } from "@/components/ui/dialog";
+import { ProjetosTree } from "@/components/projetos-tree";
+import { CreateProjetoDialog } from "@/app/workspaces/[workspaceId]/projetos/create-projeto-dialog";
+import type { ArvoreProjeto } from "@/services/navegacaoService";
+import { WORKSPACE_ROLE_LABELS, type WorkspaceRole } from "@/lib/roles";
+
+type Role = WorkspaceRole;
+
+type NavItem = { href: string; label: string; icon: LucideIcon; matchKeyword?: string };
+type NavGroup = { label: string; icon?: LucideIcon; items: NavItem[] };
+
+function iniciaisDoNome(nome: string): string {
+  const partes = nome.trim().split(/\s+/);
+  const primeira = partes[0]?.[0] ?? "";
+  const ultima = partes.length > 1 ? partes[partes.length - 1][0] : "";
+  return (primeira + ultima).toUpperCase();
+}
+
+export function AppSidebar({
+  workspaceId,
+  role,
+  assistenteIaAtivo,
+  arvore,
+  userName,
+  userEmail,
+}: {
+  workspaceId: string;
+  role: Role;
+  assistenteIaAtivo: boolean;
+  arvore: ArvoreProjeto[];
+  userName: string;
+  userEmail: string;
+}) {
+  const pathname = usePathname();
+  const [colapsados, setColapsados] = useState<Set<string>>(new Set());
+
+  const wsBase = `/workspaces/${workspaceId}`;
+
+  // assistenteIaAtivo não usado por enquanto: a Assistente IA ainda não tem página solta
+  // no modelo unificado, permanece desligada via feature flag.
+  void assistenteIaAtivo;
+
+  const principalGroup: NavGroup = {
+    label: "Principal",
+    icon: Home,
+    items: [
+      { href: wsBase, label: "Painel", icon: LayoutDashboard },
+      { href: `${wsBase}/calendario`, label: "Calendário", icon: CalendarDays },
+    ],
+  };
+
+  const outrosGrupos: NavGroup[] = [
+    {
+      label: "Qualidade",
+      items: [
+        { href: `${wsBase}/copias-controladas`, label: "Cópias Controladas", icon: Printer, matchKeyword: "copias-controladas" },
+        { href: `${wsBase}/fotos`, label: "Registro Fotográfico", icon: Camera, matchKeyword: "fotos" },
+        { href: `${wsBase}/conhecimento`, label: "Base de Conhecimento", icon: BookOpen, matchKeyword: "conhecimento" },
+      ],
+    },
+    {
+      label: "Gestão",
+      items: [
+        { href: `${wsBase}/grd`, label: "GRD", icon: Send, matchKeyword: "grd" },
+        { href: `${wsBase}/suprimentos`, label: "Suprimentos", icon: ShoppingCart, matchKeyword: "suprimentos" },
+      ],
+    },
+    {
+      label: "Cadastros",
+      items: [
+        { href: `${wsBase}/fornecedores`, label: "Fornecedores", icon: Truck },
+        { href: `${wsBase}/contatos`, label: "Contatos", icon: Users },
+        { href: `${wsBase}/membros`, label: "Membros e permissões", icon: UserCog },
+        ...(role === "administrador" || role === "coordenador"
+          ? [{ href: `${wsBase}/lixeira`, label: "Lixeira", icon: Trash2 }]
+          : []),
+      ],
+    },
+  ];
+
+  function isActive(item: NavItem) {
+    if (item.matchKeyword) return pathname.includes(`/${item.matchKeyword}`);
+    if (item.href === wsBase) return pathname === item.href;
+    return pathname === item.href || pathname.startsWith(`${item.href}/`);
+  }
+
+  function toggleGrupo(label: string) {
+    setColapsados((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  }
+
+  function renderGrupoHeader(label: string, icon?: LucideIcon, ativo?: boolean) {
+    const GroupIcon = icon;
+    const colapsado = colapsados.has(label);
+    return (
+      <button
+        type="button"
+        onClick={() => toggleGrupo(label)}
+        className={cn(
+          "mb-1 flex w-full items-center gap-1 px-2 text-xs font-medium tracking-wide uppercase",
+          ativo ? "text-primary font-semibold" : "text-muted-foreground"
+        )}
+      >
+        {GroupIcon && <GroupIcon className="size-3.5 shrink-0" />}
+        <span className="flex-1 text-left">{label}</span>
+        <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", colapsado && "-rotate-90")} />
+      </button>
+    );
+  }
+
+  const emArvoreDeProjetos = /\/projetos\/[^/]+\/obras\/[^/]+/.test(pathname);
+
+  const nomeExibido = userName || userEmail;
+
+  return (
+    <aside className="flex min-h-screen w-56 shrink-0 flex-col border-r bg-muted">
+      <div className="border-b p-4">
+        <Image src="/logo-enermais.png" alt="EnerMais" width={160} height={48} className="h-10 w-auto" priority />
+      </div>
+
+      <nav className="p-3">
+        <div className="mb-4">
+          {renderGrupoHeader(principalGroup.label, principalGroup.icon, principalGroup.items.some(isActive))}
+          {!colapsados.has(principalGroup.label) && (
+            <ul className="space-y-0.5">
+              {principalGroup.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition",
+                        isActive(item)
+                          ? "bg-primary/10 font-medium text-primary"
+                          : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="size-4 shrink-0" />
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        {outrosGrupos.map((group) => (
+          <div key={group.label} className="mb-4">
+            {renderGrupoHeader(group.label, group.icon, group.items.some(isActive))}
+            {!colapsados.has(group.label) && (
+              <ul className="space-y-0.5">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        className={cn(
+                          "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition",
+                          isActive(item)
+                            ? "bg-primary/10 font-medium text-primary"
+                            : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                        )}
+                      >
+                        <Icon className="size-4 shrink-0" />
+                        {item.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {group.label === "Gestão" && (
+              <div className="mt-4">
+                <div className="flex items-center">
+                  <div className="flex-1">{renderGrupoHeader("Projetos", FolderKanban, emArvoreDeProjetos)}</div>
+                  <CreateProjetoDialog
+                    workspaceId={workspaceId}
+                    trigger={
+                      <DialogTrigger
+                        render={
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            title="Novo projeto"
+                            className="mr-1 mb-1 shrink-0 text-primary/40 hover:text-primary"
+                          />
+                        }
+                      >
+                        <Plus className="size-3.5" />
+                      </DialogTrigger>
+                    }
+                  />
+                </div>
+                {!colapsados.has("Projetos") && (
+                  <div className="mt-1">
+                    <ProjetosTree workspaceId={workspaceId} arvore={arvore} />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </nav>
+
+      <div className="flex items-center gap-2 border-t p-3">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+          {iniciaisDoNome(nomeExibido)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{nomeExibido}</p>
+          <p className="truncate text-xs text-muted-foreground">{WORKSPACE_ROLE_LABELS[role]}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          title="Sair"
+          className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+        >
+          <LogOut className="size-4" />
+        </button>
+      </div>
+    </aside>
+  );
+}

@@ -1,0 +1,16 @@
+export const EVENTO_LABELS: Record<string, string> = {
+  documento_criado: "Documento criado",
+  revisao_criada: "Revisão criada",
+  status_transicionado: "Status alterado",
+  comentario_adicionado: "Comentário adicionado",
+  copia_controlada_criada: "Cópia controlada criada",
+  copia_controlada_substituida: "Cópia controlada trocada",
+  copia_controlada_cancelada: "Cópia controlada cancelada",
+  grd_criado: "GRD criado",
+  grd_respondido: "GRD respondido",
+  grd_cancelado: "GRD cancelado",
+  rfi_criada: "RFI criada",
+  rfi_status_alterado: "RFI status alterado",
+  rnc_criada: "RNC criada",
+  rnc_status_alterado: "RNC status alterado",
+};

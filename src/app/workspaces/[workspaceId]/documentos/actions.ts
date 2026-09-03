@@ -1,0 +1,367 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { ZodError } from "zod";
+import { auth } from "@/auth";
+import { ApiError } from "@/lib/errors";
+import {
+  documentoCreateSchema,
+  transicaoStatusSchema,
+  comentarioCreateSchema,
+  revisaoCreateSchema,
+  documentoBulkMoverSchema,
+  documentoBulkAtribuirSchema,
+  documentoBulkReprogramarSchema,
+} from "@/lib/validators";
+import {
+  createDocumento,
+  getDocumentoOrThrow,
+  bulkMoverSecao,
+  bulkAtribuir,
+  bulkReprogramar,
+} from "@/services/documentoService";
+import { createRevisao, transitionRevisaoStatus, toggleConferido, setArquivoRevisao } from "@/services/revisaoService";
+import { createComentario } from "@/services/comentarioService";
+import { toggleFavorito } from "@/services/favoritoService";
+import { createAnexoRevisao, deleteAnexo } from "@/services/anexoService";
+import { requireObraAccess } from "@/services/permissions";
+
+export type ActionState = { status: "idle" } | { status: "error"; error: string } | { status: "success" };
+
+function obraDocumentosPath(workspaceId: string, projetoId: string, obraId: string) {
+  return `/workspaces/${workspaceId}/projetos/${projetoId}/obras/${obraId}`;
+}
+
+export async function createDocumentoAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const projetoId = String(formData.get("projetoId") ?? "");
+  const obraId = String(formData.get("obraId") ?? "");
+
+  try {
+    await requireObraAccess(session.user.id, workspaceId, obraId);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    throw err;
+  }
+
+  let input;
+  try {
+    input = documentoCreateSchema.parse({
+      obraId,
+      disciplinaId: formData.get("disciplinaId"),
+      secaoId: formData.get("secaoId"),
+      faseId: formData.get("faseId"),
+      tipoDocumentoId: formData.get("tipoDocumentoId"),
+      descricao: formData.get("descricao"),
+      dataBaseline: formData.get("dataBaseline") || undefined,
+      dataPrevista: formData.get("dataPrevista") || undefined,
+    });
+  } catch (err) {
+    if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };
+    return { status: "error", error: "Dados inválidos." };
+  }
+
+  try {
+    await createDocumento(workspaceId, session.user.id, input);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    throw err;
+  }
+
+  revalidatePath(obraDocumentosPath(workspaceId, projetoId, obraId));
+  return { status: "success" };
+}
+
+export async function bulkMoverSecaoAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const projetoId = String(formData.get("projetoId") ?? "");
+  const obraId = String(formData.get("obraId") ?? "");
+
+  try {
+    await requireObraAccess(session.user.id, workspaceId, obraId);
+    const input = documentoBulkMoverSchema.parse({
+      documentoIds: formData.getAll("documentoIds"),
+      secaoId: formData.get("secaoId"),
+    });
+    await bulkMoverSecao(workspaceId, obraId, input.documentoIds, input.secaoId);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };
+    throw err;
+  }
+
+  revalidatePath(obraDocumentosPath(workspaceId, projetoId, obraId));
+  return { status: "success" };
+}
+
+export async function bulkAtribuirAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const projetoId = String(formData.get("projetoId") ?? "");
+  const obraId = String(formData.get("obraId") ?? "");
+
+  try {
+    await requireObraAccess(session.user.id, workspaceId, obraId);
+    const input = documentoBulkAtribuirSchema.parse({
+      documentoIds: formData.getAll("documentoIds"),
+      responsavelId: formData.get("responsavelId"),
+    });
+    await bulkAtribuir(workspaceId, obraId, input.documentoIds, input.responsavelId);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };
+    throw err;
+  }
+
+  revalidatePath(obraDocumentosPath(workspaceId, projetoId, obraId));
+  return { status: "success" };
+}
+
+export async function bulkReprogramarAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const projetoId = String(formData.get("projetoId") ?? "");
+  const obraId = String(formData.get("obraId") ?? "");
+
+  try {
+    await requireObraAccess(session.user.id, workspaceId, obraId);
+    const input = documentoBulkReprogramarSchema.parse({
+      documentoIds: formData.getAll("documentoIds"),
+      dataReprogramada: formData.get("dataReprogramada"),
+    });
+    await bulkReprogramar(workspaceId, obraId, input.documentoIds, input.dataReprogramada);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };
+    throw err;
+  }
+
+  revalidatePath(obraDocumentosPath(workspaceId, projetoId, obraId));
+  return { status: "success" };
+}
+
+// Ação direta (sem FormData/ActionState) — chamada via onClick com useTransition,
+// pra favoritar/desfavoritar sem recarregar a lista inteira. Retorna o novo estado.
+export async function toggleFavoritoAction(workspaceId: string, documentoId: string): Promise<boolean> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Não autenticado.");
+  await assertObraAccessForDocumento(session.user.id, workspaceId, documentoId);
+  return toggleFavorito(session.user.id, documentoId);
+}
+
+async function assertObraAccessForDocumento(userId: string, workspaceId: string, documentoId: string) {
+  const documento = await getDocumentoOrThrow(workspaceId, documentoId);
+  await requireObraAccess(userId, workspaceId, documento.obraId);
+  return documento;
+}
+
+export async function transitionStatusAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const documentoId = String(formData.get("documentoId") ?? "");
+  const revisaoId = String(formData.get("revisaoId") ?? "");
+
+  try {
+    await assertObraAccessForDocumento(session.user.id, workspaceId, documentoId);
+    const input = transicaoStatusSchema.parse({ novoStatus: formData.get("novoStatus") });
+    await transitionRevisaoStatus(workspaceId, documentoId, revisaoId, session.user.id, input.novoStatus);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    if (err instanceof ZodError) return { status: "error", error: "Status inválido." };
+    throw err;
+  }
+
+  revalidatePath(`/workspaces/${workspaceId}/documentos/${documentoId}`);
+  return { status: "success" };
+}
+
+export async function createRevisaoAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const documentoId = String(formData.get("documentoId") ?? "");
+  const letraRaw = formData.get("letra");
+  const numeroRaw = formData.get("numero");
+
+  try {
+    await assertObraAccessForDocumento(session.user.id, workspaceId, documentoId);
+    const input = revisaoCreateSchema.parse({
+      letra: letraRaw ? String(letraRaw).toUpperCase() : undefined,
+      numero: numeroRaw ? Number(numeroRaw) : undefined,
+    });
+
+    const arquivoOriginalFile = formData.get("arquivoOriginal");
+    const arquivoPdfFile = formData.get("arquivoPdf");
+
+    await createRevisao(workspaceId, documentoId, session.user.id, {
+      ...input,
+      arquivoOriginal:
+        arquivoOriginalFile instanceof File && arquivoOriginalFile.size > 0
+          ? {
+              buffer: Buffer.from(await arquivoOriginalFile.arrayBuffer()),
+              nome: arquivoOriginalFile.name,
+              mimeType: arquivoOriginalFile.type || "application/octet-stream",
+              tamanho: arquivoOriginalFile.size,
+            }
+          : undefined,
+      arquivoPdf:
+        arquivoPdfFile instanceof File && arquivoPdfFile.size > 0
+          ? {
+              buffer: Buffer.from(await arquivoPdfFile.arrayBuffer()),
+              nome: arquivoPdfFile.name,
+              mimeType: arquivoPdfFile.type || "application/octet-stream",
+              tamanho: arquivoPdfFile.size,
+            }
+          : undefined,
+    });
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };
+    throw err;
+  }
+
+  revalidatePath(`/workspaces/${workspaceId}/documentos/${documentoId}`);
+  return { status: "success" };
+}
+
+export async function uploadAnexosAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const documentoId = String(formData.get("documentoId") ?? "");
+  const revisaoId = String(formData.get("revisaoId") ?? "");
+
+  const arquivos = formData.getAll("arquivos").filter((a): a is File => a instanceof File && a.size > 0);
+  if (arquivos.length === 0) return { status: "error", error: "Selecione ao menos um arquivo." };
+
+  try {
+    await assertObraAccessForDocumento(session.user.id, workspaceId, documentoId);
+    for (const arquivo of arquivos) {
+      const buffer = Buffer.from(await arquivo.arrayBuffer());
+      await createAnexoRevisao(workspaceId, revisaoId, session.user.id, {
+        buffer,
+        nome: arquivo.name,
+        mimeType: arquivo.type || "application/octet-stream",
+        tamanho: arquivo.size,
+      });
+    }
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    throw err;
+  }
+
+  revalidatePath(`/workspaces/${workspaceId}/documentos/${documentoId}`);
+  return { status: "success" };
+}
+
+export async function deleteAnexoAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const documentoId = String(formData.get("documentoId") ?? "");
+  const anexoId = String(formData.get("anexoId") ?? "");
+
+  try {
+    await assertObraAccessForDocumento(session.user.id, workspaceId, documentoId);
+    await deleteAnexo(workspaceId, anexoId);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    throw err;
+  }
+
+  revalidatePath(`/workspaces/${workspaceId}/documentos/${documentoId}`);
+  return { status: "success" };
+}
+
+export async function uploadArquivoRevisaoAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const documentoId = String(formData.get("documentoId") ?? "");
+  const revisaoId = String(formData.get("revisaoId") ?? "");
+  const tipoRaw = formData.get("tipo");
+  const tipo = tipoRaw === "original" || tipoRaw === "pdf" ? tipoRaw : null;
+
+  const arquivo = formData.get("arquivo");
+  if (!tipo) return { status: "error", error: "Tipo de arquivo inválido." };
+  if (!(arquivo instanceof File) || arquivo.size === 0) return { status: "error", error: "Selecione um arquivo." };
+
+  try {
+    await assertObraAccessForDocumento(session.user.id, workspaceId, documentoId);
+    await setArquivoRevisao(workspaceId, documentoId, revisaoId, session.user.id, tipo, {
+      buffer: Buffer.from(await arquivo.arrayBuffer()),
+      nome: arquivo.name,
+      mimeType: arquivo.type || "application/octet-stream",
+      tamanho: arquivo.size,
+    });
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    throw err;
+  }
+
+  revalidatePath(`/workspaces/${workspaceId}/documentos/${documentoId}`);
+  return { status: "success" };
+}
+
+export async function toggleConferidoAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const documentoId = String(formData.get("documentoId") ?? "");
+  const revisaoId = String(formData.get("revisaoId") ?? "");
+
+  try {
+    await assertObraAccessForDocumento(session.user.id, workspaceId, documentoId);
+    await toggleConferido(workspaceId, documentoId, revisaoId, session.user.id);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    throw err;
+  }
+
+  revalidatePath(`/workspaces/${workspaceId}/documentos/${documentoId}`);
+  return { status: "success" };
+}
+
+export async function addComentarioAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const documentoId = String(formData.get("documentoId") ?? "");
+  const revisaoId = String(formData.get("revisaoId") ?? "");
+
+  try {
+    await assertObraAccessForDocumento(session.user.id, workspaceId, documentoId);
+    const input = comentarioCreateSchema.parse({
+      corpo: formData.get("corpo"),
+      anexoNome: formData.get("anexoNome") || undefined,
+      anexoUrl: formData.get("anexoUrl") || undefined,
+      marcarPendenciaCliente: formData.get("marcarPendenciaCliente") === "on",
+    });
+    await createComentario(workspaceId, documentoId, revisaoId, session.user.id, input);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };
+    throw err;
+  }
+
+  revalidatePath(`/workspaces/${workspaceId}/documentos/${documentoId}`);
+  return { status: "success" };
+}

@@ -1,0 +1,132 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1786022399717,
+      "tag": "0000_quiet_ultimatum",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786022415275,
+      "tag": "0001_indexes_rls_append_only",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786124272139,
+      "tag": "0002_cheerful_naoko",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786124287585,
+      "tag": "0003_grd_indexes_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786127071270,
+      "tag": "0004_dizzy_mysterio",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786127081871,
+      "tag": "0005_suprimentos_indexes_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786297825218,
+      "tag": "0006_corrige_esquema_revisao_letra_numero",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786394884822,
+      "tag": "0007_wealthy_jetstream",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786394893187,
+      "tag": "0008_copias_controladas_indexes_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786965730219,
+      "tag": "0009_sticky_omega_sentinel",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786965741290,
+      "tag": "0010_fotos_indexes_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1787250905860,
+      "tag": "0011_true_tyger_tiger",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1787250917251,
+      "tag": "0012_conhecimento_indexes_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1787316314996,
+      "tag": "0013_volatile_captain_cross",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1787762877855,
+      "tag": "0014_round_tenebrous",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1787770166611,
+      "tag": "0015_fixed_chameleon",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1787770178270,
+      "tag": "0016_majestic_wiccan",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1787780000000,
+      "tag": "0017_workspace_role_rework",
+      "breakpoints": true
+    }
+  ]
+}
