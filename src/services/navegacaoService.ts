@@ -1,7 +1,7 @@
 import { listProjetos } from "./projetoService";
 import { listObras } from "./obraService";
 import { listDisciplinasComSecoesPorObra } from "./catalogoService";
-import { listAccessibleObraIdsInWorkspace } from "./permissions";
+import { listAccessibleObraIdsInWorkspace, getWorkspaceRole } from "./permissions";
 
 export type ArvoreDisciplina = { disciplinaId: string; code: string; name: string };
 export type ArvoreObra = { id: string; projetoId: string; code: string; name: string; disciplinas: ArvoreDisciplina[] };
@@ -11,8 +11,12 @@ export type ArvoreProjeto = { id: string; code: string; name: string; obras: Arv
 // o usuário acessa (administrador: todas; demais papéis: só obra_members) — mesma regra
 // usada no Painel/Calendário. Chamada uma vez no layout do workspace, não por navegação.
 export async function getArvoreProjetos(workspaceId: string, userId: string): Promise<ArvoreProjeto[]> {
+  const role = await getWorkspaceRole(userId, workspaceId);
+  if (!role) return [];
+  const acessoTotal = role === "administrador";
+
   const obraIdsAcessiveis = new Set(await listAccessibleObraIdsInWorkspace(userId, workspaceId));
-  if (obraIdsAcessiveis.size === 0) return [];
+  if (!acessoTotal && obraIdsAcessiveis.size === 0) return [];
 
   const projetos = await listProjetos(workspaceId);
 
@@ -38,7 +42,10 @@ export async function getArvoreProjetos(workspaceId: string, userId: string): Pr
     })
   );
 
-  return arvore.filter((p) => p.obras.length > 0);
+  // Administrador vê todo Projeto do workspace, mesmo sem nenhuma Obra ainda (precisa
+  // aparecer pra dar pra criar a primeira Obra nele). Os demais papéis só veem Projetos
+  // onde têm pelo menos uma Obra acessível — um Projeto "vazio" pra eles não serve de nada.
+  return acessoTotal ? arvore : arvore.filter((p) => p.obras.length > 0);
 }
 
 export type ObraOpcao = {
