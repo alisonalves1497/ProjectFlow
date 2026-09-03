@@ -43,11 +43,13 @@ export async function listarAbasPlanilha(buffer: Buffer): Promise<string[]> {
   return workbook.SheetNames;
 }
 
+const SEM_SECAO = "Sem seção";
+
 export type LinhaImportada = {
   linha: number;
   descricao: string;
   disciplinaTexto: string;
-  secaoExcel: string | null;
+  secaoExcel: string;
 };
 
 // Acha a linha de cabeçalho (procurando "DESCRIÇÃO" e "DISCIPLINA" nas primeiras ~20
@@ -93,7 +95,7 @@ export async function parseListaDocumentos(buffer: Buffer, sheetName: string): P
   }
 
   const linhas: LinhaImportada[] = [];
-  let secaoAtual: string | null = null;
+  let secaoAtual: string = SEM_SECAO;
 
   for (let r = headerRowIdx + 1; r < linhasBrutas.length; r++) {
     const row = linhasBrutas[r] ?? [];
@@ -132,20 +134,50 @@ export function sugerirDisciplinaId(disciplinaTexto: string, disciplinas: { id: 
   return match?.id ?? null;
 }
 
-// Heurística simples: qualquer palavra do nome do Tipo (>=4 letras) que apareça na
-// descrição do documento conta como sinal. Fica com o Tipo de maior pontuação; empate
-// ou nenhum sinal → null (usuário escolhe na revisão).
-export function sugerirTipoDocumentoId(descricao: string, tipos: { id: string; name: string }[]): string | null {
-  const desc = normalizar(descricao);
-  let melhor: { id: string; pontos: number } | null = null;
-  for (const tipo of tipos) {
-    const palavras = normalizar(tipo.name)
-      .split(/[^A-Z0-9]+/)
-      .filter((p) => p.length >= 4);
-    const pontos = palavras.filter((p) => desc.includes(p)).length;
-    if (pontos > 0 && (!melhor || pontos > melhor.pontos)) melhor = { id: tipo.id, pontos };
+// A seção numerada do Excel ("1.1 Investigação do Solo...", "1.2 Fundações - 230 kV"...)
+// é usada como o Tipo de documento em si — se já existe um Tipo com esse nome no
+// catálogo, reaproveita; senão, fica marcado pra criar um novo com esse mesmo nome
+// (ver garantirTipoDocumento). Match exato (normalizado), sem heurística de palavra.
+export function sugerirTipoPorNomeSecao(secaoExcel: string, tipos: { id: string; name: string }[]): string | null {
+  const alvo = normalizar(secaoExcel);
+  const match = tipos.find((t) => normalizar(t.name) === alvo);
+  return match?.id ?? null;
+}
+
+export type GrupoSecao = { secaoExcel: string; quantidade: number; tipoDocumentoIdSugerido: string | null };
+
+export function agruparPorSecao(linhas: LinhaImportada[], tipos: { id: string; name: string }[]): GrupoSecao[] {
+  const contagem = new Map<string, number>();
+  for (const l of linhas) contagem.set(l.secaoExcel, (contagem.get(l.secaoExcel) ?? 0) + 1);
+  return [...contagem.entries()].map(([secaoExcel, quantidade]) => ({
+    secaoExcel,
+    quantidade,
+    tipoDocumentoIdSugerido: sugerirTipoPorNomeSecao(secaoExcel, tipos),
+  }));
+}
+
+function gerarCodigoTipo(nome: string, codigosExistentes: Set<string>): string {
+  const base = normalizar(nome).replace(/[^A-Z0-9]/g, "").slice(0, 6) || "TIPO";
+  let candidato = base;
+  let n = 1;
+  while (codigosExistentes.has(candidato)) {
+    n++;
+    candidato = `${base}${n}`;
   }
-  return melhor?.id ?? null;
+  return candidato;
+}
+
+// Reaproveita um Tipo de documento existente com esse nome (comparação normalizada) ou
+// cria um novo — usado quando o usuário aceita a sugestão "criar novo tipo" na revisão.
+export async function garantirTipoDocumento(workspaceId: string, nome: string): Promise<string> {
+  const existentes = await db.select().from(tiposDocumento).where(eq(tiposDocumento.workspaceId, workspaceId));
+  const alvo = normalizar(nome);
+  const match = existentes.find((t) => normalizar(t.name) === alvo);
+  if (match) return match.id;
+
+  const code = gerarCodigoTipo(nome, new Set(existentes.map((t) => t.code)));
+  const [created] = await db.insert(tiposDocumento).values({ id: newId("tipo"), workspaceId, code, name: nome }).returning();
+  return created.id;
 }
 
 async function garantirObraDisciplina(obraId: string, disciplinaId: string) {
@@ -178,7 +210,9 @@ async function garantirSecaoPorTipo(obraDisciplinaId: string, tipoNome: string, 
 export type LinhaParaImportar = {
   descricao: string;
   disciplinaId: string;
-  tipoDocumentoId: string;
+  // tipoDocumentoId: null => cria (ou reaproveita por nome) um Tipo novo chamado tipoNome.
+  tipoDocumentoId: string | null;
+  tipoNome: string;
   faseId: string;
 };
 
@@ -186,10 +220,11 @@ export async function importarDocumentos(workspaceId: string, userId: string, ob
   const criados: string[] = [];
   const erros: { descricao: string; erro: string }[] = [];
 
-  // Cache pra não reconsultar obraDisciplina/seção a cada linha do mesmo tipo.
+  // Caches pra não reconsultar/recriar obraDisciplina, Tipo ou Seção a cada linha do
+  // mesmo grupo.
   const obraDisciplinaCache = new Map<string, string>();
   const secaoCache = new Map<string, string>();
-  const tiposNome = new Map<string, string>();
+  const tipoIdPorNome = new Map<string, string>();
   let proximaPosicaoSecao = 1;
 
   for (const linha of linhas) {
@@ -201,17 +236,20 @@ export async function importarDocumentos(workspaceId: string, userId: string, ob
         obraDisciplinaCache.set(linha.disciplinaId, odId);
       }
 
-      let tipoNome = tiposNome.get(linha.tipoDocumentoId);
-      if (!tipoNome) {
-        const [tipo] = await db.select({ name: tiposDocumento.name }).from(tiposDocumento).where(eq(tiposDocumento.id, linha.tipoDocumentoId)).limit(1);
-        tipoNome = tipo?.name ?? "Documentos";
-        tiposNome.set(linha.tipoDocumentoId, tipoNome);
+      let tipoDocumentoId = linha.tipoDocumentoId;
+      if (!tipoDocumentoId) {
+        const chave = normalizar(linha.tipoNome);
+        tipoDocumentoId = tipoIdPorNome.get(chave) ?? null;
+        if (!tipoDocumentoId) {
+          tipoDocumentoId = await garantirTipoDocumento(workspaceId, linha.tipoNome);
+          tipoIdPorNome.set(chave, tipoDocumentoId);
+        }
       }
 
-      const secaoCacheKey = `${odId}:${linha.tipoDocumentoId}`;
+      const secaoCacheKey = `${odId}:${tipoDocumentoId}`;
       let secaoId = secaoCache.get(secaoCacheKey);
       if (!secaoId) {
-        const secao = await garantirSecaoPorTipo(odId, tipoNome, proximaPosicaoSecao++);
+        const secao = await garantirSecaoPorTipo(odId, linha.tipoNome, proximaPosicaoSecao++);
         secaoId = secao.id;
         secaoCache.set(secaoCacheKey, secaoId);
       }
@@ -221,7 +259,7 @@ export async function importarDocumentos(workspaceId: string, userId: string, ob
         disciplinaId: linha.disciplinaId,
         secaoId,
         faseId: linha.faseId,
-        tipoDocumentoId: linha.tipoDocumentoId,
+        tipoDocumentoId,
         descricao: linha.descricao,
       });
       criados.push(documento.id);

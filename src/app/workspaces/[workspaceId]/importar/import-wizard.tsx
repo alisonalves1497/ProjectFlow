@@ -17,12 +17,15 @@ import {
   type LinhaComSugestao,
   type CatalogoParaImportacao,
 } from "./actions";
-import type { LinhaParaImportar } from "@/services/importDocumentosService";
+import type { LinhaParaImportar, GrupoSecao } from "@/services/importDocumentosService";
 
 type Projeto = { id: string; code: string; name: string };
 type Etapa = "obra" | "upload" | "revisao" | "concluido";
 
-type LinhaEditavel = LinhaComSugestao & { incluir: boolean; disciplinaId: string; tipoDocumentoId: string };
+const CRIAR_NOVO = "__novo__";
+
+type LinhaEditavel = LinhaComSugestao & { incluir: boolean; disciplinaId: string };
+type GrupoEditavel = GrupoSecao & { tipoDocumentoId: string };
 
 function arquivoParaBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -56,6 +59,7 @@ export function ImportWizard({ workspaceId, projetos }: { workspaceId: string; p
 
   // Etapa 3 — Revisão
   const [linhas, setLinhas] = useState<LinhaEditavel[]>([]);
+  const [grupos, setGrupos] = useState<GrupoEditavel[]>([]);
   const [catalogo, setCatalogo] = useState<CatalogoParaImportacao | null>(null);
   const [faseId, setFaseId] = useState<string>("");
 
@@ -115,12 +119,12 @@ export function ImportWizard({ workspaceId, projetos }: { workspaceId: string; p
     }
     setCatalogo(res.data.catalogo);
     setFaseId(res.data.catalogo.fases[0]?.id ?? "");
+    setGrupos(res.data.grupos.map((g) => ({ ...g, tipoDocumentoId: g.tipoDocumentoIdSugerido ?? CRIAR_NOVO })));
     setLinhas(
       res.data.linhas.map((l) => ({
         ...l,
         incluir: true,
         disciplinaId: l.disciplinaIdSugerida ?? "",
-        tipoDocumentoId: l.tipoDocumentoIdSugerido ?? "",
       }))
     );
     setEtapa("revisao");
@@ -130,20 +134,24 @@ export function ImportWizard({ workspaceId, projetos }: { workspaceId: string; p
     setLinhas((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
   }
 
+  function atualizarGrupo(secaoExcel: string, tipoDocumentoId: string) {
+    setGrupos((prev) => prev.map((g) => (g.secaoExcel === secaoExcel ? { ...g, tipoDocumentoId } : g)));
+  }
+
   async function handleConfirmarImportacao() {
     if (!obraId || !faseId) return;
     const selecionadas = linhas.filter((l) => l.incluir);
-    const semTipo = selecionadas.filter((l) => !l.disciplinaId || !l.tipoDocumentoId);
-    if (semTipo.length > 0) {
-      toast.error(`${semTipo.length} linha(s) selecionada(s) sem Disciplina ou Tipo definido.`);
+    const semDisciplina = selecionadas.filter((l) => !l.disciplinaId);
+    if (semDisciplina.length > 0) {
+      toast.error(`${semDisciplina.length} linha(s) selecionada(s) sem Disciplina definida.`);
       return;
     }
-    const payload: LinhaParaImportar[] = selecionadas.map((l) => ({
-      descricao: l.descricao,
-      disciplinaId: l.disciplinaId,
-      tipoDocumentoId: l.tipoDocumentoId,
-      faseId,
-    }));
+    const grupoPorSecao = new Map(grupos.map((g) => [g.secaoExcel, g]));
+    const payload: LinhaParaImportar[] = selecionadas.map((l) => {
+      const grupo = grupoPorSecao.get(l.secaoExcel);
+      const tipoDocumentoId = grupo && grupo.tipoDocumentoId !== CRIAR_NOVO ? grupo.tipoDocumentoId : null;
+      return { descricao: l.descricao, disciplinaId: l.disciplinaId, tipoDocumentoId, tipoNome: l.secaoExcel, faseId };
+    });
     setPending(true);
     const res = await confirmarImportacaoAction(workspaceId, obraId, payload);
     setPending(false);
@@ -156,7 +164,8 @@ export function ImportWizard({ workspaceId, projetos }: { workspaceId: string; p
   }
 
   const totalSelecionadas = linhas.filter((l) => l.incluir).length;
-  const semSugestao = linhas.filter((l) => l.incluir && (!l.disciplinaId || !l.tipoDocumentoId)).length;
+  const semDisciplina = linhas.filter((l) => l.incluir && !l.disciplinaId).length;
+  const gruposNovos = grupos.filter((g) => g.tipoDocumentoId === CRIAR_NOVO).length;
 
   return (
     <div className="space-y-6">
@@ -277,18 +286,52 @@ export function ImportWizard({ workspaceId, projetos }: { workspaceId: string; p
             </div>
             <p className="text-muted-foreground">
               {linhas.length} linhas encontradas · {totalSelecionadas} selecionadas
-              {semSugestao > 0 && <span className="text-destructive"> · {semSugestao} sem Disciplina/Tipo definido</span>}
+              {semDisciplina > 0 && <span className="text-destructive"> · {semDisciplina} sem Disciplina definida</span>}
             </p>
           </div>
 
-          <div className="max-h-[28rem] overflow-y-auto rounded-lg border">
+          <div className="rounded-lg border p-3">
+            <p className="mb-1 text-sm font-medium">Seções da planilha → Tipo de documento</p>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Cada seção numerada do Excel (ex: "1.1 Investigação do Solo...") vira um Tipo de documento — reaproveita um já existente
+              ou cria um novo com esse nome. {gruposNovos > 0 && `${gruposNovos} vão criar Tipo novo.`}
+            </p>
+            <div className="space-y-2">
+              {grupos.map((g) => (
+                <div key={g.secaoExcel} className="flex items-center gap-3 text-sm">
+                  <span className="min-w-0 flex-1 truncate" title={g.secaoExcel}>
+                    {g.secaoExcel} <span className="text-xs text-muted-foreground">({g.quantidade})</span>
+                  </span>
+                  <Select value={g.tipoDocumentoId} onValueChange={(v) => v && atualizarGrupo(g.secaoExcel, v)}>
+                    <SelectTrigger size="sm" className="w-64 shrink-0">
+                      <SelectValue>
+                        {(v: string) =>
+                          v === CRIAR_NOVO ? `+ Criar "${g.secaoExcel}"` : (catalogo.tipos.find((t) => t.id === v)?.name ?? "—")
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={CRIAR_NOVO}>+ Criar &quot;{g.secaoExcel}&quot;</SelectItem>
+                      {catalogo.tipos.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="max-h-[24rem] overflow-y-auto rounded-lg border">
             <Table>
               <TableHeader className="sticky top-0 bg-background">
                 <TableRow>
                   <TableHead className="w-8"></TableHead>
                   <TableHead>Descrição</TableHead>
+                  <TableHead>Seção</TableHead>
                   <TableHead>Disciplina</TableHead>
-                  <TableHead>Tipo de documento</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -305,6 +348,9 @@ export function ImportWizard({ workspaceId, projetos }: { workspaceId: string; p
                     <TableCell className="max-w-xs truncate whitespace-normal" title={l.descricao}>
                       {l.descricao}
                     </TableCell>
+                    <TableCell className="max-w-40 truncate text-xs text-muted-foreground" title={l.secaoExcel}>
+                      {l.secaoExcel}
+                    </TableCell>
                     <TableCell>
                       <Select value={l.disciplinaId || undefined} onValueChange={(v) => v && atualizarLinha(idx, { disciplinaId: v })}>
                         <SelectTrigger size="sm" className={!l.disciplinaId ? "border-destructive" : undefined}>
@@ -316,22 +362,6 @@ export function ImportWizard({ workspaceId, projetos }: { workspaceId: string; p
                           {catalogo.disciplinas.map((d) => (
                             <SelectItem key={d.id} value={d.id}>
                               {d.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Select value={l.tipoDocumentoId || undefined} onValueChange={(v) => v && atualizarLinha(idx, { tipoDocumentoId: v })}>
-                        <SelectTrigger size="sm" className={!l.tipoDocumentoId ? "border-destructive" : undefined}>
-                          <SelectValue placeholder="—">
-                            {(v: string) => catalogo.tipos.find((t) => t.id === v)?.name ?? "—"}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {catalogo.tipos.map((t) => (
-                            <SelectItem key={t.id} value={t.id}>
-                              {t.name}
                             </SelectItem>
                           ))}
                         </SelectContent>

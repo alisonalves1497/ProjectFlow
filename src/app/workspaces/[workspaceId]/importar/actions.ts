@@ -11,9 +11,10 @@ import {
   parseListaDocumentos,
   sugerirCatalogo,
   sugerirDisciplinaId,
-  sugerirTipoDocumentoId,
+  agruparPorSecao,
   importarDocumentos,
   type LinhaParaImportar,
+  type GrupoSecao,
 } from "@/services/importDocumentosService";
 
 type Resultado<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -41,9 +42,8 @@ export type LinhaComSugestao = {
   linha: number;
   descricao: string;
   disciplinaTexto: string;
-  secaoExcel: string | null;
+  secaoExcel: string;
   disciplinaIdSugerida: string | null;
-  tipoDocumentoIdSugerido: string | null;
 };
 
 export type CatalogoParaImportacao = {
@@ -56,7 +56,7 @@ export async function analisarPlanilhaAction(
   workspaceId: string,
   arquivoBase64: string,
   sheetName: string
-): Promise<Resultado<{ linhas: LinhaComSugestao[]; catalogo: CatalogoParaImportacao }>> {
+): Promise<Resultado<{ linhas: LinhaComSugestao[]; grupos: GrupoSecao[]; catalogo: CatalogoParaImportacao }>> {
   try {
     await exigirGestor(workspaceId);
     const buffer = Buffer.from(arquivoBase64, "base64");
@@ -65,10 +65,10 @@ export async function analisarPlanilhaAction(
     const linhasComSugestao: LinhaComSugestao[] = linhas.map((l) => ({
       ...l,
       disciplinaIdSugerida: sugerirDisciplinaId(l.disciplinaTexto, catalogo.disciplinas),
-      tipoDocumentoIdSugerido: sugerirTipoDocumentoId(l.descricao, catalogo.tipos),
     }));
+    const grupos = agruparPorSecao(linhas, catalogo.tipos);
 
-    return { ok: true, data: { linhas: linhasComSugestao, catalogo } };
+    return { ok: true, data: { linhas: linhasComSugestao, grupos, catalogo } };
   } catch (err) {
     if (err instanceof ApiError) return { ok: false, error: err.message };
     throw err;
