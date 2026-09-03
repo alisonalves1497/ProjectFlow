@@ -18,9 +18,24 @@ import { createProjetoAction, type ActionState } from "./actions";
 
 const initialActionState: ActionState = { status: "idle" };
 
-export function CreateProjetoDialog({ workspaceId, trigger }: { workspaceId: string; trigger?: React.ReactNode }) {
+// Aberto/fechado normalmente é estado interno (uso padrão: botão "Novo projeto" com
+// trigger próprio) — mas aceita `open`/`onOpenChange` controlados de fora pra quando o
+// disparo vem de outro lugar sem DialogTrigger visível (ex: item de um dropdown menu).
+export function CreateProjetoDialog({
+  workspaceId,
+  trigger,
+  open: openControlado,
+  onOpenChange: setOpenControlado,
+}: {
+  workspaceId: string;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [openInterno, setOpenInterno] = useState(false);
+  const open = openControlado ?? openInterno;
+  const setOpen = setOpenControlado ?? setOpenInterno;
   const [code, setCode] = useState("");
   const [state, formAction, pending] = useActionState(createProjetoAction, initialActionState);
 
@@ -34,7 +49,7 @@ export function CreateProjetoDialog({ workspaceId, trigger }: { workspaceId: str
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {trigger ?? <DialogTrigger render={<Button />}>Novo projeto</DialogTrigger>}
+      {trigger ?? (openControlado === undefined && <DialogTrigger render={<Button />}>Novo projeto</DialogTrigger>)}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Novo projeto</DialogTitle>

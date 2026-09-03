@@ -9,25 +9,20 @@ import {
   LayoutDashboard,
   CalendarDays,
   FolderKanban,
-  Truck,
-  Users,
   UserCog,
-  Printer,
   Send,
-  ShoppingCart,
-  Camera,
-  BookOpen,
   Home,
   ChevronDown,
   Plus,
   LogOut,
   Trash2,
   FileSpreadsheet,
+  FolderPlus,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ProjetosTree } from "@/components/projetos-tree";
 import { CreateProjetoDialog } from "@/app/workspaces/[workspaceId]/projetos/create-projeto-dialog";
 import type { ArvoreProjeto } from "@/services/navegacaoService";
@@ -62,6 +57,7 @@ export function AppSidebar({
 }) {
   const pathname = usePathname();
   const [colapsados, setColapsados] = useState<Set<string>>(new Set());
+  const [novoProjetoOpen, setNovoProjetoOpen] = useState(false);
 
   const wsBase = `/workspaces/${workspaceId}`;
 
@@ -78,37 +74,25 @@ export function AppSidebar({
     ],
   };
 
+  // Qualidade (Cópias Controladas, Registro Fotográfico, Base de Conhecimento) e
+  // Suprimentos ocultos por pedido — telas continuam existindo, só não aparecem no menu.
   const outrosGrupos: NavGroup[] = [
     {
-      label: "Qualidade",
-      items: [
-        { href: `${wsBase}/copias-controladas`, label: "Cópias Controladas", icon: Printer, matchKeyword: "copias-controladas" },
-        { href: `${wsBase}/fotos`, label: "Registro Fotográfico", icon: Camera, matchKeyword: "fotos" },
-        { href: `${wsBase}/conhecimento`, label: "Base de Conhecimento", icon: BookOpen, matchKeyword: "conhecimento" },
-      ],
-    },
-    {
       label: "Gestão",
-      items: [
-        { href: `${wsBase}/grd`, label: "GRD", icon: Send, matchKeyword: "grd" },
-        { href: `${wsBase}/suprimentos`, label: "Suprimentos", icon: ShoppingCart, matchKeyword: "suprimentos" },
-      ],
+      items: [{ href: `${wsBase}/grd`, label: "GRD", icon: Send, matchKeyword: "grd" }],
     },
     {
       label: "Cadastros",
       items: [
-        { href: `${wsBase}/fornecedores`, label: "Fornecedores", icon: Truck },
-        { href: `${wsBase}/contatos`, label: "Contatos", icon: Users },
         { href: `${wsBase}/membros`, label: "Membros e permissões", icon: UserCog },
         ...(role === "administrador" || role === "coordenador"
-          ? [
-              { href: `${wsBase}/importar`, label: "Importar planilha", icon: FileSpreadsheet },
-              { href: `${wsBase}/lixeira`, label: "Lixeira", icon: Trash2 },
-            ]
+          ? [{ href: `${wsBase}/lixeira`, label: "Lixeira", icon: Trash2 }]
           : []),
       ],
     },
   ];
+
+  const podeGerenciarProjetos = role === "administrador" || role === "coordenador";
 
   function isActive(item: NavItem) {
     if (item.matchKeyword) return pathname.includes(`/${item.matchKeyword}`);
@@ -212,30 +196,42 @@ export function AppSidebar({
               <div className="mt-4">
                 <div className="flex items-center">
                   <div className="flex-1">{renderGrupoHeader("Projetos", FolderKanban, emArvoreDeProjetos)}</div>
-                  <CreateProjetoDialog
-                    workspaceId={workspaceId}
-                    trigger={
-                      <DialogTrigger
+                  {podeGerenciarProjetos && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
                         render={
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon-xs"
-                            title="Novo projeto"
+                            title="Novo projeto ou importar planilha"
                             className="mr-1 mb-1 shrink-0 text-primary/40 hover:text-primary"
                           />
                         }
                       >
                         <Plus className="size-3.5" />
-                      </DialogTrigger>
-                    }
-                  />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem onClick={() => setNovoProjetoOpen(true)}>
+                          <FolderPlus className="size-4" />
+                          Criar projeto novo
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          render={<Link href={`${wsBase}/importar`} />}
+                        >
+                          <FileSpreadsheet className="size-4" />
+                          Importar planilha
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
                 {!colapsados.has("Projetos") && (
                   <div className="mt-1">
                     <ProjetosTree workspaceId={workspaceId} arvore={arvore} />
                   </div>
                 )}
+                <CreateProjetoDialog workspaceId={workspaceId} open={novoProjetoOpen} onOpenChange={setNovoProjetoOpen} />
               </div>
             )}
           </div>
