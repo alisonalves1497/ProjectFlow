@@ -9,6 +9,8 @@ import { DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { ArvoreProjeto } from "@/services/navegacaoService";
 import { CreateObraDialog } from "@/app/workspaces/[workspaceId]/projetos/[projetoId]/obras/create-obra-dialog";
+import { RenameProjetoDialog } from "@/app/workspaces/[workspaceId]/projetos/rename-projeto-dialog";
+import { RenameObraDialog } from "@/app/workspaces/[workspaceId]/projetos/[projetoId]/obras/rename-obra-dialog";
 
 function NovaObraIconTrigger() {
   return (
@@ -28,7 +30,15 @@ function NovaObraIconTrigger() {
   );
 }
 
-export function ProjetosTree({ workspaceId, arvore }: { workspaceId: string; arvore: ArvoreProjeto[] }) {
+export function ProjetosTree({
+  workspaceId,
+  arvore,
+  podeRenomear = false,
+}: {
+  workspaceId: string;
+  arvore: ArvoreProjeto[];
+  podeRenomear?: boolean;
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const disciplinaIdAtiva = searchParams.get("disciplinaId");
@@ -86,6 +96,7 @@ export function ProjetosTree({ workspaceId, arvore }: { workspaceId: string; arv
                 <ChevronRight className={cn("size-3.5 shrink-0 transition-transform", aberto && "rotate-90")} />
                 <span className="truncate text-left">{projeto.name.replace(/^projeto\s+/i, "")}</span>
               </button>
+              {podeRenomear && <RenameProjetoDialog workspaceId={workspaceId} projetoId={projeto.id} nomeAtual={projeto.name} />}
               <CreateObraDialog workspaceId={workspaceId} projetoId={projeto.id} trigger={<NovaObraIconTrigger />} />
             </div>
             {aberto && (
@@ -109,6 +120,9 @@ export function ProjetosTree({ workspaceId, arvore }: { workspaceId: string; arv
                           <ChevronRight className={cn("size-3.5 shrink-0 transition-transform", obraAberta && "rotate-90")} />
                           <span className="truncate text-left">{obra.name}</span>
                         </button>
+                        {podeRenomear && (
+                          <RenameObraDialog workspaceId={workspaceId} projetoId={obra.projetoId} obraId={obra.id} nomeAtual={obra.name} />
+                        )}
                         <Link
                           href={`${obraBase}/membros`}
                           title="Membros da obra"

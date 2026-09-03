@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
 import { auth } from "@/auth";
 import { ApiError } from "@/lib/errors";
-import { projetoCreateSchema } from "@/lib/validators";
-import { createProjeto, softDeleteProjeto } from "@/services/projetoService";
+import { projetoCreateSchema, projetoUpdateSchema } from "@/lib/validators";
+import { createProjeto, softDeleteProjeto, updateProjeto } from "@/services/projetoService";
 import { requireWorkspaceRole } from "@/services/permissions";
 
 export type ActionState = { status: "idle" } | { status: "error"; error: string } | { status: "success" };
@@ -42,6 +42,27 @@ export async function createProjetoAction(_prevState: ActionState, formData: For
   }
 
   revalidatePath(`/workspaces/${workspaceId}/projetos`);
+  return { status: "success" };
+}
+
+export async function renameProjetoAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const projetoId = String(formData.get("projetoId") ?? "");
+
+  try {
+    await requireWorkspaceRole(session.user.id, workspaceId, ["administrador", "coordenador"]);
+    const input = projetoUpdateSchema.parse({ name: formData.get("name") });
+    await updateProjeto(workspaceId, projetoId, input);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };
+    throw err;
+  }
+
+  revalidatePath(`/workspaces/${workspaceId}`, "layout");
   return { status: "success" };
 }
 

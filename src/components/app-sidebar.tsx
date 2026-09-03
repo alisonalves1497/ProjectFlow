@@ -228,7 +228,7 @@ export function AppSidebar({
                 </div>
                 {!colapsados.has("Projetos") && (
                   <div className="mt-1">
-                    <ProjetosTree workspaceId={workspaceId} arvore={arvore} />
+                    <ProjetosTree workspaceId={workspaceId} arvore={arvore} podeRenomear={podeGerenciarProjetos} />
                   </div>
                 )}
                 <CreateProjetoDialog workspaceId={workspaceId} open={novoProjetoOpen} onOpenChange={setNovoProjetoOpen} />

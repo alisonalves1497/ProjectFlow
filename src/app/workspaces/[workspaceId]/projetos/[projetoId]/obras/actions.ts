@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
 import { auth } from "@/auth";
 import { ApiError } from "@/lib/errors";
-import { obraCreateSchema, obraMemberAddSchema } from "@/lib/validators";
-import { addObraMember, createObra, removeObraMember, softDeleteObra } from "@/services/obraService";
+import { obraCreateSchema, obraMemberAddSchema, obraUpdateSchema } from "@/lib/validators";
+import { addObraMember, createObra, removeObraMember, softDeleteObra, updateObra } from "@/services/obraService";
 import { requireWorkspaceRole, requireObraAccess } from "@/services/permissions";
 
 export type ActionState = { status: "idle" } | { status: "error"; error: string } | { status: "success" };
@@ -43,6 +43,29 @@ export async function createObraAction(_prevState: ActionState, formData: FormDa
   }
 
   revalidatePath(`/workspaces/${workspaceId}/projetos/${projetoId}`);
+  return { status: "success" };
+}
+
+export async function renameObraAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const projetoId = String(formData.get("projetoId") ?? "");
+  const obraId = String(formData.get("obraId") ?? "");
+
+  try {
+    await requireWorkspaceRole(session.user.id, workspaceId, ["administrador", "coordenador"]);
+    await requireObraAccess(session.user.id, workspaceId, obraId);
+    const input = obraUpdateSchema.parse({ name: formData.get("name") });
+    await updateObra(workspaceId, obraId, input);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };
+    throw err;
+  }
+
+  revalidatePath(`/workspaces/${workspaceId}`, "layout");
   return { status: "success" };
 }
 
