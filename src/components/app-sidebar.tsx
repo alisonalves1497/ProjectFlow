@@ -22,6 +22,7 @@ import {
   Plus,
   LogOut,
   Trash2,
+  FileSpreadsheet,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -100,7 +101,10 @@ export function AppSidebar({
         { href: `${wsBase}/contatos`, label: "Contatos", icon: Users },
         { href: `${wsBase}/membros`, label: "Membros e permissões", icon: UserCog },
         ...(role === "administrador" || role === "coordenador"
-          ? [{ href: `${wsBase}/lixeira`, label: "Lixeira", icon: Trash2 }]
+          ? [
+              { href: `${wsBase}/importar`, label: "Importar planilha", icon: FileSpreadsheet },
+              { href: `${wsBase}/lixeira`, label: "Lixeira", icon: Trash2 },
+            ]
           : []),
       ],
     },
