@@ -52,7 +52,7 @@ export function EditDocumentoDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button type="button" variant="outline" size="sm">
+          <Button type="button" variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
             <Pencil className="size-3.5" />
             Editar
           </Button>

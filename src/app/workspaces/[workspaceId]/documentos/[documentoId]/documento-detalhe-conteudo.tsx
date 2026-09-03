@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { getDocumentoOrThrow } from "@/services/documentoService";
 import { getObraOrThrow, listObraAccessUsers } from "@/services/obraService";
 import { listRevisoesComConferidoPorNome } from "@/services/revisaoService";
@@ -8,6 +9,7 @@ import { listAnexosPorRevisao } from "@/services/anexoService";
 import { listDisciplinas, listCategoriasConhecimento, listDisciplinasComSecoesPorObra } from "@/services/catalogoService";
 import { nextRevisionSpec, tipoDaRevisao, validNextStatuses, type StatusDocumento } from "@/lib/statusGraph";
 import { StatusBadge } from "@/components/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InformacoesGerais } from "./informacoes-gerais";
 import { EditDocumentoDialog } from "./edit-documento-dialog";
@@ -60,14 +62,30 @@ export async function DocumentoDetalheConteudo({ workspaceId, documentoId }: { w
   const disciplinaNome = disciplinas.find((d) => d.id === documento.disciplinaId)?.name ?? "—";
   const responsavelNome = obraUsers.find((u) => u.userId === documento.responsavelId)?.name ?? null;
   const secoesDaDisciplina = disciplinasComSecoes.find((d) => d.disciplinaId === documento.disciplinaId)?.secoes ?? [];
+  const secaoNome = secoesDaDisciplina.find((s) => s.id === documento.secaoId)?.name ?? "—";
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <h1 className="font-mono text-xl font-semibold">{documento.codigoCompleto}</h1>
-          <StatusBadge status={documento.status as StatusDocumento} />
-        </div>
+      <div className="mb-1.5 flex items-center gap-1.5 text-sm text-muted-foreground">
+        <Link
+          href={`/workspaces/${workspaceId}/projetos/${obra.projetoId}/obras/${documento.obraId}`}
+          className="hover:text-foreground hover:underline"
+        >
+          {obra.name}
+        </Link>
+        <ChevronRight className="size-3.5 shrink-0" />
+        <span>{disciplinaNome}</span>
+        <ChevronRight className="size-3.5 shrink-0" />
+        <span className="font-mono">{documento.codigoCompleto}</span>
+      </div>
+
+      <div className="mb-3 flex items-center gap-2">
+        <Badge variant="outline">{secaoNome}</Badge>
+        <StatusBadge status={documento.status as StatusDocumento} />
+      </div>
+
+      <div className="mb-2 flex items-center gap-3">
+        <h1 className="font-mono text-xl font-bold">{documento.codigoCompleto}</h1>
         <EditDocumentoDialog
           workspaceId={workspaceId}
           documentoId={documentoId}
@@ -81,7 +99,7 @@ export async function DocumentoDetalheConteudo({ workspaceId, documentoId }: { w
           obraUsers={obraUsers.map((u) => ({ userId: u.userId, name: u.name ?? u.email }))}
         />
       </div>
-      <p className="mb-6 text-muted-foreground">{documento.descricao}</p>
+      <p className="mb-6 text-foreground">{documento.descricao}</p>
 
       <div className="mb-8">
         <InformacoesGerais
