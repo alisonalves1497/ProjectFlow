@@ -20,27 +20,66 @@ pessoal, o Hobby serve bem.
 ## Passo a passo
 
 ### 1. Criar o banco (Neon)
-1. Crie uma conta em neon.tech (dá pra usar login do GitHub).
-2. Crie um projeto novo. Copie a **connection string com pooling** (a que tem `-pooler`
-   no nome do host) — é a que funciona bem com funções serverless da Vercel.
+1. Acesse **neon.tech** e clique em "Sign up". Mais rápido: entrar com a conta do GitHub
+   (mesma conta usada pra `alisonalves1497`) — não pede cartão em nenhum momento.
+2. Depois do login, ele já te pede pra criar o primeiro projeto:
+   - **Project name**: `projectflow` (ou o nome que quiser, é só um rótulo)
+   - **Postgres version**: pode deixar a padrão (mais recente)
+   - **Region**: escolha a mais próxima do Brasil (ex: `US East` costuma ser a com
+     menor latência disponível no free tier; não tem região São Paulo no free tier)
+   - Clique em "Create project"
+3. Ele te leva direto pro painel do projeto com um card **"Connection string"**.
+   Tem um dropdown ali — troque de "Direct connection" pra **"Pooled connection"**
+   (às vezes já vem selecionado). O host da URL vai ter `-pooler` no meio, tipo:
+   `postgresql://usuario:senha@ep-xxxx-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require`
+4. Clique no ícone de copiar ao lado da string. **Essa é a `DATABASE_URL`** — guarda
+   ela (cole num bloco de notas por enquanto, ou já me manda quando eu pedir).
+5. Pronto, não precisa criar tabela nem nada manualmente — isso é feito no passo 6
+   (rodando as migrations).
 
 ### 2. Criar o bucket de arquivos (Cloudflare R2)
-1. Crie uma conta em dash.cloudflare.com.
-2. Vá em R2 → Create bucket (nome sugerido: `projectflow-fotos`).
-3. Em "Manage R2 API Tokens", crie um token com permissão de leitura/escrita nesse bucket.
-   Anote: **Account ID**, **Access Key ID**, **Secret Access Key**.
-4. O endpoint S3 do R2 é `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`.
+1. Acesse **dash.cloudflare.com** e crie a conta (email + senha, ou Google/GitHub).
+   Confirma o email se ele pedir.
+2. No menu lateral esquerdo do painel, procure **"R2 Object Storage"** (às vezes
+   aparece direto, às vezes dentro de "R2" no menu). Na primeira vez, ele pode pedir
+   pra "ativar" o R2 na conta — aceite (ainda é free tier, sem cartão).
+3. Clique em **"Create bucket"**:
+   - **Bucket name**: `projectflow-fotos`
+   - **Location**: pode deixar "Automatic"
+   - Clique em "Create bucket"
+4. Agora as chaves de acesso. No menu do R2, procure **"Manage R2 API Tokens"**
+   (ou "API" → "Manage API Tokens" dependendo do layout atual do painel).
+5. Clique em **"Create API Token"**:
+   - **Token name**: `projectflow-prod`
+   - **Permissions**: "Object Read & Write"
+   - Em "Specify bucket(s)" (se aparecer essa opção), restrinja ao bucket
+     `projectflow-fotos` — mais seguro que dar acesso a todos os buckets
+   - Clique em "Create API Token"
+6. Ele mostra **uma única vez**: `Access Key ID` e `Secret Access Key`. Copie os dois
+   pra algum lugar seguro AGORA — se fechar a tela sem copiar, precisa gerar outro token.
+7. Na mesma tela (ou voltando pro painel do R2), anote também o **Account ID** — aparece
+   no canto direito do painel do R2, ou na URL do painel
+   (`dash.cloudflare.com/<ACCOUNT_ID>/r2`). O endpoint S3 é montado assim:
+   `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`
 
 ### 3. Subir o código pro GitHub
-Ainda não tem repositório Git neste projeto — eu já rodei `git init` e ajustei o
-`.gitignore` (os dados locais de Postgres/MinIO nunca vão pro repo). Falta:
-1. Você cria um repositório vazio no GitHub (github.com/new).
-2. Me diz a URL dele que eu faço o primeiro commit e o push.
+✅ Já feito — o código está em github.com/alisonalves1497/ProjectFlow.
 
 ### 4. Conectar o repositório na Vercel
-1. Crie uma conta em vercel.com (dá pra usar login do GitHub).
-2. "Add New… → Project" → selecione o repositório.
-3. A Vercel detecta Next.js automaticamente — não precisa mudar build command nem output.
+1. Acesse **vercel.com** e clique em "Sign Up" → **"Continue with GitHub"** (usa a
+   mesma conta do GitHub onde está o repositório — assim ele já enxerga o repo
+   automaticamente, sem precisar autorizar nada extra depois).
+2. No dashboard da Vercel, clique em **"Add New…"** (canto superior direito) →
+   **"Project"**.
+3. Na lista de repositórios do GitHub, ache **"ProjectFlow"** e clique em **"Import"**.
+   - Se não aparecer na lista, clique em "Adjust GitHub App Permissions" e dê acesso
+     ao repositório (ou a todos os repositórios da conta).
+4. Na tela de configuração do projeto:
+   - **Framework Preset**: já vem "Next.js" detectado sozinho — não mexe.
+   - **Build and Output Settings**: não mexe em nada.
+   - **Root Directory**: deixa `./` (a raiz)
+5. **Não clique em "Deploy" ainda** — antes, expanda **"Environment Variables"**
+   (mesma tela) e cole as variáveis do passo 5 abaixo. Só depois clique em **"Deploy"**.
 
 ### 5. Variáveis de ambiente (configurar na Vercel, aba Environment Variables)
 

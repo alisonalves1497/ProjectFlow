@@ -5,7 +5,20 @@ import { newId } from "@/lib/id";
 import { conflict, notFound, ApiError } from "@/lib/errors";
 import type { WorkspaceRole } from "./permissions";
 
+// Sistema é single-tenant por decisão de produto: só existe UM workspace no ar. O
+// primeiro usuário a logar cria esse único workspace; depois disso, ninguém mais
+// consegue criar outro (nem contornando a UI — a checagem é aqui, não só escondendo
+// o botão).
+export async function existeAlgumWorkspace(): Promise<boolean> {
+  const [row] = await db.select({ id: workspaces.id }).from(workspaces).limit(1);
+  return !!row;
+}
+
 export async function createWorkspace(ownerId: string, input: { name: string; slug: string }) {
+  if (await existeAlgumWorkspace()) {
+    throw conflict("WORKSPACE_JA_EXISTE", "Este sistema já tem um workspace — peça pra um administrador te adicionar como membro.");
+  }
+
   const [existing] = await db.select({ id: workspaces.id }).from(workspaces).where(eq(workspaces.slug, input.slug)).limit(1);
   if (existing) throw conflict("WORKSPACE_SLUG_TAKEN", "Já existe um workspace com este slug.");
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { listWorkspacesForUser } from "@/services/workspaceService";
+import { listWorkspacesForUser, existeAlgumWorkspace } from "@/services/workspaceService";
 import { WORKSPACE_ROLE_LABELS } from "@/services/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,10 @@ export default async function WorkspacesPage() {
 
   if (workspaces.length === 1) redirect(`/workspaces/${workspaces[0].id}`);
 
+  // Sistema é single-tenant: só cabe um "Novo workspace" no sistema inteiro, e só
+  // enquanto nenhum existir ainda.
+  const jaExisteWorkspace = workspaces.length > 0 || (await existeAlgumWorkspace());
+
   return (
     <div className="mx-auto max-w-3xl p-8">
       <div className="mb-6 flex items-center justify-between">
@@ -24,13 +28,17 @@ export default async function WorkspacesPage() {
           <p className="text-sm text-muted-foreground">{session.user.email}</p>
         </div>
         <div className="flex items-center gap-2">
-          <CreateWorkspaceDialog />
+          {!jaExisteWorkspace && <CreateWorkspaceDialog />}
           <SignOutButton />
         </div>
       </div>
 
       {workspaces.length === 0 ? (
-        <p className="text-muted-foreground">Você ainda não faz parte de nenhum workspace.</p>
+        <p className="text-muted-foreground">
+          {jaExisteWorkspace
+            ? "Você ainda não faz parte do workspace. Peça pra um administrador te adicionar como membro."
+            : "Nenhum workspace criado ainda — crie o primeiro acima."}
+        </p>
       ) : (
         <div className="grid gap-3">
           {workspaces.map((ws) => (
