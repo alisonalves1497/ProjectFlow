@@ -161,7 +161,6 @@ export function DocumentosLista({
         {colunasVisiveis.prazo && (
           <TableCell className="text-muted-foreground">
             {d.dataPrevista ? new Date(d.dataPrevista).toLocaleDateString("pt-BR") : "—"}
-            {d.reprogramado && <span className="ml-1 text-xs">(reprogramado)</span>}
           </TableCell>
         )}
         {colunasVisiveis.fluxo && (
@@ -207,7 +206,7 @@ export function DocumentosLista({
         className={cn(
           fechada
             ? "bg-emerald-50 hover:bg-emerald-50 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/30"
-            : "bg-muted/40 hover:bg-muted/40"
+            : "bg-blue-100 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-950/40"
         )}
       >
         <TableCell className="w-8">
@@ -227,10 +226,10 @@ export function DocumentosLista({
               type="button"
               onClick={() => onToggleSecao(g.secaoId)}
               className={cn(
-                "flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase",
+                "flex items-center gap-1.5 text-xs font-bold tracking-wide uppercase",
                 fechada
                   ? "text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
-                  : "text-muted-foreground hover:text-foreground"
+                  : "text-blue-900 hover:text-blue-950 dark:text-blue-300 dark:hover:text-blue-200"
               )}
             >
               <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", colapsada && "-rotate-90")} />
