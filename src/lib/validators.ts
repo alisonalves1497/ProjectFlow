@@ -27,6 +27,16 @@ export const workspaceMemberRoleUpdateSchema = z.object({
   role: workspaceRoleSchema,
 });
 
+export const passwordResetRequestSchema = z.object({
+  email: z.string().trim().email(),
+});
+
+export const passwordResetConfirmSchema = z.object({
+  email: z.string().trim().email(),
+  token: z.string().trim().min(1),
+  novaSenha: z.string().min(6, "A senha precisa ter pelo menos 6 caracteres."),
+});
+
 export const projetoCreateSchema = z.object({
   code: z.string().trim().min(1).max(20).regex(codeRegex, "code deve ser maiúsculo/numérico, ex: GNSE"),
   name: z.string().trim().min(1).max(200),
