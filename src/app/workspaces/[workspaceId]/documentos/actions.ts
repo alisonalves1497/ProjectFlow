@@ -13,6 +13,7 @@ import {
   documentoBulkMoverSchema,
   documentoBulkAtribuirSchema,
   documentoBulkReprogramarSchema,
+  secaoRenameSchema,
 } from "@/lib/validators";
 import {
   createDocumento,
@@ -26,7 +27,8 @@ import { createRevisao, transitionRevisaoStatus, toggleConferido, setArquivoRevi
 import { createComentario } from "@/services/comentarioService";
 import { toggleFavorito } from "@/services/favoritoService";
 import { createAnexoRevisao, deleteAnexo } from "@/services/anexoService";
-import { requireObraAccess } from "@/services/permissions";
+import { renomearSecao } from "@/services/catalogoService";
+import { requireObraAccess, requireWorkspaceRole } from "@/services/permissions";
 
 export type ActionState = { status: "idle" } | { status: "error"; error: string } | { status: "success" };
 
@@ -142,6 +144,32 @@ export async function bulkReprogramarAction(_prevState: ActionState, formData: F
       dataReprogramada: formData.get("dataReprogramada"),
     });
     await bulkReprogramar(workspaceId, obraId, input.documentoIds, input.dataReprogramada);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };
+    throw err;
+  }
+
+  revalidatePath(obraDocumentosPath(workspaceId, projetoId, obraId));
+  return { status: "success" };
+}
+
+export async function renomearSecaoAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const projetoId = String(formData.get("projetoId") ?? "");
+  const obraId = String(formData.get("obraId") ?? "");
+  const secaoId = String(formData.get("secaoId") ?? "");
+
+  try {
+    // Mesmo nível de permissão do renomear Projeto/Obra — a Seção é catálogo compartilhado
+    // por todos os documentos dela, não é um ajuste cosmético de um documento só.
+    await requireWorkspaceRole(session.user.id, workspaceId, ["administrador", "coordenador"]);
+    await requireObraAccess(session.user.id, workspaceId, obraId);
+    const input = secaoRenameSchema.parse({ name: formData.get("name") });
+    await renomearSecao(obraId, secaoId, input.name);
   } catch (err) {
     if (err instanceof ApiError) return { status: "error", error: err.message };
     if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };

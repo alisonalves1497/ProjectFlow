@@ -115,6 +115,10 @@ export const documentoAgrupadoQuerySchema = z.object({
   comRetrabalho: z.boolean().optional(),
 });
 
+export const secaoRenameSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+});
+
 export const documentoBulkMoverSchema = z.object({
   documentoIds: z.array(z.string().trim().min(1)).min(1, "Selecione pelo menos um documento."),
   secaoId: z.string().trim().min(1),

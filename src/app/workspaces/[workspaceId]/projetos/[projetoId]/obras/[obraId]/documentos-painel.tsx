@@ -42,6 +42,7 @@ export function DocumentosPainel({
   toggleAgrupadoHref,
   filtroAtivo,
   contadoresToggles,
+  podeGerenciar,
 }: {
   workspaceId: string;
   projetoId: string;
@@ -65,6 +66,7 @@ export function DocumentosPainel({
   toggleAgrupadoHref: string;
   filtroAtivo: boolean;
   contadoresToggles: { somenteEmAtraso: number; recentes: number; comRetrabalho: number; favoritos: number; paraObra: number };
+  podeGerenciar: boolean;
 }) {
   const [colunasVisiveis, setColunasVisiveis] = useState(COLUNAS_PADRAO);
   const [secoesColapsadas, setSecoesColapsadas] = useState<Set<string>>(new Set());
@@ -169,6 +171,7 @@ export function DocumentosPainel({
         secoesColapsadas={secoesColapsadas}
         onToggleSecao={toggleSecao}
         filtroAtivo={filtroAtivo}
+        podeGerenciar={podeGerenciar}
       />
     </>
   );

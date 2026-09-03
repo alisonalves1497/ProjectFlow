@@ -175,6 +175,7 @@ export default async function ObraDocumentosPage({ params, searchParams }: Param
         toggleAgrupadoHref={`?${toggleAgrupadoParams.toString()}`}
         filtroAtivo={filtroAtivo}
         contadoresToggles={contadoresToggles}
+        podeGerenciar={canManage}
       />
     </div>
   );

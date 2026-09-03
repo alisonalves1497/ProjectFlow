@@ -1,6 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { disciplinas, fases, tiposDocumento, obraDisciplinas, secoes, categoriasConhecimento } from "@/db/schema";
+import { notFound } from "@/lib/errors";
 
 export async function listFases(workspaceId: string) {
   return db.select().from(fases).where(eq(fases.workspaceId, workspaceId));
@@ -48,4 +49,20 @@ export async function listDisciplinasComSecoesPorObra(obraId: string) {
     }
   }
   return Array.from(map.values());
+}
+
+// Renomeia uma Seção — o título ("Civil - Sondagem") é Disciplina + Seção, mas só o nome
+// da Seção é armazenado editável aqui (a Disciplina é fixa pela ligação obra_disciplinas).
+// `obraId` escopa a checagem pra não deixar editar seção de outra obra via id adivinhado.
+export async function renomearSecao(obraId: string, secaoId: string, name: string) {
+  const [secao] = await db
+    .select({ id: secoes.id })
+    .from(secoes)
+    .innerJoin(obraDisciplinas, eq(obraDisciplinas.id, secoes.obraDisciplinaId))
+    .where(and(eq(secoes.id, secaoId), eq(obraDisciplinas.obraId, obraId)))
+    .limit(1);
+  if (!secao) throw notFound("SECAO_NOT_FOUND", "Seção não encontrada nesta obra.");
+
+  const [updated] = await db.update(secoes).set({ name, updatedAt: new Date() }).where(eq(secoes.id, secaoId)).returning();
+  return updated;
 }

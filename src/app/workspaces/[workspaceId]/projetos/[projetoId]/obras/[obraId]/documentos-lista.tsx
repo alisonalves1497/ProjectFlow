@@ -22,6 +22,7 @@ import type { StatusDocumento } from "@/lib/statusGraph";
 import type { GrupoSecaoDocumentos } from "@/services/documentoService";
 import { FavoritoButton } from "./favorito-button";
 import { CreateGrdDialog } from "../../../../grds/create-grd-dialog";
+import { RenameSecaoDialog } from "./rename-secao-dialog";
 import { bulkMoverSecaoAction, bulkAtribuirAction, bulkReprogramarAction, type ActionState } from "../../../../documentos/actions";
 
 const initialActionState: ActionState = { status: "idle" };
@@ -76,6 +77,7 @@ export function DocumentosLista({
   secoesColapsadas,
   onToggleSecao,
   filtroAtivo,
+  podeGerenciar,
 }: {
   workspaceId: string;
   projetoId: string;
@@ -90,6 +92,7 @@ export function DocumentosLista({
   secoesColapsadas: Set<string>;
   onToggleSecao: (secaoId: string) => void;
   filtroAtivo: boolean;
+  podeGerenciar: boolean;
 }) {
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [moverOpen, setMoverOpen] = useState(false);
@@ -235,7 +238,18 @@ export function DocumentosLista({
               <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", colapsada && "-rotate-90")} />
               {g.disciplinaName} - {g.secaoName}
             </button>
-            <ResumoSecao total={g.total} concluidos={g.concluidos} percentual={g.percentualConcluido} />
+            <div className="flex items-center gap-2">
+              {podeGerenciar && (
+                <RenameSecaoDialog
+                  workspaceId={workspaceId}
+                  projetoId={projetoId}
+                  obraId={obraId}
+                  secaoId={g.secaoId}
+                  nomeAtual={g.secaoName}
+                />
+              )}
+              <ResumoSecao total={g.total} concluidos={g.concluidos} percentual={g.percentualConcluido} />
+            </div>
           </div>
         </TableCell>
       </TableRow>
