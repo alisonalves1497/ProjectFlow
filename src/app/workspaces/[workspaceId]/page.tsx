@@ -5,13 +5,32 @@ import { getPainelData } from "@/services/painelService";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
-import { FileText, AlertTriangle, Clock, Lightbulb, CalendarDays, ListTodo, Activity, Search, Bell } from "lucide-react";
+import { FileText, AlertTriangle, Clock, Lightbulb, CalendarDays, ListTodo, Activity } from "lucide-react";
 import { EVENTO_LABELS } from "@/lib/timelineLabels";
 
 type Params = { params: Promise<{ workspaceId: string }> };
 
-const FRASE_DO_DIA = "Documentação em dia é obra sem retrabalho.";
 const LIMITE_PENDENCIAS_PAINEL = 8;
+
+// Gira uma por dia (mesma pra todo mundo, mesma o dia inteiro) — não é aleatório a cada
+// carregamento, senão "frase do dia" vira "frase a cada F5".
+const FRASES_DO_DIA = [
+  "Documentação em dia é obra sem retrabalho.",
+  "Revisão bem feita hoje é problema que não aparece na obra amanhã.",
+  "Documento sem dono é documento que não anda.",
+  "Prazo cumprido começa com status atualizado.",
+  "Um RFI respondido rápido custa menos que um retrabalho.",
+  "Padronizar a nomenclatura hoje poupa uma busca amanhã.",
+  "Registro fotográfico é memória que não falha.",
+  "Cópia controlada desatualizada é risco, não detalhe.",
+  "Comentário claro na revisão poupa reunião depois.",
+  "Cada seção organizada é tempo a menos procurando arquivo.",
+];
+
+function fraseDoDia(): string {
+  const diaDoAno = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86_400_000);
+  return FRASES_DO_DIA[diaDoAno % FRASES_DO_DIA.length];
+}
 
 function saudacao(): string {
   const hora = new Date().getHours();
@@ -31,25 +50,17 @@ export default async function PainelPage({ params }: Params) {
 
   return (
     <div className="p-8">
-      <div className="mb-1 flex items-start justify-between">
+      <div className="mb-1">
         <h1 className="text-2xl font-semibold">
           {saudacao()}, {primeiroNome}!
         </h1>
-        <div className="flex items-center gap-3 text-primary/60">
-          <Link href={`/workspaces/${workspaceId}/busca`} title="Buscar" className="hover:text-primary">
-            <Search className="size-5" />
-          </Link>
-          <Link href={`/workspaces/${workspaceId}/atividade`} title="Atividade recente" className="hover:text-primary">
-            <Bell className="size-5" />
-          </Link>
-        </div>
       </div>
 
       <div className="mb-6 flex items-start gap-2 rounded-lg border border-primary/10 bg-primary/5 p-3">
         <Lightbulb className="mt-0.5 size-4 shrink-0 text-primary" />
         <div>
           <p className="text-xs font-medium tracking-wide text-primary uppercase">Frase do dia</p>
-          <p className="text-sm text-muted-foreground">{FRASE_DO_DIA}</p>
+          <p className="text-sm text-muted-foreground">{fraseDoDia()}</p>
         </div>
       </div>
 
@@ -167,7 +178,10 @@ export default async function PainelPage({ params }: Params) {
           </Card>
         </div>
 
-        <Card>
+        {/* self-start: sem isso o grid estica o card pra altura da coluna da esquerda
+            (Minhas pendências + Programação da semana somadas), deixando um vazio enorme
+            embaixo da lista curta de atividade — assim ele só ocupa o que o conteúdo pede. */}
+        <Card className="self-start">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Activity className="size-4 text-primary" />
