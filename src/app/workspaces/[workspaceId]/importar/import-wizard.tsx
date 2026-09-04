@@ -27,18 +27,6 @@ const CRIAR_NOVO = "__novo__";
 type LinhaEditavel = LinhaComSugestao & { incluir: boolean; disciplinaId: string };
 type GrupoEditavel = GrupoSecao & { tipoDocumentoId: string };
 
-function arquivoParaBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      resolve(result.split(",")[1] ?? "");
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 export function ImportWizard({
   workspaceId,
   projetos,
@@ -103,39 +91,56 @@ export function ImportWizard({
 
   async function handleArquivoSelecionado(file: File) {
     setArquivo(file);
+    setAbas([]);
+    setSheetName("");
     setPending(true);
-    const base64 = await arquivoParaBase64(file);
-    const res = await listarAbasAction(workspaceId, base64);
-    setPending(false);
-    if (!res.ok) {
-      toast.error(res.error);
-      return;
+    try {
+      const formData = new FormData();
+      formData.set("workspaceId", workspaceId);
+      formData.set("arquivo", file);
+      const res = await listarAbasAction(formData);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      setAbas(res.data);
+      setSheetName(res.data[0] ?? "");
+    } catch {
+      toast.error("Não consegui ler esse arquivo. Tente selecionar de novo.");
+    } finally {
+      setPending(false);
     }
-    setAbas(res.data);
-    setSheetName(res.data[0] ?? "");
   }
 
   async function handleAnalisar() {
     if (!arquivo || !sheetName) return;
     setPending(true);
-    const base64 = await arquivoParaBase64(arquivo);
-    const res = await analisarPlanilhaAction(workspaceId, base64, sheetName);
-    setPending(false);
-    if (!res.ok) {
-      toast.error(res.error);
-      return;
+    try {
+      const formData = new FormData();
+      formData.set("workspaceId", workspaceId);
+      formData.set("arquivo", arquivo);
+      formData.set("sheetName", sheetName);
+      const res = await analisarPlanilhaAction(formData);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      setCatalogo(res.data.catalogo);
+      setFaseId(res.data.catalogo.fases[0]?.id ?? "");
+      setGrupos(res.data.grupos.map((g) => ({ ...g, tipoDocumentoId: g.tipoDocumentoIdSugerido ?? CRIAR_NOVO })));
+      setLinhas(
+        res.data.linhas.map((l) => ({
+          ...l,
+          incluir: true,
+          disciplinaId: l.disciplinaIdSugerida ?? CRIAR_NOVO,
+        }))
+      );
+      setEtapa("revisao");
+    } catch {
+      toast.error("Não consegui analisar a planilha. Tente de novo.");
+    } finally {
+      setPending(false);
     }
-    setCatalogo(res.data.catalogo);
-    setFaseId(res.data.catalogo.fases[0]?.id ?? "");
-    setGrupos(res.data.grupos.map((g) => ({ ...g, tipoDocumentoId: g.tipoDocumentoIdSugerido ?? CRIAR_NOVO })));
-    setLinhas(
-      res.data.linhas.map((l) => ({
-        ...l,
-        incluir: true,
-        disciplinaId: l.disciplinaIdSugerida ?? CRIAR_NOVO,
-      }))
-    );
-    setEtapa("revisao");
   }
 
   function atualizarLinha(idx: number, patch: Partial<LinhaEditavel>) {
@@ -304,7 +309,7 @@ export function ImportWizard({
           <div className="rounded-lg border p-3">
             <p className="mb-1 text-sm font-medium">Seções da planilha → Tipo de documento</p>
             <p className="mb-3 text-xs text-muted-foreground">
-              Cada seção numerada do Excel (ex: "1.1 Investigação do Solo...") vira um Tipo de documento — reaproveita um já existente
+              Cada seção numerada do Excel (ex: &quot;1.1 Investigação do Solo...&quot;) vira um Tipo de documento — reaproveita um já existente
               ou cria um novo com esse nome. {gruposNovos > 0 && `${gruposNovos} vão criar Tipo novo.`}
             </p>
             <div className="space-y-2">

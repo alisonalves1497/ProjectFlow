@@ -24,10 +24,22 @@ async function exigirGestor(workspaceId: string, obraId?: string) {
   return session.user.id;
 }
 
-export async function listarAbasGedAction(workspaceId: string, arquivoBase64: string): Promise<Resultado<string[]>> {
+// O arquivo vem dentro de um FormData (campo "arquivo", um File de verdade) em vez de uma
+// string base64 solta como argumento — Server Action com string muito longa esbarra num
+// limite de segurança do React ("Maximum array nesting exceeded", a partir de ~1-2MB de
+// string), independente do bodySizeLimit configurado. FormData com File é o jeito nativo
+// do Next pra isso: manda os bytes direto, sem inflar 33% em base64 nem cair nesse limite.
+async function arquivoDoFormData(formData: FormData): Promise<Buffer> {
+  const arquivo = formData.get("arquivo");
+  if (!(arquivo instanceof File)) throw new ApiError(400, "ARQUIVO_AUSENTE", "Nenhum arquivo enviado.");
+  return Buffer.from(await arquivo.arrayBuffer());
+}
+
+export async function listarAbasGedAction(formData: FormData): Promise<Resultado<string[]>> {
   try {
+    const workspaceId = String(formData.get("workspaceId") ?? "");
     await exigirGestor(workspaceId);
-    const buffer = Buffer.from(arquivoBase64, "base64");
+    const buffer = await arquivoDoFormData(formData);
     const abas = await listarAbasPlanilhaGed(buffer);
     return { ok: true, data: abas };
   } catch (err) {
@@ -36,16 +48,14 @@ export async function listarAbasGedAction(workspaceId: string, arquivoBase64: st
   }
 }
 
-export async function analisarPlanilhaGedAction(
-  workspaceId: string,
-  obraId: string,
-  disciplinaId: string,
-  arquivoBase64: string,
-  sheetName: string
-) {
+export async function analisarPlanilhaGedAction(formData: FormData) {
   try {
+    const workspaceId = String(formData.get("workspaceId") ?? "");
+    const obraId = String(formData.get("obraId") ?? "");
+    const disciplinaId = String(formData.get("disciplinaId") ?? "");
+    const sheetName = String(formData.get("sheetName") ?? "");
     await exigirGestor(workspaceId, obraId);
-    const buffer = Buffer.from(arquivoBase64, "base64");
+    const buffer = await arquivoDoFormData(formData);
     const linhas = await parseLinhasGed(buffer, sheetName);
     const analisadas = await analisarLinhasGed(workspaceId, obraId, disciplinaId, linhas);
     const disciplinas = await listDisciplinasComSecoesPorObra(obraId);

@@ -34,18 +34,6 @@ type LinhaAnalisada = {
 
 type LinhaEditavel = LinhaAnalisada & { secaoId: string; status: StatusDocumento | ""; criar: boolean };
 
-function arquivoParaBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      resolve(result.split(",")[1] ?? "");
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 export function SincronizarGedWizard({
   workspaceId,
   obraOpcoes,
@@ -84,14 +72,18 @@ export function SincronizarGedWizard({
     if (!file) return;
     setPending(true);
     try {
-      const base64 = await arquivoParaBase64(file);
-      const res = await listarAbasGedAction(workspaceId, base64);
+      const formData = new FormData();
+      formData.set("workspaceId", workspaceId);
+      formData.set("arquivo", file);
+      const res = await listarAbasGedAction(formData);
       if (!res.ok) {
         toast.error(res.error);
         return;
       }
       setAbas(res.data);
       setSheetName(res.data[0] ?? "");
+    } catch {
+      toast.error("Não consegui ler esse arquivo. Tente selecionar de novo.");
     } finally {
       setPending(false);
     }
@@ -104,8 +96,13 @@ export function SincronizarGedWizard({
     }
     setPending(true);
     try {
-      const base64 = await arquivoParaBase64(arquivo);
-      const res = await analisarPlanilhaGedAction(workspaceId, obraId, disciplinaId, base64, sheetName);
+      const formData = new FormData();
+      formData.set("workspaceId", workspaceId);
+      formData.set("obraId", obraId);
+      formData.set("disciplinaId", disciplinaId);
+      formData.set("arquivo", arquivo);
+      formData.set("sheetName", sheetName);
+      const res = await analisarPlanilhaGedAction(formData);
       if (!res.ok) {
         toast.error(res.error);
         return;
@@ -125,6 +122,8 @@ export function SincronizarGedWizard({
         }))
       );
       setEtapa("revisao");
+    } catch {
+      toast.error("Não consegui analisar a planilha. Tente de novo.");
     } finally {
       setPending(false);
     }

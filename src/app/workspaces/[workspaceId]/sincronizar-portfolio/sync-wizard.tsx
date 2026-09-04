@@ -51,24 +51,11 @@ type LinhaAnalisada = {
 
 type Resultado = { atualizados: string[]; criados: string[]; ignorados: { codigo: string; motivo: string }[] };
 
-function arquivoParaBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      resolve(result.split(",")[1] ?? "");
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: string }) {
   const [etapa, setEtapa] = useState<Etapa>("config");
   const [pending, setPending] = useState(false);
 
   const [arquivo, setArquivo] = useState<File | null>(null);
-  const [arquivoBase64, setArquivoBase64] = useState("");
   const [abas, setAbas] = useState<string[]>([]);
   const [sheetName, setSheetName] = useState("");
   const [erroArquivo, setErroArquivo] = useState<string | null>(null);
@@ -99,13 +86,14 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
     setArquivo(file);
     setAbas([]);
     setSheetName("");
-    setArquivoBase64("");
     setErroArquivo(null);
     if (!file) return;
     setPending(true);
     try {
-      const base64 = await arquivoParaBase64(file);
-      const res = await listarAbasPortfolioAction(workspaceId, base64);
+      const formData = new FormData();
+      formData.set("workspaceId", workspaceId);
+      formData.set("arquivo", file);
+      const res = await listarAbasPortfolioAction(formData);
       if (minhaSelecao !== selecaoAtual.current) return; // trocou de arquivo enquanto lia — descarta
 
       if (!res.ok) {
@@ -116,7 +104,6 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
         setErroArquivo("Não encontrei nenhuma aba nesse arquivo.");
         return;
       }
-      setArquivoBase64(base64);
       setAbas(res.data);
       setSheetName(res.data[0] ?? "");
     } catch {
@@ -127,13 +114,17 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
   }
 
   async function irParaGrupos() {
-    if (!arquivoBase64 || !sheetName) {
+    if (!arquivo || !sheetName) {
       toast.error("Escolha o arquivo antes de continuar.");
       return;
     }
     setPending(true);
     try {
-      const res = await resumirPortfolioAction(workspaceId, arquivoBase64, sheetName);
+      const formData = new FormData();
+      formData.set("workspaceId", workspaceId);
+      formData.set("arquivo", arquivo);
+      formData.set("sheetName", sheetName);
+      const res = await resumirPortfolioAction(formData);
       if (!res.ok) {
         toast.error(res.error);
         return;
@@ -164,12 +155,21 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
       toast.error("Selecione pelo menos uma combinação Contrato/Sistema.");
       return;
     }
+    if (!arquivo) {
+      toast.error("Arquivo perdido — volte e selecione de novo.");
+      return;
+    }
     setPending(true);
     try {
       const gruposParaEnviar = grupos
         .filter((g) => gruposSelecionados.has(chaveGrupo(g.contrato, g.sistema)))
         .map((g) => ({ contrato: g.contrato, sistema: g.sistema }));
-      const res = await analisarPortfolioAction(workspaceId, arquivoBase64, sheetName, gruposParaEnviar);
+      const formData = new FormData();
+      formData.set("workspaceId", workspaceId);
+      formData.set("arquivo", arquivo);
+      formData.set("sheetName", sheetName);
+      formData.set("gruposSelecionados", JSON.stringify(gruposParaEnviar));
+      const res = await analisarPortfolioAction(formData);
       if (!res.ok) {
         toast.error(res.error);
         return;
@@ -289,7 +289,6 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
   function reiniciar() {
     setEtapa("config");
     setArquivo(null);
-    setArquivoBase64("");
     setAbas([]);
     setSheetName("");
     setErroArquivo(null);
@@ -670,7 +669,7 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
             </div>
           )}
 
-          <Button type="button" onClick={irParaGrupos} disabled={pending || !arquivoBase64} className="w-full">
+          <Button type="button" onClick={irParaGrupos} disabled={pending || !arquivo || !sheetName} className="w-full">
             <RefreshCw className="size-4" />
             {pending ? "Lendo…" : "Analisar planilha"}
           </Button>
