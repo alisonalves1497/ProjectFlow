@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getPainelData } from "@/services/painelService";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { FileText, AlertTriangle, Clock, Lightbulb, CalendarDays, ListTodo, Activity } from "lucide-react";
@@ -67,9 +68,17 @@ export default async function PainelPage({ params }: Params) {
       <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Card size="sm">
           <CardHeader className="pb-1">
-            <CardDescription>Documentos ativos</CardDescription>
+            <div className="flex items-center gap-1.5">
+              <FileText className="size-4 text-primary" />
+              <CardTitle>Documentos ativos</CardTitle>
+            </div>
             <CardAction>
-              <FileText className="size-4 text-primary/50" />
+              <Tooltip>
+                <TooltipTrigger render={<button type="button" aria-label="O que é isso?" />}>
+                  <FileText className="size-4 text-primary/50" />
+                </TooltipTrigger>
+                <TooltipContent>Documentos que ainda não foram concluídos (não estão liberados nem cancelados).</TooltipContent>
+              </Tooltip>
             </CardAction>
           </CardHeader>
           <CardContent>
@@ -78,9 +87,17 @@ export default async function PainelPage({ params }: Params) {
         </Card>
         <Card size="sm">
           <CardHeader className="pb-1">
-            <CardDescription>Em atraso</CardDescription>
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="size-4 text-primary" />
+              <CardTitle>Em atraso</CardTitle>
+            </div>
             <CardAction>
-              <AlertTriangle className="size-4 text-primary/50" />
+              <Tooltip>
+                <TooltipTrigger render={<button type="button" aria-label="O que é isso?" />}>
+                  <AlertTriangle className="size-4 text-primary/50" />
+                </TooltipTrigger>
+                <TooltipContent>Documentos ativos cuja data prevista já passou.</TooltipContent>
+              </Tooltip>
             </CardAction>
           </CardHeader>
           <CardContent>
@@ -89,9 +106,20 @@ export default async function PainelPage({ params }: Params) {
         </Card>
         <Card size="sm">
           <CardHeader className="pb-1">
-            <CardDescription>Minhas pendências</CardDescription>
+            <div className="flex items-center gap-1.5">
+              <Clock className="size-4 text-primary" />
+              <CardTitle>Minhas pendências</CardTitle>
+            </div>
             <CardAction>
-              <Clock className="size-4 text-primary/50" />
+              <Tooltip>
+                <TooltipTrigger render={<button type="button" aria-label="O que é isso?" />}>
+                  <Clock className="size-4 text-primary/50" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  Documentos atribuídos a você que precisam de ação (Previsto, Em elaboração ou Devolvido para correção), mais
+                  cópias controladas suas que precisam ser substituídas.
+                </TooltipContent>
+              </Tooltip>
             </CardAction>
           </CardHeader>
           <CardContent>
