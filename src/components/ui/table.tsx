@@ -70,7 +70,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0",
+        "h-10 overflow-hidden px-2 text-left align-middle font-medium text-ellipsis whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0",
         className
       )}
       {...props}
@@ -82,8 +82,11 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return (
     <td
       data-slot="table-cell"
+      // overflow-hidden + text-ellipsis: sem isso, texto comprido (nome de responsável,
+      // descrição longa etc.) não quebra linha (whitespace-nowrap) e vaza visualmente por
+      // cima da célula vizinha em vez de cortar — table-fixed sozinho não impede isso.
       className={cn(
-        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0",
+        "overflow-hidden p-2 align-middle text-ellipsis whitespace-nowrap [&:has([role=checkbox])]:pr-0",
         className
       )}
       {...props}
