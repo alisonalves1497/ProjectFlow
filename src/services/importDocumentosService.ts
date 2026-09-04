@@ -26,6 +26,13 @@ function normalizar(s: string): string {
     .toUpperCase();
 }
 
+// Disciplina sempre com só a primeira letra maiúscula (ex: "CIVIL"/"civil" vindo da planilha
+// viram "Civil") — decisão de padronização, não é per-palavra tipo Title Case.
+function formatarNomeDisciplina(nome: string): string {
+  const limpo = nome.trim().toLowerCase();
+  return limpo.charAt(0).toUpperCase() + limpo.slice(1);
+}
+
 function celulaTexto(valor: unknown): string {
   if (valor == null) return "";
   return String(valor).trim();
@@ -145,7 +152,10 @@ export async function garantirDisciplina(workspaceId: string, nome: string): Pro
   if (match) return match.id;
 
   const code = gerarCodigoTipo(nome, new Set(existentes.map((d) => d.code)));
-  const [created] = await db.insert(disciplinas).values({ id: newId("disc"), workspaceId, code, name: nome }).returning();
+  const [created] = await db
+    .insert(disciplinas)
+    .values({ id: newId("disc"), workspaceId, code, name: formatarNomeDisciplina(nome) })
+    .returning();
   return created.id;
 }
 
