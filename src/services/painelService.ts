@@ -118,8 +118,11 @@ export async function getPainelData(workspaceId: string, userId: string): Promis
     .map((d) => ({ id: d.id, codigoCompleto: d.codigoCompleto, descricao: d.descricao, status: d.status, obraId: d.obraId }))
     .sort((a, b) => (PRIORIDADE_PENDENCIA[b.status] ?? 0) - (PRIORIDADE_PENDENCIA[a.status] ?? 0));
 
+  // Só do responsável logado — igual meusDocumentosPendentes, senão mostra a entrega de
+  // todo mundo na obra como se fosse "sua" (bug relatado: usuário sem nada atribuído via
+  // documento de outra pessoa aparecendo aqui).
   const programacaoSemana = ativos
-    .filter((d) => d.data !== null && d.data >= hoje && d.data <= em7Dias)
+    .filter((d) => d.responsavelId === userId && d.data !== null && d.data >= hoje && d.data <= em7Dias)
     .sort((a, b) => (a.data! < b.data! ? -1 : 1))
     .map((d) => ({ id: d.id, codigoCompleto: d.codigoCompleto, descricao: d.descricao, dataPrevista: d.data!, reprogramado: d.reprogramado, obraId: d.obraId }));
 
