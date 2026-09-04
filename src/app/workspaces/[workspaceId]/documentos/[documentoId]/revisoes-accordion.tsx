@@ -280,7 +280,12 @@ export function RevisoesAccordion({
       )}
 
       {revisoes.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhuma revisão criada ainda.</p>
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">Nenhuma revisão criada ainda.</p>
+          {/* Documento "Previsto" sem nenhuma revisão: esse é o único jeito de sair desse
+              estado (o Status não é editável direto, só muda junto com o ciclo de revisão). */}
+          {proximaRevisaoSpec && <CreateRevisaoButton workspaceId={workspaceId} documentoId={documentoId} spec={proximaRevisaoSpec} />}
+        </div>
       ) : (
         <div className="space-y-2">
           {revisoes.map((r) => (
