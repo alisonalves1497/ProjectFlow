@@ -205,6 +205,21 @@ export async function getDocumentoOrThrow(workspaceId: string, documentoId: stri
   return documento;
 }
 
+// Pedido explícito do time: trocar o Status direto, sem passar pelo fluxo de revisão
+// (isValidInPlaceTransition/nextRevisionSpec). Ao contrário de transitionRevisaoStatus,
+// NÃO cria/atualiza revisão nem grava evento na linha do tempo — só o campo em si muda.
+// Único requisito é o status ser um dos valores válidos do enum (não é "campo livre" de
+// texto); a checagem de QUEM pode fazer isso fica na action (administrador/coordenador).
+export async function setStatusDireto(workspaceId: string, documentoId: string, status: StatusDocumento) {
+  const [updated] = await db
+    .update(documentos)
+    .set({ status, statusUpdatedAt: new Date(), updatedAt: new Date() })
+    .where(and(eq(documentos.id, documentoId), eq(documentos.workspaceId, workspaceId), isNull(documentos.deletedAt)))
+    .returning();
+  if (!updated) throw notFound("DOCUMENTO_NOT_FOUND", "Documento não encontrado.");
+  return updated;
+}
+
 // Confirma que `secaoId` pertence à mesma obra+disciplina de `documentoId` — a Seção não
 // entra no código do documento, mas a Disciplina sim, então mudar de Disciplina via "mover"
 // deixaria o código incoerente com a nova seção. Lança se a seção pertencer a outra disciplina.

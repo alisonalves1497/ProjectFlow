@@ -15,6 +15,7 @@ import {
   documentoBulkReprogramarSchema,
   documentoBulkExcluirSchema,
   secaoRenameSchema,
+  setStatusDiretoSchema,
 } from "@/lib/validators";
 import {
   createDocumento,
@@ -24,6 +25,7 @@ import {
   bulkAtribuir,
   bulkReprogramar,
   bulkSoftDeleteDocumentos,
+  setStatusDireto,
 } from "@/services/documentoService";
 import { createRevisao, transitionRevisaoStatus, toggleConferido, setArquivoRevisao } from "@/services/revisaoService";
 import { createComentario } from "@/services/comentarioService";
@@ -249,6 +251,36 @@ export async function updateDocumentoAction(_prevState: ActionState, formData: F
     throw err;
   }
 
+  revalidatePath(`/workspaces/${workspaceId}/documentos/${documentoId}`);
+  return { status: "success" };
+}
+
+// Pedido explícito do time: trocar Status direto na tabela, sem passar pela revisão —
+// avisado que isso deixa o rótulo de revisão (A1/B0...), a linha do tempo e coisas como GRD
+// fora de sincronia com o status "de verdade" do documento, e mesmo assim optaram por isso.
+export async function setStatusDiretoAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const projetoId = String(formData.get("projetoId") ?? "");
+  const obraId = String(formData.get("obraId") ?? "");
+  const documentoId = String(formData.get("documentoId") ?? "");
+
+  try {
+    // Mesmo nível de permissão do Excluir em massa — trocar status ignorando o fluxo de
+    // revisão é uma ação sensível o bastante pra não deixar qualquer papel fazer.
+    await requireWorkspaceRole(session.user.id, workspaceId, ["administrador", "coordenador"]);
+    await requireObraAccess(session.user.id, workspaceId, obraId);
+    const input = setStatusDiretoSchema.parse({ status: formData.get("status") });
+    await setStatusDireto(workspaceId, documentoId, input.status);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    if (err instanceof ZodError) return { status: "error", error: "Status inválido." };
+    throw err;
+  }
+
+  revalidatePath(obraDocumentosPath(workspaceId, projetoId, obraId));
   revalidatePath(`/workspaces/${workspaceId}/documentos/${documentoId}`);
   return { status: "success" };
 }

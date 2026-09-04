@@ -16,9 +16,9 @@ import {
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/status-badge";
 import { FluxoIndicator } from "@/components/fluxo-indicator";
-import { BellRing, CircleCheck, ChevronDown } from "lucide-react";
+import { BellRing, CircleCheck, ChevronDown, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { StatusDocumento } from "@/lib/statusGraph";
+import { STATUS_LABELS, type StatusDocumento } from "@/lib/statusGraph";
 import type { GrupoSecaoDocumentos } from "@/services/documentoService";
 import { FavoritoButton } from "./favorito-button";
 import { CreateGrdDialog } from "../../../../grds/create-grd-dialog";
@@ -28,6 +28,7 @@ import {
   bulkAtribuirAction,
   bulkReprogramarAction,
   bulkExcluirAction,
+  setStatusDiretoAction,
   type ActionState,
 } from "../../../../documentos/actions";
 
@@ -62,6 +63,68 @@ function ResumoSecao({ total, concluidos, percentual }: { total: number; conclui
         {total} doc{total !== 1 ? "s" : ""}
       </span>
     </div>
+  );
+}
+
+const initialStatusActionState: ActionState = { status: "idle" };
+
+// Pedido explícito do time: trocar o Status direto na linha da tabela, sem passar pela
+// revisão. Só administrador/coordenador vê o lápis — pra quem não pode, é só o badge normal.
+function StatusCell({
+  workspaceId,
+  projetoId,
+  obraId,
+  documentoId,
+  status,
+  podeGerenciar,
+}: {
+  workspaceId: string;
+  projetoId: string;
+  obraId: string;
+  documentoId: string;
+  status: StatusDocumento;
+  podeGerenciar: boolean;
+}) {
+  const [editando, setEditando] = useState(false);
+  const [state, formAction, pending] = useActionState(setStatusDiretoAction, initialStatusActionState);
+  // Sem useEffect pra fechar: um sucesso encerra a edição derivando direto do estado da
+  // action (evita o "setState dentro de effect" só pra sincronizar duas coisas que já
+  // nascem juntas aqui — a próxima vez que abrir, `editando` volta a true e mostra de novo).
+  const mostrandoSelect = editando && state.status !== "success";
+
+  if (!podeGerenciar) return <StatusBadge status={status} />;
+
+  if (!mostrandoSelect) {
+    return (
+      <button type="button" onClick={() => setEditando(true)} className="group/status inline-flex items-center gap-1">
+        <StatusBadge status={status} />
+        <Pencil className="size-3 shrink-0 text-muted-foreground opacity-0 group-hover/status:opacity-100" />
+      </button>
+    );
+  }
+
+  return (
+    <form action={formAction}>
+      <input type="hidden" name="workspaceId" value={workspaceId} />
+      <input type="hidden" name="projetoId" value={projetoId} />
+      <input type="hidden" name="obraId" value={obraId} />
+      <input type="hidden" name="documentoId" value={documentoId} />
+      <select
+        name="status"
+        defaultValue={status}
+        disabled={pending}
+        autoFocus
+        onChange={(e) => e.currentTarget.form?.requestSubmit()}
+        className="h-7 rounded-md border bg-transparent px-1 text-xs"
+      >
+        {Object.entries(STATUS_LABELS).map(([value, label]) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
+      </select>
+      {state.status === "error" && <p className="mt-0.5 text-xs text-destructive">{state.error}</p>}
+    </form>
   );
 }
 
@@ -174,7 +237,14 @@ export function DocumentosLista({
         {colunasVisiveis.rev && <TableCell className="font-mono text-xs text-muted-foreground">{d.revisaoLabel ?? "—"}</TableCell>}
         {colunasVisiveis.status && (
           <TableCell>
-            <StatusBadge status={d.status as StatusDocumento} />
+            <StatusCell
+              workspaceId={workspaceId}
+              projetoId={projetoId}
+              obraId={obraId}
+              documentoId={d.id}
+              status={d.status as StatusDocumento}
+              podeGerenciar={podeGerenciar}
+            />
           </TableCell>
         )}
       </TableRow>

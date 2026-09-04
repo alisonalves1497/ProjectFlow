@@ -142,6 +142,12 @@ export const transicaoStatusSchema = z.object({
   novoStatus: statusDocumentoSchema,
 });
 
+// Diferente de transicaoStatusSchema: essa aceita QUALQUER status do enum, sem checar se a
+// transição é válida no grafo de revisões — decisão explícita do time (ver setStatusDireto).
+export const setStatusDiretoSchema = z.object({
+  status: statusDocumentoSchema,
+});
+
 // letra/numero são opcionais aqui porque a revisão As Built não precisa deles
 // (o service decide sozinho); quando são exigidos, o service valida a presença.
 export const revisaoCreateSchema = z.object({
