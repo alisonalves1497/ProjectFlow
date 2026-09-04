@@ -285,6 +285,7 @@ export function DocumentosLista({
             <FluxoIndicator status={d.status as StatusDocumento} />
           </TableCell>
         )}
+        {colunasVisiveis.rev && <TableCell className="font-mono text-xs text-muted-foreground">{d.revisaoLabel ?? "—"}</TableCell>}
         {colunasVisiveis.status && (
           <TableCell>
             <StatusCell
@@ -297,7 +298,6 @@ export function DocumentosLista({
             />
           </TableCell>
         )}
-        {colunasVisiveis.rev && <TableCell className="font-mono text-xs text-muted-foreground">{d.revisaoLabel ?? "—"}</TableCell>}
       </TableRow>
     );
   }
@@ -328,16 +328,16 @@ export function DocumentosLista({
               <ResizeHandle onResize={(d) => redimensionar("fluxo", d)} />
             </TableHead>
           )}
-          {colunasVisiveis.status && (
-            <TableHead className="relative" style={{ width: larguras.status }}>
-              Status
-              <ResizeHandle onResize={(d) => redimensionar("status", d)} />
-            </TableHead>
-          )}
           {colunasVisiveis.rev && (
             <TableHead className="relative" style={{ width: larguras.rev }}>
               Rev.
               <ResizeHandle onResize={(d) => redimensionar("rev", d)} />
+            </TableHead>
+          )}
+          {colunasVisiveis.status && (
+            <TableHead className="relative" style={{ width: larguras.status }}>
+              Status
+              <ResizeHandle onResize={(d) => redimensionar("status", d)} />
             </TableHead>
           )}
         </TableRow>
