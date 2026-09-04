@@ -446,6 +446,7 @@ export async function listDocumentosAgrupadosPorSecao(
         revisaoLetra: revisoes.letra,
         revisaoNumero: revisoes.numero,
         revisaoLabel: revisoes.label,
+        revisaoExterna: documentos.revisaoExterna,
         responsavelNome: users.name,
       })
       .from(documentos)
@@ -526,7 +527,9 @@ export async function listDocumentosAgrupadosPorSecao(
           favorito: d.favorito,
           statusUpdatedAt: d.statusUpdatedAt,
           responsavelNome: d.responsavelNome,
-          revisaoLabel: d.revisaoLabel,
+          // Sem revisão "de verdade" ainda (currentRevisionId nulo), mas com rótulo vindo de
+          // uma sincronização com o GED do cliente (ex: "V2") — mostra esse no lugar.
+          revisaoLabel: d.revisaoLabel ?? d.revisaoExterna,
         })),
         total: docsDaSecao.length,
         concluidos,

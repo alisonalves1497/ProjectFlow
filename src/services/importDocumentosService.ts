@@ -18,7 +18,7 @@ const COLUNAS_ESPERADAS = { item: "ITEM", descricao: "DESCRI", disciplina: "DISC
 
 const TAMANHO_MAXIMO_BYTES = 15 * 1024 * 1024; // 15MB
 
-function normalizar(s: string): string {
+export function normalizar(s: string): string {
   return s
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
@@ -33,12 +33,12 @@ function formatarNomeDisciplina(nome: string): string {
   return limpo.charAt(0).toUpperCase() + limpo.slice(1);
 }
 
-function celulaTexto(valor: unknown): string {
+export function celulaTexto(valor: unknown): string {
   if (valor == null) return "";
   return String(valor).trim();
 }
 
-function carregarWorkbook(buffer: Buffer): XLSX.WorkBook {
+export function carregarWorkbook(buffer: Buffer): XLSX.WorkBook {
   if (buffer.byteLength > TAMANHO_MAXIMO_BYTES) {
     throw badRequest("ARQUIVO_MUITO_GRANDE", "Arquivo maior que 15MB — não suportado.");
   }
@@ -205,7 +205,7 @@ export async function garantirTipoDocumento(workspaceId: string, nome: string): 
   return created.id;
 }
 
-async function garantirObraDisciplina(obraId: string, disciplinaId: string) {
+export async function garantirObraDisciplina(obraId: string, disciplinaId: string) {
   const [existing] = await db
     .select()
     .from(obraDisciplinas)
@@ -218,7 +218,7 @@ async function garantirObraDisciplina(obraId: string, disciplinaId: string) {
 
 // Seção segue o mesmo nome do Tipo de documento (padrão já usado no resto do app —
 // ex: "Civil - Sondagem") — reaproveita se já existir pra essa obra+disciplina.
-async function garantirSecaoPorTipo(obraDisciplinaId: string, tipoNome: string, posicao: number) {
+export async function garantirSecaoPorTipo(obraDisciplinaId: string, tipoNome: string, posicao: number) {
   const [existing] = await db
     .select()
     .from(secoes)

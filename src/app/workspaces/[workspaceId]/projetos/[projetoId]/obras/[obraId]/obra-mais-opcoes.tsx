@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
-import { MoreHorizontal, Trash2 } from "lucide-react";
+import { MoreHorizontal, Trash2, RefreshCw } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,6 +67,10 @@ export function ObraMaisOpcoes({
           <MoreHorizontal className="size-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem render={<Link href={`/workspaces/${workspaceId}/sincronizar-ged?obraId=${obraId}`} />}>
+            <RefreshCw className="size-4" />
+            Sincronizar com GED
+          </DropdownMenuItem>
           <DropdownMenuItem variant="destructive" onClick={() => setConfirmOpen(true)}>
             <Trash2 className="size-4" />
             Excluir obra

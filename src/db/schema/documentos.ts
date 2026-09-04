@@ -67,6 +67,15 @@ export const documentos = pgTable(
     // consistência (current_revision_id sempre aponta pra revisão de documento_id correto) é garantida na camada de serviço.
     currentRevisionId: text("current_revision_id"),
 
+    // Rótulo de revisão "solto" (ex: "V2") que vem de uma sincronização com o GED do
+    // cliente — de propósito NÃO é uma linha em `revisoes` (sem histórico/regra de
+    // sequência amarrada). Só aparece na coluna Rev. quando o documento não tem uma
+    // revisão "de verdade" (currentRevisionId nulo) criada pelo nosso próprio fluxo.
+    revisaoExterna: text("revisao_externa"),
+    // De onde esse documento veio (nome do sistema GED do cliente, ex: "ACC") — só
+    // informativo, não usado em nenhuma regra do sistema.
+    gedOrigem: text("ged_origem"),
+
     createdBy: text("created_by").notNull().references(() => users.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
