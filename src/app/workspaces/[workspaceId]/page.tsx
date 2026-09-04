@@ -77,7 +77,7 @@ export default async function PainelPage({ params }: Params) {
                 <TooltipTrigger render={<button type="button" aria-label="O que é isso?" />}>
                   <FileText className="size-4 text-primary/50" />
                 </TooltipTrigger>
-                <TooltipContent>Documentos que ainda não foram concluídos (não estão liberados nem cancelados).</TooltipContent>
+                <TooltipContent>Documentos que ainda não foram entregues.</TooltipContent>
               </Tooltip>
             </CardAction>
           </CardHeader>
@@ -96,7 +96,7 @@ export default async function PainelPage({ params }: Params) {
                 <TooltipTrigger render={<button type="button" aria-label="O que é isso?" />}>
                   <AlertTriangle className="size-4 text-primary/50" />
                 </TooltipTrigger>
-                <TooltipContent>Documentos ativos cuja data prevista já passou.</TooltipContent>
+                <TooltipContent>Documentos ativos que já passaram da data prevista.</TooltipContent>
               </Tooltip>
             </CardAction>
           </CardHeader>
@@ -115,10 +115,7 @@ export default async function PainelPage({ params }: Params) {
                 <TooltipTrigger render={<button type="button" aria-label="O que é isso?" />}>
                   <Clock className="size-4 text-primary/50" />
                 </TooltipTrigger>
-                <TooltipContent>
-                  Documentos atribuídos a você que precisam de ação (Previsto, Em elaboração ou Devolvido para correção), mais
-                  cópias controladas suas que precisam ser substituídas.
-                </TooltipContent>
+                <TooltipContent>Todas as atribuições para você.</TooltipContent>
               </Tooltip>
             </CardAction>
           </CardHeader>
