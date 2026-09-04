@@ -5,6 +5,7 @@ type BadgeVariant = "success" | "warning" | "destructive" | "secondary";
 
 const VARIANT: Record<StatusDocumento, BadgeVariant> = {
   previsto: "warning",
+  em_rascunho: "secondary",
   em_elaboracao: "warning",
   devolvido_correcao: "warning",
   em_revisao_interna: "warning",

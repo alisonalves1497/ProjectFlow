@@ -6,6 +6,7 @@ import { STATUS_LABELS, type StatusDocumento } from "@/lib/statusGraph";
 
 const STATUS_COR: Record<StatusDocumento, string> = {
   previsto: "bg-amber-400",
+  em_rascunho: "bg-slate-300",
   em_elaboracao: "bg-amber-400",
   devolvido_correcao: "bg-amber-400",
   em_revisao_interna: "bg-amber-400",
@@ -23,6 +24,7 @@ const STATUS_COR: Record<StatusDocumento, string> = {
 
 const STATUS_ORDEM: StatusDocumento[] = [
   "previsto",
+  "em_rascunho",
   "em_elaboracao",
   "devolvido_correcao",
   "em_revisao_interna",

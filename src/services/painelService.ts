@@ -10,8 +10,9 @@ import { isDocumentoFechado, dataEfetivaPrevista } from "@/lib/documentoStatus";
 // ainda nem ter sido iniciado (previsto). Só cobre os status que entram em pendência
 // (ver meusDocumentosPendentes); os demais não aparecem aqui de qualquer forma.
 const PRIORIDADE_PENDENCIA: Partial<Record<StatusDocumento, number>> = {
-  devolvido_correcao: 3,
-  em_elaboracao: 2,
+  devolvido_correcao: 4,
+  em_elaboracao: 3,
+  em_rascunho: 2,
   previsto: 1,
 };
 
@@ -110,7 +111,9 @@ export async function getPainelData(workspaceId: string, userId: string): Promis
   // alguém criar a primeira revisão e "entrar no fluxo" de verdade.
   const meusDocumentosPendentes = ativos
     .filter(
-      (d) => d.responsavelId === userId && (d.status === "previsto" || d.status === "em_elaboracao" || d.status === "devolvido_correcao")
+      (d) =>
+        d.responsavelId === userId &&
+        (d.status === "previsto" || d.status === "em_rascunho" || d.status === "em_elaboracao" || d.status === "devolvido_correcao")
     )
     .map((d) => ({ id: d.id, codigoCompleto: d.codigoCompleto, descricao: d.descricao, status: d.status, obraId: d.obraId }))
     .sort((a, b) => (PRIORIDADE_PENDENCIA[b.status] ?? 0) - (PRIORIDADE_PENDENCIA[a.status] ?? 0));

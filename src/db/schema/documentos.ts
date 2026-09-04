@@ -9,6 +9,7 @@ import { secoes } from "./hierarquia";
 // O grafo de transições válidas é reforçado na camada de serviço, não no banco.
 export const statusDocumentoEnum = pgEnum("status_documento", [
   "previsto",
+  "em_rascunho",
   "em_elaboracao",
   "devolvido_correcao",
   "em_revisao_interna",

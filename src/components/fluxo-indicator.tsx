@@ -5,6 +5,7 @@ import type { StatusDocumento } from "@/lib/statusGraph";
 // não é uma fonte de verdade (o StatusBadge ao lado já mostra o status exato).
 const ETAPA: Record<StatusDocumento, number> = {
   previsto: 0,
+  em_rascunho: 0,
   em_elaboracao: 1,
   devolvido_correcao: 1,
   em_revisao_interna: 2,

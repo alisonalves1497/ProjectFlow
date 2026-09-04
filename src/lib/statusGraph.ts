@@ -1,5 +1,6 @@
 export type StatusDocumento =
   | "previsto"
+  | "em_rascunho"
   | "em_elaboracao"
   | "devolvido_correcao"
   | "em_revisao_interna"
@@ -25,6 +26,7 @@ export function tipoDaRevisao(revisao: { ehAsBuilt: boolean; numero: number | nu
 
 // Bucket A: transições que mutam a própria revisão (não geram letra/número novo).
 const INTERNO_TRANSITIONS: Partial<Record<StatusDocumento, StatusDocumento[]>> = {
+  em_rascunho: ["em_elaboracao"],
   em_elaboracao: ["em_revisao_interna", "informativo"],
   em_revisao_interna: ["devolvido_correcao", "aprovacao_lider_tecnico"],
 };
@@ -35,14 +37,15 @@ const FORMAL_TRANSITIONS: Partial<Record<StatusDocumento, StatusDocumento[]>> = 
 };
 
 const AS_BUILT_TRANSITIONS: Partial<Record<StatusDocumento, StatusDocumento[]>> = {
+  em_rascunho: ["em_elaboracao"],
   em_elaboracao: ["em_revisao_interna"],
   em_revisao_interna: ["aprovado"],
 };
 
 const CANCELABLE_FROM: Record<RevisaoTipo, StatusDocumento[]> = {
-  interno: ["em_elaboracao", "em_revisao_interna"],
+  interno: ["em_rascunho", "em_elaboracao", "em_revisao_interna"],
   formal: ["aguardando_envio_ged", "em_analise_cliente"],
-  as_built: ["em_elaboracao", "em_revisao_interna"],
+  as_built: ["em_rascunho", "em_elaboracao", "em_revisao_interna"],
 };
 
 // Status que travam a revisão (Bucket A já não tem mais pra onde ir) e liberam
@@ -84,7 +87,7 @@ export function nextRevisionSpec(
   current: { ehAsBuilt: boolean; letra: string | null; numero: number | null; status: StatusDocumento } | null
 ): ProximaRevisaoSpec | null {
   if (!current) {
-    return { tipo: "interno", letra: "A", numero: 1, startStatus: "em_elaboracao" };
+    return { tipo: "interno", letra: "A", numero: 1, startStatus: "em_rascunho" };
   }
 
   const tipo = tipoDaRevisao(current);
@@ -92,7 +95,7 @@ export function nextRevisionSpec(
 
   if (tipo === "interno") {
     if (current.status === "devolvido_correcao") {
-      return { tipo: "interno", letra: current.letra!, numero: current.numero! + 1, startStatus: "em_elaboracao" };
+      return { tipo: "interno", letra: current.letra!, numero: current.numero! + 1, startStatus: "em_rascunho" };
     }
     if (current.status === "aprovacao_lider_tecnico") {
       return { tipo: "formal", letra: current.letra!, numero: 0, startStatus: "aguardando_envio_ged" };
@@ -102,10 +105,10 @@ export function nextRevisionSpec(
 
   if (tipo === "formal") {
     if (current.status === "reprovado" || current.status === "devolvido_pelo_cliente") {
-      return { tipo: "interno", letra: proximaLetra(current.letra!), numero: 1, startStatus: "em_elaboracao" };
+      return { tipo: "interno", letra: proximaLetra(current.letra!), numero: 1, startStatus: "em_rascunho" };
     }
     if (current.status === "aprovado" || current.status === "aprovado_com_comentarios") {
-      return { tipo: "as_built", startStatus: "em_elaboracao" };
+      return { tipo: "as_built", startStatus: "em_rascunho" };
     }
     return null; // cancelado
   }
@@ -115,6 +118,7 @@ export function nextRevisionSpec(
 
 const ALL_STATUSES: StatusDocumento[] = [
   "previsto",
+  "em_rascunho",
   "em_elaboracao",
   "devolvido_correcao",
   "em_revisao_interna",
@@ -137,6 +141,7 @@ export function validNextStatuses(tipo: RevisaoTipo, from: StatusDocumento): Sta
 
 export const STATUS_LABELS: Record<StatusDocumento, string> = {
   previsto: "Previsto",
+  em_rascunho: "Em rascunho",
   em_elaboracao: "Em elaboração",
   devolvido_correcao: "Devolvido para correção",
   em_revisao_interna: "Em revisão interna",

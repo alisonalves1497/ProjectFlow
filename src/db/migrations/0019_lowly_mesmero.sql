@@ -1,0 +1,1 @@
+ALTER TYPE "public"."status_documento" ADD VALUE 'em_rascunho' BEFORE 'em_elaboracao';
