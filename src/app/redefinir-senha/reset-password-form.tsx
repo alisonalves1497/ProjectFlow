@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { resetPasswordAction, type ActionState } from "./actions";
 
@@ -29,11 +29,11 @@ export function ResetPasswordForm({ email, token }: { email: string; token: stri
       <input type="hidden" name="token" value={token} />
       <div className="space-y-2">
         <Label htmlFor="novaSenha">Nova senha</Label>
-        <Input id="novaSenha" name="novaSenha" type="password" autoComplete="new-password" required minLength={6} />
+        <PasswordInput id="novaSenha" name="novaSenha" autoComplete="new-password" required minLength={6} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="confirmarSenha">Confirmar nova senha</Label>
-        <Input id="confirmarSenha" name="confirmarSenha" type="password" autoComplete="new-password" required minLength={6} />
+        <PasswordInput id="confirmarSenha" name="confirmarSenha" autoComplete="new-password" required minLength={6} />
       </div>
       {state.status === "error" && <p className="text-sm text-destructive">{state.error}</p>}
       <Button type="submit" className="w-full" disabled={pending}>
