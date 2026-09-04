@@ -21,6 +21,7 @@ import { CreateObraDialog } from "@/app/workspaces/[workspaceId]/projetos/[proje
 import { RenameProjetoDialog } from "@/app/workspaces/[workspaceId]/projetos/rename-projeto-dialog";
 import { RenameObraDialog } from "@/app/workspaces/[workspaceId]/projetos/[projetoId]/obras/rename-obra-dialog";
 import { deleteObraAction, type ActionState } from "@/app/workspaces/[workspaceId]/projetos/[projetoId]/obras/actions";
+import { deleteProjetoAction } from "@/app/workspaces/[workspaceId]/projetos/actions";
 
 export function ProjetosTree({
   workspaceId,
@@ -65,6 +66,32 @@ export function ProjetosTree({
     // outra página, a árvore só atualiza sozinha (revalidação) sem tirar o usuário do lugar.
     if (obraAtivaId === obraExcluir.id) router.push(`/workspaces/${workspaceId}/projetos/${obraExcluir.projetoId}`);
     setObraExcluir(null);
+  }
+
+  // Projeto com o dialog de confirmação de exclusão aberto — só um por vez.
+  const [projetoExcluir, setProjetoExcluir] = useState<{ id: string; nome: string } | null>(null);
+  const [excluindoProjeto, setExcluindoProjeto] = useState(false);
+  const projetoVisivelId = pathname.match(/\/projetos\/([^/]+)/)?.[1];
+
+  async function handleExcluirProjeto() {
+    if (!projetoExcluir) return;
+    setExcluindoProjeto(true);
+    const formData = new FormData();
+    formData.set("workspaceId", workspaceId);
+    formData.set("projetoId", projetoExcluir.id);
+    const resultado = await deleteProjetoAction({ status: "idle" }, formData);
+    setExcluindoProjeto(false);
+
+    if (resultado.status === "error") {
+      toast.error(resultado.error);
+      return;
+    }
+
+    toast.success("Projeto excluído. Fica guardado na Lixeira por 30 dias.");
+    // Idem obra: só navega pra fora se o projeto excluído (ou uma obra dele) era o que
+    // estava sendo visto.
+    if (projetoVisivelId === projetoExcluir.id) router.push(`/workspaces/${workspaceId}/projetos`);
+    setProjetoExcluir(null);
   }
 
   // Auto-expande o galho da Obra/Projeto atual na primeira renderização, pra quem chega
@@ -153,6 +180,32 @@ export function ProjetosTree({
                 open={novaObraProjetoId === projeto.id}
                 onOpenChange={(v) => setNovaObraProjetoId(v ? projeto.id : null)}
               />
+              {podeRenomear && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        title="Mais opções"
+                        className="mr-1 shrink-0 text-primary/40 opacity-0 hover:text-primary group-hover/projeto:opacity-100"
+                      />
+                    }
+                  >
+                    <MoreHorizontal className="size-3.5" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => setProjetoExcluir({ id: projeto.id, nome: projeto.name })}
+                    >
+                      <Trash2 className="size-4" />
+                      Excluir projeto
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
             {aberto && (
               <ul className="ml-3 space-y-0.5 border-l pl-2">
@@ -253,6 +306,26 @@ export function ProjetosTree({
           </Button>
           <Button type="button" variant="destructive" disabled={excluindo} onClick={handleExcluirObra}>
             {excluindo ? "Excluindo..." : "Sim, tenho certeza — excluir"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog open={projetoExcluir !== null} onOpenChange={(v) => !v && setProjetoExcluir(null)}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Excluir projeto &quot;{projetoExcluir?.nome}&quot;?</DialogTitle>
+          <DialogDescription>
+            Isso oculta o Projeto &quot;{projetoExcluir?.nome}&quot;, TODAS as suas Obras e os documentos dessas Obras. Nada
+            é apagado de verdade — fica guardado por 30 dias na Lixeira, de onde dá pra restaurar tudo junto.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setProjetoExcluir(null)}>
+            Cancelar
+          </Button>
+          <Button type="button" variant="destructive" disabled={excluindoProjeto} onClick={handleExcluirProjeto}>
+            {excluindoProjeto ? "Excluindo..." : "Sim, tenho certeza — excluir"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -81,6 +81,8 @@ export async function deleteProjetoAction(_prevState: ActionState, formData: For
     throw err;
   }
 
-  revalidatePath(`/workspaces/${workspaceId}/projetos`);
+  // "layout" pra também tirar o projeto da árvore da sidebar (renderizada no layout, não só
+  // na lista de projetos) — mesmo padrão de renameProjetoAction/deleteObraAction.
+  revalidatePath(`/workspaces/${workspaceId}`, "layout");
   return { status: "success" };
 }
