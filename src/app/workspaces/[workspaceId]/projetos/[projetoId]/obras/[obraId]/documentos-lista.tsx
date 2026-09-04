@@ -132,6 +132,44 @@ export type ColunasVisiveis = { resp: boolean; prazo: boolean; fluxo: boolean; r
 
 export const COLUNAS_PADRAO: ColunasVisiveis = { resp: true, prazo: true, fluxo: true, rev: true, status: true };
 
+type LarguraColuna = "resp" | "prazo" | "fluxo" | "rev" | "status";
+const LARGURAS_PADRAO: Record<LarguraColuna, number> = { resp: 112, prazo: 96, fluxo: 96, rev: 56, status: 176 };
+const LARGURA_MINIMA = 48;
+
+// Alça de redimensionar: fica em cima do "traço" divisório de cada coluna (borda direita
+// do header). Arrastar pra direita alarga a coluna, pra esquerda estreita — tudo em estado
+// local, só dura a sessão (não precisa persistir entre recarregamentos).
+function ResizeHandle({ onResize }: { onResize: (deltaX: number) => void }) {
+  function onMouseDown(e: React.MouseEvent) {
+    e.preventDefault();
+    const xInicial = e.clientX;
+    let ultimoX = xInicial;
+
+    function onMouseMove(ev: MouseEvent) {
+      const deltaX = ev.clientX - ultimoX;
+      ultimoX = ev.clientX;
+      onResize(deltaX);
+    }
+    function onMouseUp() {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    }
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }
+
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      role="separator"
+      aria-orientation="vertical"
+      className="absolute top-0 left-0 z-10 h-full w-2 -translate-x-1/2 cursor-col-resize touch-none select-none"
+    >
+      <div className="mx-auto h-full w-px bg-border" />
+    </div>
+  );
+}
+
 export function DocumentosLista({
   workspaceId,
   projetoId,
@@ -169,6 +207,15 @@ export function DocumentosLista({
   const [reprogramarOpen, setReprogramarOpen] = useState(false);
   const [grdOpen, setGrdOpen] = useState(false);
   const [excluirOpen, setExcluirOpen] = useState(false);
+  const [larguras, setLarguras] = useState<Record<LarguraColuna, number>>(LARGURAS_PADRAO);
+
+  // A alça fica na borda ESQUERDA da coluna (onde ficava o "traço" divisório antigo) — arrastar
+  // pra direita empurra essa borda pra dentro da coluna e ela encolhe; a coluna "Código /
+  // Descrição" não tem largura própria (ocupa o que sobra), então ela sozinha absorve a
+  // diferença, então tanto faz qual das outras colunas você arrasta.
+  function redimensionar(coluna: LarguraColuna, deltaX: number) {
+    setLarguras((prev) => ({ ...prev, [coluna]: Math.max(LARGURA_MINIMA, prev[coluna] - deltaX) }));
+  }
 
   const todosDocumentos = useMemo(() => grupos.flatMap((g) => g.documentos), [grupos]);
 
@@ -256,14 +303,39 @@ export function DocumentosLista({
   function cabecalhoTabela() {
     return (
       <TableHeader>
-        <TableRow className="[&>th:not(:first-child)]:relative [&>th:not(:first-child)]:before:absolute [&>th:not(:first-child)]:before:top-1/2 [&>th:not(:first-child)]:before:left-0 [&>th:not(:first-child)]:before:h-3 [&>th:not(:first-child)]:before:w-px [&>th:not(:first-child)]:before:-translate-y-1/2 [&>th:not(:first-child)]:before:bg-border [&>th:not(:first-child)]:before:content-['']">
+        <TableRow>
           <TableHead className="w-8" />
-          <TableHead>Código / Descrição</TableHead>
-          {colunasVisiveis.resp && <TableHead className="w-28">Resp.</TableHead>}
-          {colunasVisiveis.prazo && <TableHead className="w-24">Prazo</TableHead>}
-          {colunasVisiveis.fluxo && <TableHead className="w-24">Fluxo</TableHead>}
-          {colunasVisiveis.rev && <TableHead className="w-14">Rev.</TableHead>}
-          {colunasVisiveis.status && <TableHead className="w-44">Status</TableHead>}
+          <TableHead className="relative">Código / Descrição</TableHead>
+          {colunasVisiveis.resp && (
+            <TableHead className="relative" style={{ width: larguras.resp }}>
+              Resp.
+              <ResizeHandle onResize={(d) => redimensionar("resp", d)} />
+            </TableHead>
+          )}
+          {colunasVisiveis.prazo && (
+            <TableHead className="relative" style={{ width: larguras.prazo }}>
+              Prazo
+              <ResizeHandle onResize={(d) => redimensionar("prazo", d)} />
+            </TableHead>
+          )}
+          {colunasVisiveis.fluxo && (
+            <TableHead className="relative" style={{ width: larguras.fluxo }}>
+              Fluxo
+              <ResizeHandle onResize={(d) => redimensionar("fluxo", d)} />
+            </TableHead>
+          )}
+          {colunasVisiveis.rev && (
+            <TableHead className="relative" style={{ width: larguras.rev }}>
+              Rev.
+              <ResizeHandle onResize={(d) => redimensionar("rev", d)} />
+            </TableHead>
+          )}
+          {colunasVisiveis.status && (
+            <TableHead className="relative" style={{ width: larguras.status }}>
+              Status
+              <ResizeHandle onResize={(d) => redimensionar("status", d)} />
+            </TableHead>
+          )}
         </TableRow>
       </TableHeader>
     );
