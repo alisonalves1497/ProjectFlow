@@ -146,7 +146,7 @@ export function AppSidebar({
 
   return (
     <aside className="flex min-h-screen w-56 shrink-0 flex-col border-r bg-muted">
-      <div className="border-b p-4">
+      <div className="flex justify-center border-b p-4">
         <Image src="/logo-enermais.png" alt="EnerMais" width={160} height={48} className="h-10 w-auto" priority />
       </div>
 
