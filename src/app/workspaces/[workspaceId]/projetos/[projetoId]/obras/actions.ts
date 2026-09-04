@@ -51,7 +51,6 @@ export async function renameObraAction(_prevState: ActionState, formData: FormDa
   if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
 
   const workspaceId = String(formData.get("workspaceId") ?? "");
-  const projetoId = String(formData.get("projetoId") ?? "");
   const obraId = String(formData.get("obraId") ?? "");
 
   try {
@@ -74,7 +73,6 @@ export async function deleteObraAction(_prevState: ActionState, formData: FormDa
   if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
 
   const workspaceId = String(formData.get("workspaceId") ?? "");
-  const projetoId = String(formData.get("projetoId") ?? "");
   const obraId = String(formData.get("obraId") ?? "");
 
   try {
@@ -86,7 +84,9 @@ export async function deleteObraAction(_prevState: ActionState, formData: FormDa
     throw err;
   }
 
-  revalidatePath(`/workspaces/${workspaceId}/projetos/${projetoId}`);
+  // "layout" pra também tirar a obra da árvore da sidebar (renderizada no layout, não só
+  // na página do projeto) — mesmo padrão de renameObraAction.
+  revalidatePath(`/workspaces/${workspaceId}`, "layout");
   return { status: "success" };
 }
 
