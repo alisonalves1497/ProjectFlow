@@ -134,6 +134,10 @@ export const documentoBulkReprogramarSchema = z.object({
   dataReprogramada: z.string().date(),
 });
 
+export const documentoBulkExcluirSchema = z.object({
+  documentoIds: z.array(z.string().trim().min(1)).min(1, "Selecione pelo menos um documento."),
+});
+
 export const transicaoStatusSchema = z.object({
   novoStatus: statusDocumentoSchema,
 });

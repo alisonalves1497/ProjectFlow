@@ -13,6 +13,7 @@ import {
   documentoBulkMoverSchema,
   documentoBulkAtribuirSchema,
   documentoBulkReprogramarSchema,
+  documentoBulkExcluirSchema,
   secaoRenameSchema,
 } from "@/lib/validators";
 import {
@@ -22,6 +23,7 @@ import {
   bulkMoverSecao,
   bulkAtribuir,
   bulkReprogramar,
+  bulkSoftDeleteDocumentos,
 } from "@/services/documentoService";
 import { createRevisao, transitionRevisaoStatus, toggleConferido, setArquivoRevisao } from "@/services/revisaoService";
 import { createComentario } from "@/services/comentarioService";
@@ -144,6 +146,31 @@ export async function bulkReprogramarAction(_prevState: ActionState, formData: F
       dataReprogramada: formData.get("dataReprogramada"),
     });
     await bulkReprogramar(workspaceId, obraId, input.documentoIds, input.dataReprogramada);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };
+    throw err;
+  }
+
+  revalidatePath(obraDocumentosPath(workspaceId, projetoId, obraId));
+  return { status: "success" };
+}
+
+export async function bulkExcluirAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const projetoId = String(formData.get("projetoId") ?? "");
+  const obraId = String(formData.get("obraId") ?? "");
+
+  try {
+    // Excluir é mais destrutivo que mover/atribuir/reprogramar — exige administrador/coordenador
+    // do workspace, mesmo nível já usado pra excluir uma Obra ou Projeto inteiro.
+    await requireWorkspaceRole(session.user.id, workspaceId, ["administrador", "coordenador"]);
+    await requireObraAccess(session.user.id, workspaceId, obraId);
+    const input = documentoBulkExcluirSchema.parse({ documentoIds: formData.getAll("documentoIds") });
+    await bulkSoftDeleteDocumentos(workspaceId, obraId, input.documentoIds);
   } catch (err) {
     if (err instanceof ApiError) return { status: "error", error: err.message };
     if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };

@@ -23,7 +23,13 @@ import type { GrupoSecaoDocumentos } from "@/services/documentoService";
 import { FavoritoButton } from "./favorito-button";
 import { CreateGrdDialog } from "../../../../grds/create-grd-dialog";
 import { RenameSecaoDialog } from "./rename-secao-dialog";
-import { bulkMoverSecaoAction, bulkAtribuirAction, bulkReprogramarAction, type ActionState } from "../../../../documentos/actions";
+import {
+  bulkMoverSecaoAction,
+  bulkAtribuirAction,
+  bulkReprogramarAction,
+  bulkExcluirAction,
+  type ActionState,
+} from "../../../../documentos/actions";
 
 const initialActionState: ActionState = { status: "idle" };
 
@@ -99,15 +105,9 @@ export function DocumentosLista({
   const [atribuirOpen, setAtribuirOpen] = useState(false);
   const [reprogramarOpen, setReprogramarOpen] = useState(false);
   const [grdOpen, setGrdOpen] = useState(false);
+  const [excluirOpen, setExcluirOpen] = useState(false);
 
   const todosDocumentos = useMemo(() => grupos.flatMap((g) => g.documentos), [grupos]);
-  const docsSelecionados = useMemo(() => todosDocumentos.filter((d) => selecionados.has(d.id)), [todosDocumentos, selecionados]);
-
-  const disciplinaIdsSelecionados = new Set(docsSelecionados.map((d) => d.disciplinaId));
-  const disciplinaUnicaSelecionada = disciplinaIdsSelecionados.size === 1 ? [...disciplinaIdsSelecionados][0] : null;
-  const secoesDaDisciplina = disciplinaUnicaSelecionada
-    ? (disciplinas.find((d) => d.disciplinaId === disciplinaUnicaSelecionada)?.secoes ?? [])
-    : [];
 
   function toggle(id: string) {
     setSelecionados((prev) => {
@@ -274,6 +274,11 @@ export function DocumentosLista({
             <Button size="sm" variant="outline" onClick={() => setGrdOpen(true)}>
               Criar GRD
             </Button>
+            {podeGerenciar && (
+              <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => setExcluirOpen(true)}>
+                Excluir
+              </Button>
+            )}
             <Button size="sm" variant="ghost" onClick={limparSelecao}>
               Limpar
             </Button>
@@ -332,8 +337,17 @@ export function DocumentosLista({
         projetoId={projetoId}
         obraId={obraId}
         documentoIds={[...selecionados]}
-        secoes={secoesDaDisciplina}
-        disciplinaMista={disciplinaIdsSelecionados.size > 1}
+        disciplinas={disciplinas}
+        onSuccess={limparSelecao}
+      />
+      <ExcluirDialog
+        open={excluirOpen}
+        onOpenChange={setExcluirOpen}
+        workspaceId={workspaceId}
+        projetoId={projetoId}
+        obraId={obraId}
+        documentoIds={[...selecionados]}
+        quantidade={selecionados.size}
         onSuccess={limparSelecao}
       />
       <AtribuirDialog
@@ -380,8 +394,7 @@ function MoverSecaoDialog({
   projetoId,
   obraId,
   documentoIds,
-  secoes,
-  disciplinaMista,
+  disciplinas,
   onSuccess,
 }: {
   open: boolean;
@@ -390,11 +403,11 @@ function MoverSecaoDialog({
   projetoId: string;
   obraId: string;
   documentoIds: string[];
-  secoes: { id: string; name: string }[];
-  disciplinaMista: boolean;
+  disciplinas: Disciplina[];
   onSuccess: () => void;
 }) {
   const [state, formAction, pending] = useActionState(bulkMoverSecaoAction, initialActionState);
+  const temSecao = disciplinas.some((d) => d.secoes.length > 0);
 
   useEffect(() => {
     if (state.status === "success") {
@@ -410,37 +423,104 @@ function MoverSecaoDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Mover pra outra seção</DialogTitle>
-          <DialogDescription>Só é possível mover dentro da mesma disciplina que os documentos já têm.</DialogDescription>
+          <DialogDescription>
+            Pode mover pra uma seção de outra disciplina — os documentos passam a valer pra essa disciplina nova. Só o
+            código deles não muda sozinho (ele carrega a disciplina antiga); ajuste na tela do documento se precisar.
+          </DialogDescription>
         </DialogHeader>
-        {disciplinaMista ? (
-          <p className="text-sm text-destructive">Os documentos selecionados são de disciplinas diferentes — selecione documentos de uma única disciplina.</p>
-        ) : (
-          <form action={formAction} className="space-y-4">
-            <input type="hidden" name="workspaceId" value={workspaceId} />
-            <input type="hidden" name="projetoId" value={projetoId} />
-            <input type="hidden" name="obraId" value={obraId} />
-            {documentoIds.map((id) => (
-              <input key={id} type="hidden" name="documentoIds" value={id} />
-            ))}
-            <div className="space-y-2">
-              <Label htmlFor="secaoId">Nova seção</Label>
-              <select id="secaoId" name="secaoId" required className="h-9 w-full rounded-md border bg-transparent px-3 text-sm">
-                {secoes.length === 0 && <option value="">Nenhuma seção disponível</option>}
-                {secoes.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {state.status === "error" && <p className="text-sm text-destructive">{state.error}</p>}
-            <DialogFooter>
-              <Button type="submit" disabled={pending || secoes.length === 0}>
-                {pending ? "Movendo..." : "Mover"}
-              </Button>
-            </DialogFooter>
-          </form>
-        )}
+        <form action={formAction} className="space-y-4">
+          <input type="hidden" name="workspaceId" value={workspaceId} />
+          <input type="hidden" name="projetoId" value={projetoId} />
+          <input type="hidden" name="obraId" value={obraId} />
+          {documentoIds.map((id) => (
+            <input key={id} type="hidden" name="documentoIds" value={id} />
+          ))}
+          <div className="space-y-2">
+            <Label htmlFor="secaoId">Nova seção</Label>
+            <select id="secaoId" name="secaoId" required className="h-9 w-full rounded-md border bg-transparent px-3 text-sm">
+              {!temSecao && <option value="">Nenhuma seção disponível</option>}
+              {disciplinas.map(
+                (d) =>
+                  d.secoes.length > 0 && (
+                    <optgroup key={d.disciplinaId} label={d.name}>
+                      {d.secoes.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )
+              )}
+            </select>
+          </div>
+          {state.status === "error" && <p className="text-sm text-destructive">{state.error}</p>}
+          <DialogFooter>
+            <Button type="submit" disabled={pending || !temSecao}>
+              {pending ? "Movendo..." : "Mover"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ExcluirDialog({
+  open,
+  onOpenChange,
+  workspaceId,
+  projetoId,
+  obraId,
+  documentoIds,
+  quantidade,
+  onSuccess,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  workspaceId: string;
+  projetoId: string;
+  obraId: string;
+  documentoIds: string[];
+  quantidade: number;
+  onSuccess: () => void;
+}) {
+  const [state, formAction, pending] = useActionState(bulkExcluirAction, initialActionState);
+
+  useEffect(() => {
+    if (state.status === "success") {
+      onOpenChange(false);
+      onSuccess();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só dispara uma vez por submissão bem-sucedida
+  }, [state]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Excluir {quantidade} documento{quantidade > 1 ? "s" : ""}?</DialogTitle>
+          <DialogDescription>
+            Isso oculta o{quantidade > 1 ? "s" : ""} documento{quantidade > 1 ? "s" : ""} selecionado{quantidade > 1 ? "s" : ""}.
+            Nada é apagado de verdade — fica guardado por 30 dias na Lixeira, de onde dá pra restaurar.
+          </DialogDescription>
+        </DialogHeader>
+        <form action={formAction} className="space-y-4">
+          <input type="hidden" name="workspaceId" value={workspaceId} />
+          <input type="hidden" name="projetoId" value={projetoId} />
+          <input type="hidden" name="obraId" value={obraId} />
+          {documentoIds.map((id) => (
+            <input key={id} type="hidden" name="documentoIds" value={id} />
+          ))}
+          {state.status === "error" && <p className="text-sm text-destructive">{state.error}</p>}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" variant="destructive" disabled={pending}>
+              {pending ? "Excluindo..." : "Sim, excluir"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

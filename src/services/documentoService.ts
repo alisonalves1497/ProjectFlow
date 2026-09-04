@@ -287,8 +287,12 @@ async function assertDocumentosNaObra(workspaceId: string, obraId: string, docum
   return rows;
 }
 
+// Mover pra uma Seção de OUTRA disciplina é permitido de propósito — troca junto a
+// disciplinaId dos documentos pra bater com a seção de destino. Isso deixa o
+// codigoCompleto (que carrega o código da disciplina ANTIGA) desatualizado; quem
+// precisar do código coerente com a nova disciplina edita na tela do documento.
 export async function bulkMoverSecao(workspaceId: string, obraId: string, documentoIds: string[], secaoId: string) {
-  const docs = await assertDocumentosNaObra(workspaceId, obraId, documentoIds);
+  await assertDocumentosNaObra(workspaceId, obraId, documentoIds);
 
   const [secao] = await db
     .select({ id: secoes.id, obraDisciplinaId: secoes.obraDisciplinaId })
@@ -304,17 +308,18 @@ export async function bulkMoverSecao(workspaceId: string, obraId: string, docume
     .limit(1);
   if (!od) throw badRequest("SECAO_NOT_FOUND", "Seção não encontrada nesta obra.");
 
-  const foraDaDisciplina = docs.filter((d) => d.disciplinaId !== od.disciplinaId);
-  if (foraDaDisciplina.length > 0) {
-    throw badRequest(
-      "SECAO_DISCIPLINA_MISMATCH",
-      "Todos os documentos selecionados precisam ser da mesma disciplina da seção de destino."
-    );
-  }
-
   return db
     .update(documentos)
-    .set({ secaoId, updatedAt: new Date() })
+    .set({ secaoId, disciplinaId: od.disciplinaId, updatedAt: new Date() })
+    .where(inArray(documentos.id, documentoIds))
+    .returning();
+}
+
+export async function bulkSoftDeleteDocumentos(workspaceId: string, obraId: string, documentoIds: string[]) {
+  await assertDocumentosNaObra(workspaceId, obraId, documentoIds);
+  return db
+    .update(documentos)
+    .set({ deletedAt: new Date() })
     .where(inArray(documentos.id, documentoIds))
     .returning();
 }
