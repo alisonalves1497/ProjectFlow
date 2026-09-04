@@ -12,6 +12,7 @@ import { EVENTO_LABELS } from "@/lib/timelineLabels";
 type Params = { params: Promise<{ workspaceId: string }> };
 
 const LIMITE_PENDENCIAS_PAINEL = 8;
+const LIMITE_PROGRAMACAO_PAINEL = 5;
 
 // Gira uma por dia (mesma pra todo mundo, mesma o dia inteiro) — não é aleatório a cada
 // carregamento, senão "frase do dia" vira "frase a cada F5".
@@ -179,13 +180,20 @@ export default async function PainelPage({ params }: Params) {
                 <CalendarDays className="size-4 text-primary" />
                 <CardTitle>Programação da semana</CardTitle>
               </div>
+              {painel.programacaoSemana.length > LIMITE_PROGRAMACAO_PAINEL && (
+                <CardAction>
+                  <Link href={`/workspaces/${workspaceId}/programacao-semana`} className="text-xs text-primary hover:underline">
+                    Ver mais ({painel.programacaoSemana.length}) →
+                  </Link>
+                </CardAction>
+              )}
             </CardHeader>
             <CardContent>
               {painel.programacaoSemana.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhuma entrega prevista nos próximos 7 dias.</p>
               ) : (
                 <ul className="space-y-2">
-                  {painel.programacaoSemana.map((d) => (
+                  {painel.programacaoSemana.slice(0, LIMITE_PROGRAMACAO_PAINEL).map((d) => (
                     <li key={d.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
                       <Link href={`/workspaces/${workspaceId}/documentos/${d.id}`} className="hover:underline">
                         <span className="font-mono text-xs">{d.codigoCompleto}</span>{" "}

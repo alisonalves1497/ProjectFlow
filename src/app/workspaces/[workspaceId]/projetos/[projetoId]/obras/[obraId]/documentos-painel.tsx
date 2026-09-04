@@ -35,6 +35,7 @@ export function DocumentosPainel({
   status,
   disciplinaId,
   secaoId,
+  responsavelId,
   somenteEmAtraso,
   recentes,
   comRetrabalho,
@@ -59,6 +60,7 @@ export function DocumentosPainel({
   status?: string;
   disciplinaId?: string;
   secaoId?: string;
+  responsavelId?: string;
   somenteEmAtraso: boolean;
   recentes: boolean;
   comRetrabalho: boolean;
@@ -142,9 +144,11 @@ export function DocumentosPainel({
           statusOptions={statusOptions}
           disciplinas={disciplinas}
           secaoOptions={secaoOptions}
+          usuarios={usuarios}
           status={status}
           disciplinaId={disciplinaId}
           secaoId={secaoId}
+          responsavelId={responsavelId}
           somenteEmAtraso={somenteEmAtraso}
           recentes={recentes}
           comRetrabalho={comRetrabalho}

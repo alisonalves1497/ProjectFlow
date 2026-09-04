@@ -361,6 +361,7 @@ export type DocumentoAgrupadoFiltros = {
   status?: StatusDocumento;
   disciplinaId?: string;
   secaoId?: string;
+  responsavelId?: string;
   somenteEmAtraso?: boolean;
   recentes?: boolean;
   comRetrabalho?: boolean;
@@ -423,6 +424,7 @@ export async function listDocumentosAgrupadosPorSecao(
   if (filtros.status) condicoes.push(eq(documentos.status, filtros.status));
   if (filtros.disciplinaId) condicoes.push(eq(documentos.disciplinaId, filtros.disciplinaId));
   if (filtros.secaoId) condicoes.push(eq(documentos.secaoId, filtros.secaoId));
+  if (filtros.responsavelId) condicoes.push(eq(documentos.responsavelId, filtros.responsavelId));
   if (filtros.busca) {
     const termo = `%${filtros.busca}%`;
     condicoes.push(or(ilike(documentos.codigoCompleto, termo), ilike(documentos.descricao, termo))!);

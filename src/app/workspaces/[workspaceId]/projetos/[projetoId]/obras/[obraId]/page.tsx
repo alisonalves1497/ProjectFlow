@@ -20,6 +20,7 @@ type Params = {
     status?: string;
     disciplinaId?: string;
     secaoId?: string;
+    responsavelId?: string;
     somenteEmAtraso?: string;
     recentes?: string;
     comRetrabalho?: string;
@@ -55,19 +56,22 @@ export default async function ObraDocumentosPage({ params, searchParams }: Param
       status: sp.status as StatusDocumento | undefined,
       disciplinaId: sp.disciplinaId || undefined,
       secaoId: sp.secaoId || undefined,
+      responsavelId: sp.responsavelId || undefined,
       somenteEmAtraso: sp.somenteEmAtraso === "1",
       recentes: sp.recentes === "1",
       comRetrabalho: sp.comRetrabalho === "1",
       favoritos: sp.favoritos === "1",
       busca: sp.q || undefined,
     }),
-    // Mesmo escopo (status/disciplina/seção/busca), mas sem os toggles — usado só pra calcular
-    // as contagens dos próprios toggles no popover de filtro ("Somente em atraso (N)" etc.),
-    // que precisam refletir "se eu ligar isso, quantos apareceriam" independente uns dos outros.
+    // Mesmo escopo (status/disciplina/seção/responsável/busca), mas sem os toggles — usado só
+    // pra calcular as contagens dos próprios toggles no popover de filtro ("Somente em atraso
+    // (N)" etc.), que precisam refletir "se eu ligar isso, quantos apareceriam" independente
+    // uns dos outros.
     listDocumentosAgrupadosPorSecao(workspaceId, obraId, session.user.id, {
       status: sp.status as StatusDocumento | undefined,
       disciplinaId: sp.disciplinaId || undefined,
       secaoId: sp.secaoId || undefined,
+      responsavelId: sp.responsavelId || undefined,
       busca: sp.q || undefined,
     }),
     listDisciplinasComSecoesPorObra(obraId),
@@ -137,6 +141,7 @@ export default async function ObraDocumentosPage({ params, searchParams }: Param
     sp.status ||
       sp.disciplinaId ||
       sp.secaoId ||
+      sp.responsavelId ||
       sp.somenteEmAtraso === "1" ||
       sp.recentes === "1" ||
       sp.comRetrabalho === "1" ||
@@ -176,6 +181,7 @@ export default async function ObraDocumentosPage({ params, searchParams }: Param
         status={sp.status}
         disciplinaId={sp.disciplinaId}
         secaoId={sp.secaoId}
+        responsavelId={sp.responsavelId}
         somenteEmAtraso={sp.somenteEmAtraso === "1"}
         recentes={sp.recentes === "1"}
         comRetrabalho={sp.comRetrabalho === "1"}

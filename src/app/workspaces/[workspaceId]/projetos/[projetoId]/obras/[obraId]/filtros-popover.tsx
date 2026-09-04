@@ -7,6 +7,7 @@ import type { StatusDocumento } from "@/lib/statusGraph";
 type StatusOption = [StatusDocumento, string];
 type Disciplina = { disciplinaId: string; code: string; name: string };
 type SecaoOption = { id: string; label: string };
+type UsuarioOption = { userId: string; name: string | null; email: string };
 
 function CampoFiltro({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -39,9 +40,11 @@ export function FiltrosPopover({
   statusOptions,
   disciplinas,
   secaoOptions,
+  usuarios,
   status,
   disciplinaId,
   secaoId,
+  responsavelId,
   somenteEmAtraso,
   recentes,
   comRetrabalho,
@@ -53,9 +56,11 @@ export function FiltrosPopover({
   statusOptions: StatusOption[];
   disciplinas: Disciplina[];
   secaoOptions: SecaoOption[];
+  usuarios: UsuarioOption[];
   status?: string;
   disciplinaId?: string;
   secaoId?: string;
+  responsavelId?: string;
   somenteEmAtraso: boolean;
   recentes: boolean;
   comRetrabalho: boolean;
@@ -67,7 +72,8 @@ export function FiltrosPopover({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const nenhumFiltroAtivo = !status && !disciplinaId && !secaoId && !somenteEmAtraso && !recentes && !comRetrabalho && !favoritos;
+  const nenhumFiltroAtivo =
+    !status && !disciplinaId && !secaoId && !responsavelId && !somenteEmAtraso && !recentes && !comRetrabalho && !favoritos;
 
   function aplicar(form: HTMLFormElement) {
     const dados = new FormData(form);
@@ -114,6 +120,16 @@ export function FiltrosPopover({
               {secaoOptions.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.label}
+                </option>
+              ))}
+            </select>
+          </CampoFiltro>
+          <CampoFiltro label="Responsável">
+            <select name="responsavelId" defaultValue={responsavelId ?? ""} className="h-9 w-full rounded-md border bg-card px-3 text-sm">
+              <option value="">Todos</option>
+              {usuarios.map((u) => (
+                <option key={u.userId} value={u.userId}>
+                  {u.name ?? u.email}
                 </option>
               ))}
             </select>
