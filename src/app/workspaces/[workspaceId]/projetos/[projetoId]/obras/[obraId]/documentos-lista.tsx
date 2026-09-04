@@ -104,7 +104,7 @@ function StatusCell({
   }
 
   return (
-    <form action={formAction}>
+    <form action={formAction} className="max-w-full">
       <input type="hidden" name="workspaceId" value={workspaceId} />
       <input type="hidden" name="projetoId" value={projetoId} />
       <input type="hidden" name="obraId" value={obraId} />
@@ -115,7 +115,10 @@ function StatusCell({
         disabled={pending}
         autoFocus
         onChange={(e) => e.currentTarget.form?.requestSubmit()}
-        className="h-7 rounded-md border bg-transparent px-1 text-xs"
+        // w-full + min-w-0: sem isso o <select> pega a largura do texto mais comprido das
+        // opções ("Aprovação do líder técnico"...) e estoura pra fora da célula, que corta
+        // ele (a TableCell tem overflow-hidden) — precisa ficar preso na largura da coluna.
+        className="h-7 w-full min-w-0 max-w-full rounded-md border bg-transparent px-1 text-xs"
       >
         {Object.entries(STATUS_LABELS).map(([value, label]) => (
           <option key={value} value={value}>
