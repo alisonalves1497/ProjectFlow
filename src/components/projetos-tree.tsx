@@ -3,32 +3,14 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { ChevronRight, FileText, Settings, Plus, Layers } from "lucide-react";
+import { ChevronRight, FileText, Settings, Plus, Layers, FolderPlus, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import type { ArvoreProjeto } from "@/services/navegacaoService";
 import { CreateObraDialog } from "@/app/workspaces/[workspaceId]/projetos/[projetoId]/obras/create-obra-dialog";
 import { RenameProjetoDialog } from "@/app/workspaces/[workspaceId]/projetos/rename-projeto-dialog";
 import { RenameObraDialog } from "@/app/workspaces/[workspaceId]/projetos/[projetoId]/obras/rename-obra-dialog";
-
-function NovaObraIconTrigger() {
-  return (
-    <DialogTrigger
-      render={
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          title="Nova obra"
-          className="mr-1 shrink-0 text-primary/40 opacity-0 hover:text-primary group-hover/projeto:opacity-100"
-        />
-      }
-    >
-      <Plus className="size-3.5" />
-    </DialogTrigger>
-  );
-}
 
 export function ProjetosTree({
   workspaceId,
@@ -42,6 +24,10 @@ export function ProjetosTree({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const disciplinaIdAtiva = searchParams.get("disciplinaId");
+
+  // Qual Projeto tem o dialog "Nova obra" aberto no momento — só um por vez, disparado
+  // pelo item do dropdown do "+" (o dialog em si fica controlado, sem DialogTrigger próprio).
+  const [novaObraProjetoId, setNovaObraProjetoId] = useState<string | null>(null);
 
   // Auto-expande o galho da Obra/Projeto atual na primeira renderização, pra quem chega
   // numa página de Documento já ver onde está na árvore, sem precisar reabrir na mão.
@@ -97,7 +83,37 @@ export function ProjetosTree({
                 <span className="truncate text-left">{projeto.name.replace(/^projeto\s+/i, "")}</span>
               </button>
               {podeRenomear && <RenameProjetoDialog workspaceId={workspaceId} projetoId={projeto.id} nomeAtual={projeto.name} />}
-              <CreateObraDialog workspaceId={workspaceId} projetoId={projeto.id} trigger={<NovaObraIconTrigger />} />
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      title="Nova obra ou importar planilha"
+                      className="mr-1 shrink-0 text-primary/40 opacity-0 hover:text-primary group-hover/projeto:opacity-100"
+                    />
+                  }
+                >
+                  <Plus className="size-3.5" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem onClick={() => setNovaObraProjetoId(projeto.id)}>
+                    <FolderPlus className="size-4" />
+                    Nova obra
+                  </DropdownMenuItem>
+                  <DropdownMenuItem render={<Link href={`/workspaces/${workspaceId}/importar?projetoId=${projeto.id}`} />}>
+                    <FileSpreadsheet className="size-4" />
+                    Importar planilha
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <CreateObraDialog
+                workspaceId={workspaceId}
+                projetoId={projeto.id}
+                open={novaObraProjetoId === projeto.id}
+                onOpenChange={(v) => setNovaObraProjetoId(v ? projeto.id : null)}
+              />
             </div>
             {aberto && (
               <ul className="ml-3 space-y-0.5 border-l pl-2">

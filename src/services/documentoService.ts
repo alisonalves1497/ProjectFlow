@@ -163,6 +163,38 @@ export async function listDocumentos(
     .where(and(...conditions));
 }
 
+// Busca por código/descrição em todas as Obras que o usuário acessa no workspace (não uma
+// Obra só) — usado pela lupa do cabeçalho. `obraIdsAcessiveis` já vem resolvido do chamador
+// (administrador: todas; demais papéis: só obra_members) pra não duplicar essa regra aqui.
+export async function buscarDocumentosNoWorkspace(workspaceId: string, obraIdsAcessiveis: string[], termo: string, limite = 30) {
+  if (obraIdsAcessiveis.length === 0 || termo.trim().length === 0) return [];
+  const like = `%${termo.trim()}%`;
+
+  return db
+    .select({
+      id: documentos.id,
+      codigoCompleto: documentos.codigoCompleto,
+      descricao: documentos.descricao,
+      status: documentos.status,
+      obraId: documentos.obraId,
+      obraNome: obras.name,
+      projetoId: obras.projetoId,
+      projetoNome: projetos.name,
+    })
+    .from(documentos)
+    .innerJoin(obras, eq(obras.id, documentos.obraId))
+    .innerJoin(projetos, eq(projetos.id, obras.projetoId))
+    .where(
+      and(
+        eq(documentos.workspaceId, workspaceId),
+        isNull(documentos.deletedAt),
+        inArray(documentos.obraId, obraIdsAcessiveis),
+        or(ilike(documentos.codigoCompleto, like), ilike(documentos.descricao, like))
+      )
+    )
+    .limit(limite);
+}
+
 export async function getDocumentoOrThrow(workspaceId: string, documentoId: string) {
   const [documento] = await db
     .select()

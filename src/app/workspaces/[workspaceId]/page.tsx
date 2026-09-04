@@ -35,8 +35,12 @@ export default async function PainelPage({ params }: Params) {
           {saudacao()}, {primeiroNome}!
         </h1>
         <div className="flex items-center gap-3 text-primary/60">
-          <Search className="size-5" />
-          <Bell className="size-5" />
+          <Link href={`/workspaces/${workspaceId}/busca`} title="Buscar" className="hover:text-primary">
+            <Search className="size-5" />
+          </Link>
+          <Link href={`/workspaces/${workspaceId}/atividade`} title="Atividade recente" className="hover:text-primary">
+            <Bell className="size-5" />
+          </Link>
         </div>
       </div>
 

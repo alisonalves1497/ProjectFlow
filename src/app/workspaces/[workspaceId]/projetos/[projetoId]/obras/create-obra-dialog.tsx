@@ -18,17 +18,26 @@ import { createObraAction, type ActionState } from "./actions";
 
 const initialActionState: ActionState = { status: "idle" };
 
+// Aberto/fechado normalmente é estado interno (uso padrão: trigger próprio) — mas aceita
+// `open`/`onOpenChange` controlados de fora pra quando o disparo vem de outro lugar sem
+// DialogTrigger visível (ex: item de um dropdown menu).
 export function CreateObraDialog({
   workspaceId,
   projetoId,
   trigger,
+  open: openControlado,
+  onOpenChange: setOpenControlado,
 }: {
   workspaceId: string;
   projetoId: string;
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [openInterno, setOpenInterno] = useState(false);
+  const open = openControlado ?? openInterno;
+  const setOpen = setOpenControlado ?? setOpenInterno;
   const [code, setCode] = useState("");
   const [state, formAction, pending] = useActionState(createObraAction, initialActionState);
 
@@ -42,7 +51,7 @@ export function CreateObraDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {trigger ?? <DialogTrigger render={<Button />}>Nova obra</DialogTrigger>}
+      {trigger ?? (openControlado === undefined && <DialogTrigger render={<Button />}>Nova obra</DialogTrigger>)}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Nova obra</DialogTitle>

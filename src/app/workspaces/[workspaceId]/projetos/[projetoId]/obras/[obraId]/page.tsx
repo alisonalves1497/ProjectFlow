@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { PanelRight } from "lucide-react";
 import { auth } from "@/auth";
 import { getObraOrThrow, listObraAccessUsers } from "@/services/obraService";
 import { requireObraAccess, getWorkspaceRole } from "@/services/permissions";
@@ -146,9 +145,6 @@ export default async function ObraDocumentosPage({ params, searchParams }: Param
         <div className="flex items-center gap-2 justify-self-start sm:justify-self-end">
           <CreateDocumentoDialog workspaceId={workspaceId} projetoId={projetoId} obraId={obraId} disciplinas={disciplinasComSecoes} fases={fases} tipos={tipos} />
           {canManage && <ObraMaisOpcoes workspaceId={workspaceId} projetoId={projetoId} obraId={obraId} obraNome={obra.name} />}
-          <button type="button" className="rounded-md border p-1.5 text-muted-foreground hover:bg-accent" title="Painel lateral">
-            <PanelRight className="size-4" />
-          </button>
         </div>
       </div>
 

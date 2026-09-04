@@ -18,6 +18,8 @@ import {
   Trash2,
   FileSpreadsheet,
   FolderPlus,
+  Briefcase,
+  Database,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -79,10 +81,12 @@ export function AppSidebar({
   const outrosGrupos: NavGroup[] = [
     {
       label: "Gestão",
+      icon: Briefcase,
       items: [{ href: `${wsBase}/grd`, label: "GRD", icon: Send, matchKeyword: "grd" }],
     },
     {
       label: "Cadastros",
+      icon: Database,
       items: [
         { href: `${wsBase}/membros`, label: "Membros e permissões", icon: UserCog },
         ...(role === "administrador" || role === "coordenador"

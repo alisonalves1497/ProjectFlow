@@ -39,12 +39,20 @@ function arquivoParaBase64(file: File): Promise<string> {
   });
 }
 
-export function ImportWizard({ workspaceId, projetos }: { workspaceId: string; projetos: Projeto[] }) {
+export function ImportWizard({
+  workspaceId,
+  projetos,
+  projetoIdInicial,
+}: {
+  workspaceId: string;
+  projetos: Projeto[];
+  projetoIdInicial?: string;
+}) {
   const [etapa, setEtapa] = useState<Etapa>("obra");
   const [pending, setPending] = useState(false);
 
   // Etapa 1 — Obra
-  const [projetoId, setProjetoId] = useState<string>(projetos[0]?.id ?? "__novo__");
+  const [projetoId, setProjetoId] = useState<string>(projetoIdInicial ?? projetos[0]?.id ?? "__novo__");
   const [projetoCode, setProjetoCode] = useState("");
   const [projetoNome, setProjetoNome] = useState("");
   const [obraCode, setObraCode] = useState("");
