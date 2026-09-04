@@ -130,7 +130,8 @@ function StatusCell({
 
 export type ColunasVisiveis = { resp: boolean; prazo: boolean; fluxo: boolean; rev: boolean; status: boolean };
 
-export const COLUNAS_PADRAO: ColunasVisiveis = { resp: true, prazo: true, fluxo: true, rev: true, status: true };
+// Fluxo começa oculta por pedido — quem quiser vê liga de novo no popover de Colunas.
+export const COLUNAS_PADRAO: ColunasVisiveis = { resp: true, prazo: true, fluxo: false, rev: true, status: true };
 
 type LarguraColuna = "resp" | "prazo" | "fluxo" | "rev" | "status";
 const LARGURAS_PADRAO: Record<LarguraColuna, number> = { resp: 112, prazo: 96, fluxo: 96, rev: 56, status: 176 };
