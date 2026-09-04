@@ -11,6 +11,7 @@ import { EVENTO_LABELS } from "@/lib/timelineLabels";
 type Params = { params: Promise<{ workspaceId: string }> };
 
 const FRASE_DO_DIA = "Documentação em dia é obra sem retrabalho.";
+const LIMITE_PENDENCIAS_PAINEL = 8;
 
 function saudacao(): string {
   const hora = new Date().getHours();
@@ -96,13 +97,22 @@ export default async function PainelPage({ params }: Params) {
                 <ListTodo className="size-4 text-primary" />
                 <CardTitle>Minhas pendências</CardTitle>
               </div>
+              {totalPendencias > LIMITE_PENDENCIAS_PAINEL && (
+                <CardAction>
+                  <Link href={`/workspaces/${workspaceId}/pendencias`} className="text-xs text-primary hover:underline">
+                    Ver tudo ({totalPendencias}) →
+                  </Link>
+                </CardAction>
+              )}
             </CardHeader>
             <CardContent>
               {totalPendencias === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhuma pendência sua no momento.</p>
               ) : (
                 <ul className="space-y-2">
-                  {painel.minhasPendencias.documentos.map((d) => (
+                  {/* Documentos já vêm ordenados por status mais adiantado primeiro (ver
+                      painelService); cópias controladas completam a lista até o limite. */}
+                  {painel.minhasPendencias.documentos.slice(0, LIMITE_PENDENCIAS_PAINEL).map((d) => (
                     <li key={d.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
                       <Link href={`/workspaces/${workspaceId}/documentos/${d.id}`} className="hover:underline">
                         <span className="font-mono text-xs">{d.codigoCompleto}</span>{" "}
@@ -111,15 +121,17 @@ export default async function PainelPage({ params }: Params) {
                       <StatusBadge status={d.status} />
                     </li>
                   ))}
-                  {painel.minhasPendencias.copiasControladas.map((c) => (
-                    <li key={c.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                      <span>
-                        <span className="font-mono text-xs">{c.documentoCodigo}</span>{" "}
-                        <span className="text-muted-foreground">cópia em {c.revisaoLabel}</span>
-                      </span>
-                      <Badge variant="warning">A substituir</Badge>
-                    </li>
-                  ))}
+                  {painel.minhasPendencias.copiasControladas
+                    .slice(0, Math.max(0, LIMITE_PENDENCIAS_PAINEL - painel.minhasPendencias.documentos.length))
+                    .map((c) => (
+                      <li key={c.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                        <span>
+                          <span className="font-mono text-xs">{c.documentoCodigo}</span>{" "}
+                          <span className="text-muted-foreground">cópia em {c.revisaoLabel}</span>
+                        </span>
+                        <Badge variant="warning">A substituir</Badge>
+                      </li>
+                    ))}
                 </ul>
               )}
             </CardContent>

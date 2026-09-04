@@ -5,6 +5,16 @@ import { listAccessibleObraIdsInWorkspace } from "./permissions";
 import type { StatusDocumento } from "@/lib/statusGraph";
 import { isDocumentoFechado, dataEfetivaPrevista } from "@/lib/documentoStatus";
 
+// Quanto mais "adiantado" no fluxo, mais em cima aparece em Minhas Pendências — devolvido
+// pra correção é mais urgente que só ter começado, que por sua vez é mais urgente que
+// ainda nem ter sido iniciado (previsto). Só cobre os status que entram em pendência
+// (ver meusDocumentosPendentes); os demais não aparecem aqui de qualquer forma.
+const PRIORIDADE_PENDENCIA: Partial<Record<StatusDocumento, number>> = {
+  devolvido_correcao: 3,
+  em_elaboracao: 2,
+  previsto: 1,
+};
+
 export type PainelData = {
   documentosAtivos: number;
   documentosEmAtraso: number;
@@ -102,7 +112,8 @@ export async function getPainelData(workspaceId: string, userId: string): Promis
     .filter(
       (d) => d.responsavelId === userId && (d.status === "previsto" || d.status === "em_elaboracao" || d.status === "devolvido_correcao")
     )
-    .map((d) => ({ id: d.id, codigoCompleto: d.codigoCompleto, descricao: d.descricao, status: d.status, obraId: d.obraId }));
+    .map((d) => ({ id: d.id, codigoCompleto: d.codigoCompleto, descricao: d.descricao, status: d.status, obraId: d.obraId }))
+    .sort((a, b) => (PRIORIDADE_PENDENCIA[b.status] ?? 0) - (PRIORIDADE_PENDENCIA[a.status] ?? 0));
 
   const programacaoSemana = ativos
     .filter((d) => d.data !== null && d.data >= hoje && d.data <= em7Dias)
