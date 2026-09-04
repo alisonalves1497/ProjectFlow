@@ -1,12 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, AlertTriangle, Upload } from "lucide-react";
+import {
+  CheckCircle2,
+  AlertTriangle,
+  Upload,
+  FileSpreadsheet,
+  FolderKanban,
+  RefreshCw,
+  ListChecks,
+  ShieldCheck,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import { STATUS_LABELS, type StatusDocumento } from "@/lib/statusGraph";
 import {
   listarAbasPortfolioAction,
@@ -60,6 +71,10 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
   const [arquivoBase64, setArquivoBase64] = useState("");
   const [abas, setAbas] = useState<string[]>([]);
   const [sheetName, setSheetName] = useState("");
+  const [erroArquivo, setErroArquivo] = useState<string | null>(null);
+  // Protege contra o usuário trocar de arquivo antes da leitura anterior terminar — só o
+  // resultado da seleção mais recente pode atualizar o estado.
+  const selecaoAtual = useRef(0);
 
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [gruposSelecionados, setGruposSelecionados] = useState<Set<string>>(new Set());
@@ -80,24 +95,34 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
   }
 
   async function onArquivoSelecionado(file: File | null) {
+    const minhaSelecao = ++selecaoAtual.current;
     setArquivo(file);
     setAbas([]);
     setSheetName("");
     setArquivoBase64("");
+    setErroArquivo(null);
     if (!file) return;
     setPending(true);
     try {
       const base64 = await arquivoParaBase64(file);
-      setArquivoBase64(base64);
       const res = await listarAbasPortfolioAction(workspaceId, base64);
+      if (minhaSelecao !== selecaoAtual.current) return; // trocou de arquivo enquanto lia — descarta
+
       if (!res.ok) {
-        toast.error(res.error);
+        setErroArquivo(res.error);
         return;
       }
+      if (res.data.length === 0) {
+        setErroArquivo("Não encontrei nenhuma aba nesse arquivo.");
+        return;
+      }
+      setArquivoBase64(base64);
       setAbas(res.data);
       setSheetName(res.data[0] ?? "");
+    } catch {
+      if (minhaSelecao === selecaoAtual.current) setErroArquivo("Não consegui ler esse arquivo. Tente selecionar de novo.");
     } finally {
-      setPending(false);
+      if (minhaSelecao === selecaoAtual.current) setPending(false);
     }
   }
 
@@ -118,6 +143,8 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
       // o usuário desmarca aqui olhando a quantidade.
       setGruposSelecionados(new Set(res.data.grupos.map((g) => chaveGrupo(g.contrato, g.sistema))));
       setEtapa("grupos");
+    } catch {
+      toast.error("Não consegui analisar a planilha. Tente de novo.");
     } finally {
       setPending(false);
     }
@@ -153,6 +180,8 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
         Object.fromEntries(gruposParaEnviar.map((g) => [chaveGrupo(g.contrato, g.sistema), true]))
       );
       setEtapa("resolucao");
+    } catch {
+      toast.error("Não consegui analisar as linhas selecionadas. Tente de novo.");
     } finally {
       setPending(false);
     }
@@ -250,6 +279,8 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
       }
       setResultado(res.data);
       setEtapa("concluido");
+    } catch {
+      toast.error("Não consegui aplicar a sincronização. Tente de novo.");
     } finally {
       setPending(false);
     }
@@ -261,6 +292,7 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
     setArquivoBase64("");
     setAbas([]);
     setSheetName("");
+    setErroArquivo(null);
     setGrupos([]);
     setGruposSelecionados(new Set());
     setLinhas([]);
@@ -557,31 +589,117 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
     );
   }
 
+  const PASSOS = [
+    { icon: FileSpreadsheet, titulo: "Envie a planilha", texto: "Uma aba com Contrato, Sistema, Código, Tipo e Status." },
+    { icon: FolderKanban, titulo: "Escolha as obras", texto: "Marque quais combinações Contrato/Sistema entram na sincronização." },
+    { icon: ListChecks, titulo: "Resolva as pendências", texto: "Seção, Status ou Responsável que não bateram sozinhos — uma vez só, não linha por linha." },
+    { icon: ShieldCheck, titulo: "Confirme por obra", texto: "Documento novo só entra depois de você aprovar, obra por obra." },
+  ];
+
   return (
-    <div className="max-w-md space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="arquivo">Planilha do portfólio</Label>
-        <Input id="arquivo" type="file" accept=".xlsx,.xls,.xlsm" onChange={(e) => onArquivoSelecionado(e.target.files?.[0] ?? null)} />
-        {arquivo && <p className="text-xs text-muted-foreground">{arquivo.name}</p>}
-      </div>
+    <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-primary">
+            <Upload className="size-4" />
+            1. Enviar planilha
+          </CardTitle>
+          <CardDescription>Aceita .xlsx, .xls ou .xlsm — até 25MB.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <label
+            htmlFor="arquivo"
+            className={cn(
+              "flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors",
+              erroArquivo
+                ? "border-destructive/40 bg-destructive/5"
+                : arquivo
+                  ? "border-primary/40 bg-primary/5"
+                  : "border-border hover:border-primary/40 hover:bg-accent/50"
+            )}
+          >
+            <Upload className={cn("size-6", arquivo ? "text-primary" : "text-muted-foreground")} />
+            <span className="text-sm font-medium">{pending ? "Lendo arquivo…" : "Clique para escolher o arquivo"}</span>
+            <span className="text-xs text-muted-foreground">ou arraste aqui</span>
+          </label>
+          <input
+            id="arquivo"
+            type="file"
+            accept=".xlsx,.xls,.xlsm"
+            className="sr-only"
+            onChange={(e) => onArquivoSelecionado(e.target.files?.[0] ?? null)}
+          />
 
-      {abas.length > 1 && (
-        <div className="space-y-2">
-          <Label htmlFor="sheetName">Aba</Label>
-          <select id="sheetName" value={sheetName} onChange={(e) => setSheetName(e.target.value)} className="h-9 w-full rounded-md border bg-transparent px-3 text-sm">
-            {abas.map((a) => (
-              <option key={a} value={a}>
-                {a}
-              </option>
+          {arquivo && (
+            <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+              <FileSpreadsheet className="size-4 shrink-0 text-primary" />
+              <span className="min-w-0 flex-1 truncate">{arquivo.name}</span>
+              <button
+                type="button"
+                onClick={() => onArquivoSelecionado(null)}
+                className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
+                title="Remover arquivo"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+          )}
+
+          {erroArquivo && (
+            <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <span>{erroArquivo}</span>
+            </div>
+          )}
+
+          {abas.length > 1 && (
+            <div className="space-y-1.5">
+              <Label htmlFor="sheetName">Aba</Label>
+              <select
+                id="sheetName"
+                value={sheetName}
+                onChange={(e) => setSheetName(e.target.value)}
+                className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+              >
+                {abas.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <Button type="button" onClick={irParaGrupos} disabled={pending || !arquivoBase64} className="w-full">
+            <RefreshCw className="size-4" />
+            {pending ? "Lendo…" : "Analisar planilha"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card size="sm" className="bg-muted/30">
+        <CardHeader>
+          <CardTitle className="text-sm text-muted-foreground uppercase tracking-wide">Como funciona</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ol className="space-y-4">
+            {PASSOS.map((passo, idx) => (
+              <li key={passo.titulo} className="flex gap-3">
+                <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                  {idx + 1}
+                </div>
+                <div className="min-w-0">
+                  <p className="flex items-center gap-1.5 text-sm font-medium">
+                    <passo.icon className="size-3.5 text-primary/70" />
+                    {passo.titulo}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{passo.texto}</p>
+                </div>
+              </li>
             ))}
-          </select>
-        </div>
-      )}
-
-      <Button type="button" onClick={irParaGrupos} disabled={pending || !arquivoBase64}>
-        <Upload className="size-4" />
-        {pending ? "Lendo..." : "Analisar planilha"}
-      </Button>
+          </ol>
+        </CardContent>
+      </Card>
     </div>
   );
 }
