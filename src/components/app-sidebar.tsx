@@ -20,6 +20,7 @@ import {
   FolderPlus,
   Briefcase,
   Database,
+  RefreshCw,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -234,6 +235,12 @@ export function AppSidebar({
                         >
                           <FileSpreadsheet className="size-4" />
                           Importar planilha
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          render={<Link href={`${wsBase}/sincronizar-portfolio`} />}
+                        >
+                          <RefreshCw className="size-4" />
+                          Sincronizar Portfólio
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
