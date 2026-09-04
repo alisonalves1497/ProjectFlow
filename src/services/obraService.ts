@@ -186,6 +186,17 @@ export async function listObrasDoWorkspaceComProjeto(workspaceId: string) {
     .orderBy(projetos.name, obras.name);
 }
 
+// Obras liberadas pra ESSE membro especificamente — usado como "estado atual" pra calcular
+// o diff quando o painel de Membros salva um novo conjunto de Obras de uma vez só.
+export async function listObraIdsDoMembro(workspaceId: string, userId: string): Promise<string[]> {
+  const rows = await db
+    .select({ obraId: obraMembers.obraId })
+    .from(obraMembers)
+    .innerJoin(obras, eq(obras.id, obraMembers.obraId))
+    .where(and(eq(obras.workspaceId, workspaceId), eq(obraMembers.userId, userId), isNull(obras.deletedAt)));
+  return rows.map((r) => r.obraId);
+}
+
 export async function removeObraMember(obraId: string, userId: string) {
   const deleted = await db
     .delete(obraMembers)
