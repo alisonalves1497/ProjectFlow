@@ -31,8 +31,14 @@ import { createRevisao, transitionRevisaoStatus, toggleConferido, setArquivoRevi
 import { createComentario } from "@/services/comentarioService";
 import { toggleFavorito } from "@/services/favoritoService";
 import { createAnexoRevisao, deleteAnexo } from "@/services/anexoService";
-import { renomearSecao } from "@/services/catalogoService";
+import { renomearSecao, getSecaoPadraoOrThrow, contarSecoesDaObraDisciplina } from "@/services/catalogoService";
+import { garantirObraDisciplina, garantirSecaoPorTipo } from "@/services/importDocumentosService";
 import { requireObraAccess, requireWorkspaceRole } from "@/services/permissions";
+
+// Prefixo usado pelo <select> de Seção em "Novo documento" pra distinguir uma Seção real
+// (id de verdade) de um nome sugerido do catálogo (ver secoesPadrao) que ainda não foi usado
+// nesta Obra — nesse caso materializa a Seção de verdade na hora, sob demanda.
+const PREFIXO_SECAO_PADRAO = "padrao:";
 
 export type ActionState = { status: "idle" } | { status: "error"; error: string } | { status: "success" };
 
@@ -73,6 +79,14 @@ export async function createDocumentoAction(_prevState: ActionState, formData: F
   }
 
   try {
+    if (input.secaoId.startsWith(PREFIXO_SECAO_PADRAO)) {
+      const secaoPadraoId = input.secaoId.slice(PREFIXO_SECAO_PADRAO.length);
+      const secaoPadrao = await getSecaoPadraoOrThrow(workspaceId, secaoPadraoId);
+      const od = await garantirObraDisciplina(obraId, input.disciplinaId);
+      const posicao = (await contarSecoesDaObraDisciplina(od.id)) + 1;
+      const secao = await garantirSecaoPorTipo(od.id, secaoPadrao.name, posicao);
+      input.secaoId = secao.id;
+    }
     await createDocumento(workspaceId, session.user.id, input);
   } catch (err) {
     if (err instanceof ApiError) return { status: "error", error: err.message };

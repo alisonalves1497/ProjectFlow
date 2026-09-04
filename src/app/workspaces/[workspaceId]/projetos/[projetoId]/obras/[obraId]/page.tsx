@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { getObraOrThrow, listObraAccessUsers } from "@/services/obraService";
 import { requireObraAccess, getWorkspaceRole } from "@/services/permissions";
 import { listDocumentosAgrupadosPorSecao } from "@/services/documentoService";
-import { listDisciplinasComSecoesPorObra, listFases, listTiposDocumento } from "@/services/catalogoService";
+import { listDisciplinasComSecoesPorObra, listSecoesPadraoDoWorkspace, listFases, listTiposDocumento } from "@/services/catalogoService";
 import { listContatosExternos } from "@/services/contatoExternoService";
 import { getArvoreProjetos, flattenArvoreParaOpcoes } from "@/services/navegacaoService";
 import { getUltimaVisita, registrarVisita } from "@/services/visitaService";
@@ -50,7 +50,7 @@ export default async function ObraDocumentosPage({ params, searchParams }: Param
   const canManage = role === "administrador" || role === "coordenador";
   const agrupado = sp.agrupado !== "0";
 
-  const [grupos, gruposBase, disciplinasComSecoes, fases, tipos, usuarios, contatos, arvore] = await Promise.all([
+  const [grupos, gruposBase, disciplinasComSecoes, secoesPadrao, fases, tipos, usuarios, contatos, arvore] = await Promise.all([
     listDocumentosAgrupadosPorSecao(workspaceId, obraId, session.user.id, {
       status: sp.status as StatusDocumento | undefined,
       disciplinaId: sp.disciplinaId || undefined,
@@ -71,6 +71,7 @@ export default async function ObraDocumentosPage({ params, searchParams }: Param
       busca: sp.q || undefined,
     }),
     listDisciplinasComSecoesPorObra(obraId),
+    listSecoesPadraoDoWorkspace(workspaceId),
     listFases(workspaceId),
     listTiposDocumento(workspaceId),
     listObraAccessUsers(workspaceId, obraId),
@@ -79,6 +80,17 @@ export default async function ObraDocumentosPage({ params, searchParams }: Param
   ]);
 
   const secaoOptions = disciplinasComSecoes.flatMap((d) => d.secoes.map((s) => ({ id: s.id, label: `${d.name} - ${s.name}` })));
+
+  // Só pro form de "Novo documento": além das Seções que essa Obra já tem de verdade, oferece
+  // também os nomes sugeridos do catálogo (workspace inteiro) que ainda não viraram Seção
+  // aqui — prefixados pra createDocumentoAction saber que precisa materializar na hora.
+  const disciplinasParaNovoDocumento = disciplinasComSecoes.map((d) => {
+    const nomesJaReais = new Set(d.secoes.map((s) => s.name));
+    const sugeridas = secoesPadrao
+      .filter((sp) => sp.disciplinaId === d.disciplinaId && !nomesJaReais.has(sp.name))
+      .map((sp) => ({ id: `padrao:${sp.id}`, name: sp.name }));
+    return { ...d, secoes: [...d.secoes, ...sugeridas] };
+  });
   const obraOpcoes = flattenArvoreParaOpcoes(arvore);
 
   const disciplinaSelecionada = disciplinasComSecoes.find((d) => d.disciplinaId === sp.disciplinaId);
@@ -143,7 +155,7 @@ export default async function ObraDocumentosPage({ params, searchParams }: Param
           <ObraSwitcher workspaceId={workspaceId} obras={obraOpcoes} obraAtualId={obraId} disciplinaAtual={disciplinaSelecionada?.name} />
         </div>
         <div className="flex items-center gap-2 justify-self-start sm:justify-self-end">
-          <CreateDocumentoDialog workspaceId={workspaceId} projetoId={projetoId} obraId={obraId} disciplinas={disciplinasComSecoes} fases={fases} tipos={tipos} />
+          <CreateDocumentoDialog workspaceId={workspaceId} projetoId={projetoId} obraId={obraId} disciplinas={disciplinasParaNovoDocumento} fases={fases} tipos={tipos} />
           {canManage && <ObraMaisOpcoes workspaceId={workspaceId} projetoId={projetoId} obraId={obraId} obraNome={obra.name} />}
         </div>
       </div>
