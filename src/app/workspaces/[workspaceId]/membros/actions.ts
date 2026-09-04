@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
 import { auth } from "@/auth";
 import { ApiError } from "@/lib/errors";
-import { workspaceMemberAddSchema, workspaceMemberRoleUpdateSchema } from "@/lib/validators";
-import { addWorkspaceMember, removeWorkspaceMember, updateWorkspaceMemberRole } from "@/services/workspaceService";
+import { workspaceMemberAddSchema, workspaceMemberRoleUpdateSchema, workspaceMemberEmailUpdateSchema } from "@/lib/validators";
+import { addWorkspaceMember, removeWorkspaceMember, updateWorkspaceMemberRole, updateWorkspaceMemberEmail } from "@/services/workspaceService";
 import { addObraMemberByUserId, removeObraMember } from "@/services/obraService";
 import { requireWorkspaceRole, requireObraAccess } from "@/services/permissions";
 
@@ -62,6 +62,27 @@ export async function updateMemberRoleAction(_prevState: ActionState, formData: 
   } catch (err) {
     if (err instanceof ApiError) return { status: "error", error: err.message };
     if (err instanceof ZodError) return { status: "error", error: "Papel inválido." };
+    throw err;
+  }
+
+  revalidatePath(`/workspaces/${workspaceId}/membros`);
+  return { status: "success" };
+}
+
+export async function updateMemberEmailAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const userId = String(formData.get("userId") ?? "");
+
+  try {
+    await requireWorkspaceRole(session.user.id, workspaceId, ["administrador", "coordenador"]);
+    const input = workspaceMemberEmailUpdateSchema.parse({ email: formData.get("email") });
+    await updateWorkspaceMemberEmail(workspaceId, userId, input.email);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };
     throw err;
   }
 

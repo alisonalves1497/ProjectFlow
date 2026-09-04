@@ -27,6 +27,10 @@ export const workspaceMemberRoleUpdateSchema = z.object({
   role: workspaceRoleSchema,
 });
 
+export const workspaceMemberEmailUpdateSchema = z.object({
+  email: z.string().trim().email(),
+});
+
 export const passwordResetRequestSchema = z.object({
   email: z.string().trim().email(),
 });

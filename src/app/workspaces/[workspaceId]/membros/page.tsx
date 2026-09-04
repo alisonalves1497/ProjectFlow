@@ -8,6 +8,7 @@ import { AddMemberForm } from "./add-member-form";
 import { MemberRoleSelect } from "./member-role-select";
 import { RemoveMemberButton } from "./remove-member-button";
 import { MemberObraAccess } from "./member-obra-access";
+import { EditMemberEmailDialog } from "./edit-member-email-dialog";
 
 type Params = { params: Promise<{ workspaceId: string }> };
 
@@ -61,7 +62,10 @@ export default async function MembrosPage({ params }: Params) {
                 </div>
                 <div className="min-w-0 leading-tight">
                   <p className="truncate text-sm font-medium">{m.name ?? m.email}</p>
-                  <p className="truncate text-xs text-muted-foreground">{m.email}</p>
+                  <p className="flex items-center truncate text-xs text-muted-foreground">
+                    {m.email}
+                    {canManage && <EditMemberEmailDialog workspaceId={workspaceId} userId={m.userId} emailAtual={m.email} />}
+                  </p>
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">

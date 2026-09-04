@@ -141,6 +141,25 @@ export async function updateWorkspaceMemberRole(workspaceId: string, userId: str
   return updated;
 }
 
+// Só troca o email de quem já é membro deste workspace (escopo por segurança — não dá pra
+// editar o email de um usuário adivinhando o id dele). Email é único no sistema inteiro
+// (users.email), então bate com o já usado por outra conta é rejeitado.
+export async function updateWorkspaceMemberEmail(workspaceId: string, userId: string, email: string) {
+  const [membro] = await db
+    .select({ id: workspaceMembers.id })
+    .from(workspaceMembers)
+    .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)))
+    .limit(1);
+  if (!membro) throw notFound("WORKSPACE_MEMBER_NOT_FOUND", "Membro não encontrado neste workspace.");
+
+  const [emailEmUso] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  if (emailEmUso && emailEmUso.id !== userId) throw conflict("EMAIL_JA_EM_USO", "Já existe uma conta com este email.");
+
+  const [updated] = await db.update(users).set({ email, updatedAt: new Date() }).where(eq(users.id, userId)).returning();
+  if (!updated) throw notFound("USUARIO_NOT_FOUND", "Usuário não encontrado.");
+  return updated;
+}
+
 export async function removeWorkspaceMember(workspaceId: string, userId: string) {
   await assertNotLastOwnerDemotion(workspaceId, userId, null);
   const deleted = await db
