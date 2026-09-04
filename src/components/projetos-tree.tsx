@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { ChevronRight, FileText, Settings, Plus, Layers, FolderPlus, FileSpreadsheet } from "lucide-react";
+import { ChevronRight, Settings, Plus, Layers, FolderPlus, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -149,20 +149,6 @@ export function ProjetosTree({
                       </div>
                       {obraAberta && (
                         <ul className="ml-3 space-y-0.5 border-l pl-2">
-                          <li>
-                            <Link
-                              href={obraBase}
-                              className={cn(
-                                "flex items-center gap-1.5 rounded-md px-2 py-1 text-sm",
-                                pathname === obraBase && !disciplinaIdAtiva
-                                  ? "bg-primary/10 font-medium text-primary"
-                                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                              )}
-                            >
-                              <FileText className="size-3.5 shrink-0" />
-                              Documentos
-                            </Link>
-                          </li>
                           {obra.disciplinas.map((d) => {
                             const disciplinaAtiva = pathname === obraBase && disciplinaIdAtiva === d.disciplinaId;
                             return (
