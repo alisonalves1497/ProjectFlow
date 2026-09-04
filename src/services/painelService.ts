@@ -96,8 +96,12 @@ export async function getPainelData(workspaceId: string, userId: string): Promis
   const documentosAtivos = ativos.length;
   const documentosEmAtraso = ativos.filter((d) => d.data !== null && d.data < hoje).length;
 
+  // "previsto" entra aqui de propósito — é pendência assim que atribuída, não só depois de
+  // alguém criar a primeira revisão e "entrar no fluxo" de verdade.
   const meusDocumentosPendentes = ativos
-    .filter((d) => d.responsavelId === userId && (d.status === "em_elaboracao" || d.status === "devolvido_correcao"))
+    .filter(
+      (d) => d.responsavelId === userId && (d.status === "previsto" || d.status === "em_elaboracao" || d.status === "devolvido_correcao")
+    )
     .map((d) => ({ id: d.id, codigoCompleto: d.codigoCompleto, descricao: d.descricao, status: d.status, obraId: d.obraId }));
 
   const programacaoSemana = ativos
