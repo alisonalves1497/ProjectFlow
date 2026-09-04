@@ -27,7 +27,10 @@ export function normalizar(s: string): string {
     // KV - FUNDACAO"), e sem isso o casamento de texto (Seção, Status etc.) falha à toa.
     .replace(/[–—]/g, "-")
     .trim()
-    .toUpperCase();
+    .toUpperCase()
+    // "500 KV" vs "500KV" (com ou sem espaço antes da unidade) — mesma planilha mistura os
+    // dois, e isso sozinho já derrubava vários casamentos de Seção/Status à toa.
+    .replace(/(\d)\s+(KV|VCC|VCA|MVA)\b/g, "$1$2");
 }
 
 // Disciplina sempre com só a primeira letra maiúscula (ex: "CIVIL"/"civil" vindo da planilha
