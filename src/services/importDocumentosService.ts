@@ -22,6 +22,10 @@ export function normalizar(s: string): string {
   return s
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
+    // Travessão/meia-risca (– —) tratado igual hífen normal (-) — a mesma planilha real
+    // mistura os três pro mesmo tipo de separador ("SETOR 230 KV – FUNDACAO" vs "SETOR 230
+    // KV - FUNDACAO"), e sem isso o casamento de texto (Seção, Status etc.) falha à toa.
+    .replace(/[–—]/g, "-")
     .trim()
     .toUpperCase();
 }
