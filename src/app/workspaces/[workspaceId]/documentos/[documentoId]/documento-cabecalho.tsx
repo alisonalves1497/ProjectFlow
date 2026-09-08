@@ -31,6 +31,12 @@ function formatarData(iso: string | null | undefined): string {
   return new Date(iso + "T00:00:00").toLocaleDateString("pt-BR");
 }
 
+function formatarHoras(valor: string | null): string {
+  if (!valor) return "—";
+  const numero = Number(valor);
+  return `${numero.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}h`;
+}
+
 function Campo({ icon: Icon, label, valor }: { icon: LucideIcon; label: string; valor: string }) {
   return (
     <div>
@@ -84,6 +90,8 @@ export function DocumentoCabecalho({
   obraUsers,
   revisaoExterna,
   temRevisao,
+  tempoEstimadoHoras,
+  tempoRastreadoHoras,
 }: {
   workspaceId: string;
   documentoId: string;
@@ -104,6 +112,8 @@ export function DocumentoCabecalho({
   obraUsers: { userId: string; name: string }[];
   revisaoExterna: string | null;
   temRevisao: boolean;
+  tempoEstimadoHoras: string | null;
+  tempoRastreadoHoras: string | null;
 }) {
   const router = useRouter();
   const [editando, setEditando] = useState(false);
@@ -247,8 +257,37 @@ export function DocumentoCabecalho({
               <Campo icon={UserSearch} label="Análise" valor="—" />
             </Grupo>
             <Grupo titulo="Esforço">
-              <Campo icon={Clock} label="Tempo estimado" valor="—" />
-              <Campo icon={History} label="Tempo rastreado" valor="—" />
+              {editando ? (
+                <>
+                  <CampoEditavel icon={Clock} label="Tempo estimado">
+                    <Input
+                      name="tempoEstimadoHoras"
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      placeholder="horas"
+                      defaultValue={tempoEstimadoHoras ?? ""}
+                      className="h-7 w-20 text-sm"
+                    />
+                  </CampoEditavel>
+                  <CampoEditavel icon={History} label="Tempo rastreado">
+                    <Input
+                      name="tempoRastreadoHoras"
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      placeholder="horas"
+                      defaultValue={tempoRastreadoHoras ?? ""}
+                      className="h-7 w-20 text-sm"
+                    />
+                  </CampoEditavel>
+                </>
+              ) : (
+                <>
+                  <Campo icon={Clock} label="Tempo estimado" valor={formatarHoras(tempoEstimadoHoras)} />
+                  <Campo icon={History} label="Tempo rastreado" valor={formatarHoras(tempoRastreadoHoras)} />
+                </>
+              )}
             </Grupo>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, date, integer, pgEnum, unique, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, date, integer, numeric, pgEnum, unique, primaryKey } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 import { users } from "./auth";
 import { obras } from "./hierarquia";
@@ -76,6 +76,11 @@ export const documentos = pgTable(
     // De onde esse documento veio (nome do sistema GED do cliente, ex: "ACC") — só
     // informativo, não usado em nenhuma regra do sistema.
     gedOrigem: text("ged_origem"),
+
+    // Esforço — só informativo (card "Esforço" na tela do documento), sem nenhuma regra do
+    // sistema em cima disso (não soma pra nenhum relatório ainda).
+    tempoEstimadoHoras: numeric("tempo_estimado_horas", { precision: 8, scale: 2 }),
+    tempoRastreadoHoras: numeric("tempo_rastreado_horas", { precision: 8, scale: 2 }),
 
     createdBy: text("created_by").notNull().references(() => users.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

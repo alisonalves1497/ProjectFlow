@@ -82,6 +82,8 @@ export async function DocumentoDetalheConteudo({ workspaceId, documentoId }: { w
         obraUsers={obraUsers.map((u) => ({ userId: u.userId, name: u.name ?? u.email }))}
         revisaoExterna={documento.revisaoExterna}
         temRevisao={documento.currentRevisionId !== null}
+        tempoEstimadoHoras={documento.tempoEstimadoHoras}
+        tempoRastreadoHoras={documento.tempoRastreadoHoras}
       />
 
       <Tabs defaultValue="revisoes">

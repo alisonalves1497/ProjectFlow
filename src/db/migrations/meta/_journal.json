@@ -148,6 +148,13 @@
       "when": 1788541755612,
       "tag": "0020_melted_maddog",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1788906753123,
+      "tag": "0021_wet_night_thrasher",
+      "breakpoints": true
     }
   ]
 }

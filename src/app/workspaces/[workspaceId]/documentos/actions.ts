@@ -262,6 +262,8 @@ export async function updateDocumentoAction(_prevState: ActionState, formData: F
     if (formData.has("dataReprogramada")) patch.dataReprogramada = formData.get("dataReprogramada") || null;
     if (formData.has("dataPrevista")) patch.dataPrevista = formData.get("dataPrevista") || null;
     if (formData.has("revisaoExterna")) patch.revisaoExterna = formData.get("revisaoExterna") || null;
+    if (formData.has("tempoEstimadoHoras")) patch.tempoEstimadoHoras = formData.get("tempoEstimadoHoras") || null;
+    if (formData.has("tempoRastreadoHoras")) patch.tempoRastreadoHoras = formData.get("tempoRastreadoHoras") || null;
     if (formData.has("responsavelId")) {
       // "" no select significa "sem responsável" — precisa virar null explícito, não some do patch.
       const responsavelIdRaw = formData.get("responsavelId");

@@ -258,6 +258,8 @@ export async function updateDocumento(
     dataPrevista?: string | null;
     secaoId?: string;
     revisaoExterna?: string | null;
+    tempoEstimadoHoras?: number | null;
+    tempoRastreadoHoras?: number | null;
   }
 ) {
   if (patch.secaoId) {
@@ -265,11 +267,20 @@ export async function updateDocumento(
     await assertSecaoMesmaDisciplina(documento, patch.secaoId);
   }
 
+  // Coluna numeric do Postgres é modelada como string no drizzle — patch aceita number
+  // (mais natural pra quem chama), converte só na hora de gravar.
+  const { tempoEstimadoHoras, tempoRastreadoHoras, ...restoPatch } = patch;
+
   let updated;
   try {
     [updated] = await db
       .update(documentos)
-      .set({ ...patch, updatedAt: new Date() })
+      .set({
+        ...restoPatch,
+        ...(tempoEstimadoHoras !== undefined ? { tempoEstimadoHoras: tempoEstimadoHoras === null ? null : String(tempoEstimadoHoras) } : {}),
+        ...(tempoRastreadoHoras !== undefined ? { tempoRastreadoHoras: tempoRastreadoHoras === null ? null : String(tempoRastreadoHoras) } : {}),
+        updatedAt: new Date(),
+      })
       .where(and(eq(documentos.id, documentoId), eq(documentos.workspaceId, workspaceId), isNull(documentos.deletedAt)))
       .returning();
   } catch (err) {
