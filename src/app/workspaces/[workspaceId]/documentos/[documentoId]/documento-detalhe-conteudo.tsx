@@ -3,6 +3,8 @@ import { getDocumentoOrThrow } from "@/services/documentoService";
 import { getObraOrThrow, listObraAccessUsers } from "@/services/obraService";
 import { listRevisoesComConferidoPorNome } from "@/services/revisaoService";
 import { listComentarios } from "@/services/comentarioService";
+import { listMensagensChat } from "@/services/documentoChatService";
+import { ChatTab } from "./chat-tab";
 import { listTimelineComAutorNome } from "@/services/timelineService";
 import { listAnexosPorRevisao } from "@/services/anexoService";
 import { listDisciplinas, listCategoriasConhecimento, listDisciplinasComSecoesPorObra } from "@/services/catalogoService";
@@ -23,7 +25,7 @@ export async function DocumentoDetalheConteudo({ workspaceId, documentoId }: { w
   const documento = await getDocumentoOrThrow(workspaceId, documentoId);
   const obra = await getObraOrThrow(workspaceId, documento.obraId);
 
-  const [revisoes, timeline, disciplinas, obraUsers, fotos, itensConhecimento, categoriasConhecimento, disciplinasComSecoes] =
+  const [revisoes, timeline, disciplinas, obraUsers, fotos, itensConhecimento, categoriasConhecimento, disciplinasComSecoes, mensagensChat] =
     await Promise.all([
       listRevisoesComConferidoPorNome(workspaceId, documentoId),
       listTimelineComAutorNome(workspaceId, documentoId),
@@ -33,6 +35,7 @@ export async function DocumentoDetalheConteudo({ workspaceId, documentoId }: { w
       listItensConhecimento(workspaceId, { documentoId }),
       listCategoriasConhecimento(workspaceId),
       listDisciplinasComSecoesPorObra(documento.obraId),
+      listMensagensChat(workspaceId, documentoId),
     ]);
 
   const comentariosPorRevisaoEntries = await Promise.all(
@@ -86,14 +89,20 @@ export async function DocumentoDetalheConteudo({ workspaceId, documentoId }: { w
         tempoRastreadoHoras={documento.tempoRastreadoHoras}
       />
 
-      <Tabs defaultValue="revisoes">
+      <Tabs defaultValue="chat">
         <TabsList variant="line" className="mb-6 w-full justify-start border-b">
-          <TabsTrigger value="revisoes">Revisões ({revisoes.length})</TabsTrigger>
+          <TabsTrigger value="chat">Chat ({mensagensChat.length})</TabsTrigger>
+          {/* Revisões ocultada por pedido do time — fica pronta pra voltar, sem tirar o
+              histórico real de revisão nem a lógica de troca de status por trás dela. */}
           <TabsTrigger value="linha-do-tempo">Linha do tempo</TabsTrigger>
           <TabsTrigger value="rfi-rnc">RFI/RNC</TabsTrigger>
           <TabsTrigger value="anexos">Anexos</TabsTrigger>
           <TabsTrigger value="fotos">Fotos</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="chat">
+          <ChatTab workspaceId={workspaceId} documentoId={documentoId} mensagens={mensagensChat} />
+        </TabsContent>
 
         <TabsContent value="revisoes">
           <RevisoesAccordion

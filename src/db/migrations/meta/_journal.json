@@ -155,6 +155,13 @@
       "when": 1788906753123,
       "tag": "0021_wet_night_thrasher",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1788908691631,
+      "tag": "0022_abandoned_amphibian",
+      "breakpoints": true
     }
   ]
 }

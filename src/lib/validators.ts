@@ -178,6 +178,10 @@ export const comentarioCreateSchema = z.object({
   marcarPendenciaCliente: z.boolean().optional(),
 });
 
+export const chatMensagemCreateSchema = z.object({
+  corpo: z.string().trim().min(1).max(4000),
+});
+
 export const contatoExternoCreateSchema = z.object({
   nome: z.string().trim().min(1).max(200),
   email: z.string().trim().email(),

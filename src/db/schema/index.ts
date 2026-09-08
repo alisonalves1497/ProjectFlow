@@ -14,3 +14,4 @@ export * from "./anexos";
 export * from "./conhecimento";
 export * from "./visitas";
 export * from "./favoritos";
+export * from "./chat";

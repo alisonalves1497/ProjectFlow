@@ -16,6 +16,7 @@ import {
   documentoBulkExcluirSchema,
   secaoRenameSchema,
   setStatusDiretoSchema,
+  chatMensagemCreateSchema,
 } from "@/lib/validators";
 import {
   createDocumento,
@@ -29,6 +30,7 @@ import {
 } from "@/services/documentoService";
 import { createRevisao, transitionRevisaoStatus, toggleConferido, setArquivoRevisao } from "@/services/revisaoService";
 import { createComentario } from "@/services/comentarioService";
+import { createMensagemChat } from "@/services/documentoChatService";
 import { toggleFavorito } from "@/services/favoritoService";
 import { createAnexoRevisao, deleteAnexo } from "@/services/anexoService";
 import { renomearSecao, getSecaoPadraoOrThrow, contarSecoesDaObraDisciplina } from "@/services/catalogoService";
@@ -504,6 +506,27 @@ export async function addComentarioAction(_prevState: ActionState, formData: For
       marcarPendenciaCliente: formData.get("marcarPendenciaCliente") === "on",
     });
     await createComentario(workspaceId, documentoId, revisaoId, session.user.id, input);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };
+    throw err;
+  }
+
+  revalidatePath(`/workspaces/${workspaceId}/documentos/${documentoId}`);
+  return { status: "success" };
+}
+
+export async function addChatMensagemAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const documentoId = String(formData.get("documentoId") ?? "");
+
+  try {
+    await assertObraAccessForDocumento(session.user.id, workspaceId, documentoId);
+    const input = chatMensagemCreateSchema.parse({ corpo: formData.get("corpo") });
+    await createMensagemChat(workspaceId, documentoId, session.user.id, input.corpo);
   } catch (err) {
     if (err instanceof ApiError) return { status: "error", error: err.message };
     if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };
