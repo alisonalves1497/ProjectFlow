@@ -677,7 +677,7 @@ export function DocumentosLista({
             trigger={
               <button
                 type="button"
-                className="flex w-full items-center justify-center py-1 text-muted-foreground hover:text-primary"
+                className="flex w-full items-center justify-end py-1 pr-4 text-muted-foreground hover:text-primary"
                 title={`Novo documento em ${g.disciplinaName} - ${g.secaoName}`}
               />
             }
