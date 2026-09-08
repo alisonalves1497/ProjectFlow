@@ -29,6 +29,10 @@ export function CreateDocumentoDialog({
   disciplinas,
   fases,
   tipos,
+  disciplinaIdInicial,
+  secaoIdInicial,
+  trigger,
+  triggerCompacto,
 }: {
   workspaceId: string;
   projetoId: string;
@@ -36,9 +40,16 @@ export function CreateDocumentoDialog({
   disciplinas: Disciplina[];
   fases: Catalogo[];
   tipos: Catalogo[];
+  // Usado pelo "+" de cada seção na Lista de Documentos — abre o diálogo já com a
+  // disciplina/seção daquela linha escolhidas, em vez de sempre a primeira da obra, com um
+  // gatilho customizado (ícone só, sem o botão "+ Novo" padrão).
+  disciplinaIdInicial?: string;
+  secaoIdInicial?: string;
+  trigger?: React.ReactElement;
+  triggerCompacto?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [disciplinaId, setDisciplinaId] = useState(disciplinas[0]?.disciplinaId ?? "");
+  const [disciplinaId, setDisciplinaId] = useState(disciplinaIdInicial ?? disciplinas[0]?.disciplinaId ?? "");
   const [state, formAction, pending] = useActionState(createDocumentoAction, initialActionState);
 
   const secoesDaDisciplina = useMemo(
@@ -54,9 +65,15 @@ export function CreateDocumentoDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button disabled={semCatalogo} />}>
-        <Plus className="size-4" />
-        Novo
+      <DialogTrigger render={trigger ?? <Button disabled={semCatalogo} />}>
+        {triggerCompacto ? (
+          <Plus className="size-3.5" />
+        ) : (
+          <>
+            <Plus className="size-4" />
+            Novo
+          </>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -97,7 +114,13 @@ export function CreateDocumentoDialog({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="secaoId">Seção</Label>
-                <select id="secaoId" name="secaoId" required className="h-9 w-full rounded-md border bg-transparent px-3 text-sm">
+                <select
+                  id="secaoId"
+                  name="secaoId"
+                  required
+                  defaultValue={secaoIdInicial}
+                  className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+                >
                   {secoesDaDisciplina.length === 0 && <option value="">Nenhuma seção nesta disciplina</option>}
                   {secoesDaDisciplina.map((s) => (
                     <option key={s.id} value={s.id}>

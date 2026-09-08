@@ -16,6 +16,7 @@ type Disciplina = { disciplinaId: string; code: string; name: string; secoes: { 
 type SecaoOption = { id: string; label: string };
 type Usuario = { userId: string; name: string | null; email: string };
 type Contato = { id: string; nome: string; email: string };
+type Catalogo = { id: string; code: string; name: string };
 
 const ICONE_QUADRADO = "flex size-8 items-center justify-center rounded-md border text-muted-foreground hover:bg-accent hover:text-foreground";
 
@@ -26,6 +27,8 @@ export function DocumentosPainel({
   grupos,
   agrupado,
   disciplinas,
+  fases,
+  tipos,
   usuarios,
   contatos,
   documentosAtualizadosIds,
@@ -51,6 +54,8 @@ export function DocumentosPainel({
   grupos: GrupoSecaoDocumentos[];
   agrupado: boolean;
   disciplinas: Disciplina[];
+  fases: Catalogo[];
+  tipos: Catalogo[];
   usuarios: Usuario[];
   contatos: Contato[];
   documentosAtualizadosIds: Set<string>;
@@ -168,6 +173,8 @@ export function DocumentosPainel({
         grupos={grupos}
         agrupado={agrupado}
         disciplinas={disciplinas}
+        fases={fases}
+        tipos={tipos}
         usuarios={usuarios}
         contatos={contatos}
         documentosAtualizadosIds={documentosAtualizadosIds}

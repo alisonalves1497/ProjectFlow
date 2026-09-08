@@ -385,6 +385,7 @@ export type DocumentoAgrupadoFiltros = {
 export type GrupoSecaoDocumentos = {
   secaoId: string;
   secaoName: string;
+  disciplinaId: string;
   disciplinaName: string;
   documentos: {
     id: string;
@@ -528,6 +529,7 @@ export async function listDocumentosAgrupadosPorSecao(
       return {
         secaoId: s.secaoId,
         secaoName: s.secaoName,
+        disciplinaId: s.disciplinaId,
         disciplinaName: s.disciplinaName,
         documentos: docsDaSecao.map((d) => ({
           id: d.id,

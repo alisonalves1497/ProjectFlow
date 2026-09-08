@@ -22,6 +22,7 @@ import { STATUS_LABELS, type StatusDocumento } from "@/lib/statusGraph";
 import type { GrupoSecaoDocumentos } from "@/services/documentoService";
 import { FavoritoButton } from "./favorito-button";
 import { CreateGrdDialog } from "../../../../grds/create-grd-dialog";
+import { CreateDocumentoDialog } from "../../../../documentos/create-documento-dialog";
 import { RenameSecaoDialog } from "./rename-secao-dialog";
 import {
   bulkMoverSecaoAction,
@@ -39,6 +40,7 @@ const initialUpdateActionState: ActionState = { status: "idle" };
 const CHECKBOX_CLASS = "checkbox-custom";
 
 type Disciplina = { disciplinaId: string; code: string; name: string; secoes: { id: string; name: string }[] };
+type Catalogo = { id: string; code: string; name: string };
 type Usuario = { userId: string; name: string | null; email: string };
 type Contato = { id: string; nome: string; email: string };
 
@@ -387,6 +389,8 @@ export function DocumentosLista({
   grupos,
   agrupado,
   disciplinas,
+  fases,
+  tipos,
   usuarios,
   contatos,
   documentosAtualizadosIds,
@@ -402,6 +406,8 @@ export function DocumentosLista({
   grupos: GrupoSecaoDocumentos[];
   agrupado: boolean;
   disciplinas: Disciplina[];
+  fases: Catalogo[];
+  tipos: Catalogo[];
   usuarios: Usuario[];
   contatos: Contato[];
   documentosAtualizadosIds: Set<string>;
@@ -650,6 +656,37 @@ export function DocumentosLista({
     );
   }
 
+  // Linha fina abaixo do título da seção — atalho pra criar documento já com disciplina/seção
+  // dessa linha marcadas, sem precisar escolher tudo de novo no diálogo "+ Novo" do topo (que
+  // sempre abre com a primeira disciplina/seção da obra).
+  function linhaAdicionarDocumento(g: GrupoSecaoDocumentos) {
+    return (
+      <TableRow key={`add-${g.secaoId}`} className="hover:bg-accent/40">
+        <TableCell />
+        <TableCell colSpan={colSpanResto} className="p-0">
+          <CreateDocumentoDialog
+            workspaceId={workspaceId}
+            projetoId={projetoId}
+            obraId={obraId}
+            disciplinas={disciplinas}
+            fases={fases}
+            tipos={tipos}
+            disciplinaIdInicial={g.disciplinaId}
+            secaoIdInicial={g.secaoId}
+            triggerCompacto
+            trigger={
+              <button
+                type="button"
+                className="flex w-full items-center justify-center py-1 text-muted-foreground hover:text-primary"
+                title={`Novo documento em ${g.disciplinaName} - ${g.secaoName}`}
+              />
+            }
+          />
+        </TableCell>
+      </TableRow>
+    );
+  }
+
   return (
     <div>
       {selecionados.size > 0 && (
@@ -695,6 +732,7 @@ export function DocumentosLista({
                 return (
                   <Fragment key={g.secaoId}>
                     {linhaCabecalhoSecao(g)}
+                    {!colapsada && podeGerenciar && linhaAdicionarDocumento(g)}
                     {colapsada
                       ? null
                       : g.documentos.length === 0

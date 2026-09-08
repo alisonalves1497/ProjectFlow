@@ -176,6 +176,8 @@ export default async function ObraDocumentosPage({ params, searchParams }: Param
         grupos={grupos}
         agrupado={agrupado}
         disciplinas={disciplinasComSecoes}
+        fases={fases}
+        tipos={tipos}
         usuarios={usuarios}
         contatos={contatos}
         documentosAtualizadosIds={documentosAtualizadosIds}
