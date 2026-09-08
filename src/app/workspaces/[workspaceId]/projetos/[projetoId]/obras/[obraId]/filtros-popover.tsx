@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -42,21 +43,43 @@ function StatusMultiSelect({ statusOptions, selecionados }: { statusOptions: Sta
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  // Estado local pra o checkbox responder na hora — cada clique disparando router.push direto
+  // esperava a navegação inteira (ida e volta no servidor) antes de marcar/desmarcar, o que
+  // deixava marcar vários status seguidos extremamente lento. Aplica na URL com um pequeno
+  // debounce, então vários cliques rápidos viram uma navegação só.
+  const [selecionadosLocais, setSelecionadosLocais] = useState(selecionados);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function alternar(value: string) {
-    const novo = selecionados.includes(value) ? selecionados.filter((v) => v !== value) : [...selecionados, value];
+  useEffect(() => {
+    setSelecionadosLocais(selecionados);
+  }, [selecionados]);
+
+  function aplicarNaUrl(lista: string[]) {
     const params = new URLSearchParams(searchParams.toString());
-    if (novo.length > 0) params.set("status", novo.join(","));
+    if (lista.length > 0) params.set("status", lista.join(","));
     else params.delete("status");
     router.push(`${pathname}?${params.toString()}`);
   }
 
+  function alternar(value: string) {
+    const novo = selecionadosLocais.includes(value) ? selecionadosLocais.filter((v) => v !== value) : [...selecionadosLocais, value];
+    setSelecionadosLocais(novo);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => aplicarNaUrl(novo), 400);
+  }
+
+  function limparSelecao() {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setSelecionadosLocais([]);
+    aplicarNaUrl([]);
+  }
+
   const rotulo =
-    selecionados.length === 0
+    selecionadosLocais.length === 0
       ? "Todos os status"
-      : selecionados.length === 1
-        ? (statusOptions.find(([v]) => v === selecionados[0])?.[1] ?? selecionados[0])
-        : `${selecionados.length} status selecionados`;
+      : selecionadosLocais.length === 1
+        ? (statusOptions.find(([v]) => v === selecionadosLocais[0])?.[1] ?? selecionadosLocais[0])
+        : `${selecionadosLocais.length} status selecionados`;
 
   return (
     <Popover>
@@ -77,7 +100,7 @@ function StatusMultiSelect({ statusOptions, selecionados }: { statusOptions: Sta
             <label key={value} className="flex cursor-pointer items-center gap-2 text-sm">
               <input
                 type="checkbox"
-                checked={selecionados.includes(value)}
+                checked={selecionadosLocais.includes(value)}
                 onChange={(e) => {
                   // Esse checkbox vive dentro do Popover, que renderiza num portal fora da
                   // árvore DOM do <form> — mas eventos sintéticos do React ainda borbulham
@@ -93,14 +116,12 @@ function StatusMultiSelect({ statusOptions, selecionados }: { statusOptions: Sta
             </label>
           ))}
         </div>
-        {selecionados.length > 0 && (
+        {selecionadosLocais.length > 0 && (
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              const params = new URLSearchParams(searchParams.toString());
-              params.delete("status");
-              router.push(`${pathname}?${params.toString()}`);
+              limparSelecao();
             }}
             className="mt-3 text-xs text-primary hover:underline"
           >
