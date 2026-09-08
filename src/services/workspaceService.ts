@@ -100,7 +100,8 @@ export async function addWorkspaceMember(
   workspaceId: string,
   input: { email: string; role: WorkspaceRole; nome?: string; senha?: string }
 ) {
-  let [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, input.email)).limit(1);
+  const email = input.email.toLowerCase().trim();
+  let [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
 
   if (!user) {
     if (!input.nome || !input.senha) {
@@ -112,7 +113,7 @@ export async function addWorkspaceMember(
     const passwordHash = await bcrypt.hash(input.senha, 10);
     [user] = await db
       .insert(users)
-      .values({ id: newId("usr"), name: input.nome, email: input.email, passwordHash })
+      .values({ id: newId("usr"), name: input.nome, email, passwordHash })
       .returning();
   }
 
@@ -144,7 +145,8 @@ export async function updateWorkspaceMemberRole(workspaceId: string, userId: str
 // Só troca o email de quem já é membro deste workspace (escopo por segurança — não dá pra
 // editar o email de um usuário adivinhando o id dele). Email é único no sistema inteiro
 // (users.email), então bate com o já usado por outra conta é rejeitado.
-export async function updateWorkspaceMemberEmail(workspaceId: string, userId: string, email: string) {
+export async function updateWorkspaceMemberEmail(workspaceId: string, userId: string, emailBruto: string) {
+  const email = emailBruto.toLowerCase().trim();
   const [membro] = await db
     .select({ id: workspaceMembers.id })
     .from(workspaceMembers)

@@ -15,7 +15,8 @@ function hashToken(token: string): string {
 
 // Sempre "funciona" do ponto de vista de quem chama, exista ou não o email — não dá
 // pra vazar pra fora se um email tem conta ou não (evita enumeração de usuários).
-export async function requestPasswordReset(email: string, baseUrl: string) {
+export async function requestPasswordReset(emailBruto: string, baseUrl: string) {
+  const email = emailBruto.toLowerCase().trim();
   const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
   if (!user) return;
 
@@ -36,7 +37,8 @@ export async function requestPasswordReset(email: string, baseUrl: string) {
   await sendPasswordResetEmail(email, link);
 }
 
-export async function resetPasswordWithToken(email: string, token: string, novaSenha: string) {
+export async function resetPasswordWithToken(emailBruto: string, token: string, novaSenha: string) {
+  const email = emailBruto.toLowerCase().trim();
   const identifier = `${PREFIXO_IDENTIFIER}${email}`;
   const tokenHash = hashToken(token);
 

@@ -27,7 +27,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Senha", type: "password" },
       },
       authorize: async (credentials) => {
-        const email = credentials?.email as string | undefined;
+        const email = (credentials?.email as string | undefined)?.toLowerCase().trim();
         const password = credentials?.password as string | undefined;
         if (!email || !password) return null;
 
@@ -60,7 +60,7 @@ export async function createUserWithPassword(params: { name: string; email: stri
   const passwordHash = await bcrypt.hash(params.password, 10);
   const [user] = await db
     .insert(users)
-    .values({ id: newId("usr"), name: params.name, email: params.email, passwordHash })
+    .values({ id: newId("usr"), name: params.name, email: params.email.toLowerCase().trim(), passwordHash })
     .returning();
   return user;
 }

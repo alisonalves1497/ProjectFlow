@@ -147,7 +147,8 @@ export async function listObraMembers(obraId: string) {
     .where(eq(obraMembers.obraId, obraId));
 }
 
-export async function addObraMember(obraId: string, email: string) {
+export async function addObraMember(obraId: string, emailBruto: string) {
+  const email = emailBruto.toLowerCase().trim();
   const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
   if (!user) throw notFound("USER_NOT_FOUND", "Nenhum usuário encontrado com este email.");
   return addObraMemberByUserId(obraId, user.id);
