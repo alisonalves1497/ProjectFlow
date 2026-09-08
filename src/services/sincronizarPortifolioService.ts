@@ -115,7 +115,11 @@ export async function parseLinhasPortifolio(buffer: Buffer, sheetName: string): 
     else if (texto === "PROJETISTA") projetista = idx;
     else if (texto.includes("DATA") && texto.includes("ALTERA")) dataAlteracao = idx;
     else if (texto.includes("GED") && ged === -1) ged = idx;
-    else if (texto.includes("REVIS") && revisao === -1) revisao = idx;
+    // "REVISÃO NUMÉRICA?" é outra coluna (sinalizador auxiliar da planilha, não o rótulo de
+    // revisão de verdade) — sem excluir ela, "REVIS" bate nela primeiro (some planilhas têm
+    // as duas, e essa vem antes da "REVISÃO" de verdade), travando revisao === -1 pra sempre
+    // e fazendo o rótulo real da coluna REVISÃO nunca ser usado.
+    else if (texto.includes("REVIS") && !texto.includes("NUMERIC") && revisao === -1) revisao = idx;
   });
 
   if (contrato === -1 || sistema === -1 || (codigo1 === -1 && codigo2 === -1) || tipo === -1) {
