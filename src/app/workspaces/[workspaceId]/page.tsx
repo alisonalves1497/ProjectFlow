@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { FileText, AlertTriangle, Clock, Lightbulb, CalendarDays, ListTodo, Activity } from "lucide-react";
 import { EVENTO_LABELS } from "@/lib/timelineLabels";
+import { MeusDocumentosCard } from "./meus-documentos-card";
 
 type Params = { params: Promise<{ workspaceId: string }> };
 
@@ -17,16 +18,26 @@ const LIMITE_PROGRAMACAO_PAINEL = 5;
 // Gira uma por dia (mesma pra todo mundo, mesma o dia inteiro) — não é aleatório a cada
 // carregamento, senão "frase do dia" vira "frase a cada F5".
 const FRASES_DO_DIA = [
-  "Documentação em dia é obra sem retrabalho.",
-  "Revisão bem feita hoje é problema que não aparece na obra amanhã.",
-  "Documento sem dono é documento que não anda.",
-  "Prazo cumprido começa com status atualizado.",
-  "Um RFI respondido rápido custa menos que um retrabalho.",
-  "Padronizar a nomenclatura hoje poupa uma busca amanhã.",
-  "Registro fotográfico é memória que não falha.",
-  "Cópia controlada desatualizada é risco, não detalhe.",
-  "Comentário claro na revisão poupa reunião depois.",
-  "Cada seção organizada é tempo a menos procurando arquivo.",
+  "Mas aí está igual Zeca Pagodinho, deixa a vida me levar.",
+  "Cachorro com 2 donos morre de fome.",
+  "Igual olho verde em gente feia, não adianta nada.",
+  "A melhor função do relé GE é a distância, a distância que você mantém dele.",
+  "Mas aí é cobertor curto.",
+  "Igual buzina em avião.",
+  "Cachorro mordido por cobra, tem medo até de linguiça.",
+  "Nada tão diferente quanto duas coisas iguais.",
+  "Se passa 1 boi, passa uma boiada.",
+  "Melhor uma pergunta idiota, do que um idiota com uma pergunta.",
+  "Mais perdido que Adão em dia das Mães.",
+  "Você não inventa, você aumenta.",
+  "Pinta de verde e joga no mato.",
+  "Mesma coisa que pedir cronograma para o pessoal da gestão.",
+  "A gente tá dando murro em ponta de faca.",
+  "Tem só 3 partes erradas, o começo, meio e fim.",
+  "A única coisa prevista é que haverá imprevistos.",
+  "Não tá contratando um Zé da esquina!",
+  "O caminho de ida é o caminho de volta.",
+  "Quem nasceu burro, nunca será promovido a cavalo.",
 ];
 
 function fraseDoDia(): string {
@@ -174,41 +185,45 @@ export default async function PainelPage({ params }: Params) {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <CalendarDays className="size-4 text-primary" />
-                <CardTitle>Programação da semana</CardTitle>
-              </div>
-              {painel.programacaoSemana.length > LIMITE_PROGRAMACAO_PAINEL && (
-                <CardAction>
-                  <Link href={`/workspaces/${workspaceId}/programacao-semana`} className="text-xs text-primary hover:underline">
-                    Ver mais ({painel.programacaoSemana.length}) →
-                  </Link>
-                </CardAction>
-              )}
-            </CardHeader>
-            <CardContent>
-              {painel.programacaoSemana.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhuma entrega prevista nos próximos 7 dias.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {painel.programacaoSemana.slice(0, LIMITE_PROGRAMACAO_PAINEL).map((d) => (
-                    <li key={d.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                      <Link href={`/workspaces/${workspaceId}/documentos/${d.id}`} className="hover:underline">
-                        <span className="font-mono text-xs">{d.codigoCompleto}</span>{" "}
-                        <span className="text-muted-foreground">{d.descricao}</span>
-                      </Link>
-                      <span className="text-muted-foreground">
-                        {new Date(d.dataPrevista).toLocaleDateString("pt-BR")}
-                        {d.reprogramado && <span className="ml-1 text-xs">(reprogramado)</span>}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
+          <div className="grid gap-8 sm:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="size-4 text-primary" />
+                  <CardTitle>Programação da semana</CardTitle>
+                </div>
+                {painel.programacaoSemana.length > LIMITE_PROGRAMACAO_PAINEL && (
+                  <CardAction>
+                    <Link href={`/workspaces/${workspaceId}/programacao-semana`} className="text-xs text-primary hover:underline">
+                      Ver mais ({painel.programacaoSemana.length}) →
+                    </Link>
+                  </CardAction>
+                )}
+              </CardHeader>
+              <CardContent>
+                {painel.programacaoSemana.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhuma entrega prevista nos próximos 7 dias.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {painel.programacaoSemana.slice(0, LIMITE_PROGRAMACAO_PAINEL).map((d) => (
+                      <li key={d.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                        <Link href={`/workspaces/${workspaceId}/documentos/${d.id}`} className="hover:underline">
+                          <span className="font-mono text-xs">{d.codigoCompleto}</span>{" "}
+                          <span className="text-muted-foreground">{d.descricao}</span>
+                        </Link>
+                        <span className="text-muted-foreground">
+                          {new Date(d.dataPrevista).toLocaleDateString("pt-BR")}
+                          {d.reprogramado && <span className="ml-1 text-xs">(reprogramado)</span>}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+
+            <MeusDocumentosCard workspaceId={workspaceId} documentos={painel.meusDocumentos} />
+          </div>
         </div>
 
         {/* self-start: sem isso o grid estica o card pra altura da coluna da esquerda
