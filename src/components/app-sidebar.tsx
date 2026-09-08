@@ -83,7 +83,10 @@ export function AppSidebar({
     {
       label: "Gestão",
       icon: Briefcase,
-      items: [{ href: `${wsBase}/grd`, label: "GRD", icon: Send, matchKeyword: "grd" }],
+      items: [
+        { href: `${wsBase}/grd`, label: "GRD", icon: Send, matchKeyword: "grd" },
+        { href: `${wsBase}/dashboards`, label: "Dashboards", icon: LayoutDashboard, matchKeyword: "dashboards" },
+      ],
     },
     {
       label: "Cadastros",
