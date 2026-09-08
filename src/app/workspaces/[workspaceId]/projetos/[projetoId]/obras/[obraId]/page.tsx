@@ -50,10 +50,14 @@ export default async function ObraDocumentosPage({ params, searchParams }: Param
   const role = await getWorkspaceRole(session.user.id, workspaceId);
   const canManage = role === "administrador" || role === "coordenador";
   const agrupado = sp.agrupado !== "0";
+  // Múltiplos status selecionados vêm como um único query param separado por vírgula
+  // (ex: "aprovado,liberado_para_construcao") — mais simples de carregar na URL do que
+  // vários params repetidos com o mesmo nome.
+  const statusSelecionados = sp.status ? (sp.status.split(",") as StatusDocumento[]) : undefined;
 
   const [grupos, gruposBase, disciplinasComSecoes, secoesPadrao, fases, tipos, usuarios, contatos, arvore] = await Promise.all([
     listDocumentosAgrupadosPorSecao(workspaceId, obraId, session.user.id, {
-      status: sp.status as StatusDocumento | undefined,
+      status: statusSelecionados,
       disciplinaId: sp.disciplinaId || undefined,
       secaoId: sp.secaoId || undefined,
       responsavelId: sp.responsavelId || undefined,
@@ -68,7 +72,7 @@ export default async function ObraDocumentosPage({ params, searchParams }: Param
     // (N)" etc.), que precisam refletir "se eu ligar isso, quantos apareceriam" independente
     // uns dos outros.
     listDocumentosAgrupadosPorSecao(workspaceId, obraId, session.user.id, {
-      status: sp.status as StatusDocumento | undefined,
+      status: statusSelecionados,
       disciplinaId: sp.disciplinaId || undefined,
       secaoId: sp.secaoId || undefined,
       responsavelId: sp.responsavelId || undefined,
@@ -178,7 +182,7 @@ export default async function ObraDocumentosPage({ params, searchParams }: Param
         contadores={contadores}
         statusOptions={STATUS_OPTIONS}
         secaoOptions={secaoOptions}
-        status={sp.status}
+        status={statusSelecionados ?? []}
         disciplinaId={sp.disciplinaId}
         secaoId={sp.secaoId}
         responsavelId={sp.responsavelId}

@@ -3,6 +3,7 @@ import { db } from "@/db/client";
 import { disciplinas, fases, tiposDocumento, obraDisciplinas, secoes, secoesPadrao, categoriasConhecimento } from "@/db/schema";
 import { notFound } from "@/lib/errors";
 import { newId } from "@/lib/id";
+import { compararNomesDisciplina } from "@/lib/disciplinaOrdem";
 
 export async function listFases(workspaceId: string) {
   return db.select().from(fases).where(eq(fases.workspaceId, workspaceId));
@@ -101,7 +102,7 @@ export async function listDisciplinasComSecoesPorObra(obraId: string) {
       map.get(r.disciplinaId)!.secoes.push({ id: r.secaoId, name: r.secaoName! });
     }
   }
-  return Array.from(map.values());
+  return Array.from(map.values()).sort((a, b) => compararNomesDisciplina(a.name, b.name));
 }
 
 // Renomeia uma Seção — o título ("Civil - Sondagem") é Disciplina + Seção, mas só o nome

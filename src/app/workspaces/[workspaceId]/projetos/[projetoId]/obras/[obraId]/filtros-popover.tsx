@@ -1,7 +1,9 @@
 "use client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import type { StatusDocumento } from "@/lib/statusGraph";
 
 type StatusOption = [StatusDocumento, string];
@@ -32,6 +34,84 @@ function ChipToggle({ name, label, count, defaultChecked }: { name: string; labe
   );
 }
 
+// Dropdown com checkbox por status (multi-seleção) — separado do resto do formulário
+// porque o conteúdo do Popover é renderizado num portal (fora da árvore do <form>), então
+// não dá pra depender do FormData do form pai; aplica direto na URL, preservando os
+// outros filtros já ativos (mesma ideia do toggle "Agrupar por" logo abaixo).
+function StatusMultiSelect({ statusOptions, selecionados }: { statusOptions: StatusOption[]; selecionados: string[] }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  function alternar(value: string) {
+    const novo = selecionados.includes(value) ? selecionados.filter((v) => v !== value) : [...selecionados, value];
+    const params = new URLSearchParams(searchParams.toString());
+    if (novo.length > 0) params.set("status", novo.join(","));
+    else params.delete("status");
+    router.push(`${pathname}?${params.toString()}`);
+  }
+
+  const rotulo =
+    selecionados.length === 0
+      ? "Todos os status"
+      : selecionados.length === 1
+        ? (statusOptions.find(([v]) => v === selecionados[0])?.[1] ?? selecionados[0])
+        : `${selecionados.length} status selecionados`;
+
+  return (
+    <Popover>
+      <PopoverTrigger
+        render={
+          <button
+            type="button"
+            className="flex h-9 w-full items-center justify-between rounded-md border bg-card px-3 text-sm"
+          />
+        }
+      >
+        <span className="truncate">{rotulo}</span>
+        <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-64 max-h-80 overflow-y-auto">
+        <div className="space-y-1.5">
+          {statusOptions.map(([value, label]) => (
+            <label key={value} className="flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={selecionados.includes(value)}
+                onChange={(e) => {
+                  // Esse checkbox vive dentro do Popover, que renderiza num portal fora da
+                  // árvore DOM do <form> — mas eventos sintéticos do React ainda borbulham
+                  // pela árvore de COMPONENTES, então sem isso o onChange do <form> pai
+                  // também dispara (com o FormData antigo, sem o status) e sobrescreve a
+                  // URL que acabou de ser aplicada aqui.
+                  e.stopPropagation();
+                  alternar(value);
+                }}
+                className="checkbox-custom"
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+        {selecionados.length > 0 && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const params = new URLSearchParams(searchParams.toString());
+              params.delete("status");
+              router.push(`${pathname}?${params.toString()}`);
+            }}
+            className="mt-3 text-xs text-primary hover:underline"
+          >
+            Limpar seleção
+          </button>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // Painel inline (não é popup) — fica "ativo/oculto" via toggle no ícone de Filtros,
 // empurrando a tabela pra baixo em vez de flutuar por cima do conteúdo. Aplica via
 // client-side navigation (router.push), não submit nativo — um submit nativo recarrega a
@@ -57,7 +137,7 @@ export function FiltrosPopover({
   disciplinas: Disciplina[];
   secaoOptions: SecaoOption[];
   usuarios: UsuarioOption[];
-  status?: string;
+  status: string[];
   disciplinaId?: string;
   secaoId?: string;
   responsavelId?: string;
@@ -73,7 +153,14 @@ export function FiltrosPopover({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const nenhumFiltroAtivo =
-    !status && !disciplinaId && !secaoId && !responsavelId && !somenteEmAtraso && !recentes && !comRetrabalho && !favoritos;
+    status.length === 0 &&
+    !disciplinaId &&
+    !secaoId &&
+    !responsavelId &&
+    !somenteEmAtraso &&
+    !recentes &&
+    !comRetrabalho &&
+    !favoritos;
 
   function aplicar(form: HTMLFormElement) {
     const dados = new FormData(form);
@@ -95,14 +182,7 @@ export function FiltrosPopover({
       >
         <div className="flex flex-wrap gap-3">
           <CampoFiltro label="Status">
-            <select name="status" defaultValue={status ?? ""} className="h-9 w-full rounded-md border bg-card px-3 text-sm">
-              <option value="">Todos os status</option>
-              {statusOptions.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
+            <StatusMultiSelect statusOptions={statusOptions} selecionados={status} />
           </CampoFiltro>
           <CampoFiltro label="Disciplina">
             <select name="disciplinaId" defaultValue={disciplinaId ?? ""} className="h-9 w-full rounded-md border bg-card px-3 text-sm">

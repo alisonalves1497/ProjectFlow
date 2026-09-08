@@ -20,6 +20,7 @@ import { newId } from "@/lib/id";
 import { ApiError, badRequest, conflict, isUniqueViolation, notFound } from "@/lib/errors";
 import type { StatusDocumento } from "@/lib/statusGraph";
 import { isDocumentoFechado, isDocumentoComRetrabalho, dataEfetivaPrevista } from "@/lib/documentoStatus";
+import { compararNomesDisciplina } from "@/lib/disciplinaOrdem";
 import { logTimelineEvent } from "./timelineService";
 
 export async function createDocumento(
@@ -358,7 +359,7 @@ export async function bulkReprogramar(workspaceId: string, obraId: string, docum
 }
 
 export type DocumentoAgrupadoFiltros = {
-  status?: StatusDocumento;
+  status?: StatusDocumento[];
   disciplinaId?: string;
   secaoId?: string;
   responsavelId?: string;
@@ -421,7 +422,7 @@ export async function listDocumentosAgrupadosPorSecao(
     .where(and(...estruturaCondicoes));
 
   const condicoes = [eq(documentos.workspaceId, workspaceId), eq(documentos.obraId, obraId), isNull(documentos.deletedAt)];
-  if (filtros.status) condicoes.push(eq(documentos.status, filtros.status));
+  if (filtros.status && filtros.status.length > 0) condicoes.push(inArray(documentos.status, filtros.status));
   if (filtros.disciplinaId) condicoes.push(eq(documentos.disciplinaId, filtros.disciplinaId));
   if (filtros.secaoId) condicoes.push(eq(documentos.secaoId, filtros.secaoId));
   if (filtros.responsavelId) condicoes.push(eq(documentos.responsavelId, filtros.responsavelId));
@@ -504,7 +505,7 @@ export async function listDocumentosAgrupadosPorSecao(
   }
 
   return estrutura
-    .sort((a, b) => a.disciplinaName.localeCompare(b.disciplinaName) || a.secaoPosition.localeCompare(b.secaoPosition))
+    .sort((a, b) => compararNomesDisciplina(a.disciplinaName, b.disciplinaName) || a.secaoPosition.localeCompare(b.secaoPosition))
     .map((s) => {
       const docsDaSecao = porSecao.get(s.secaoId) ?? [];
       const concluidos = docsDaSecao.filter((d) => d.fechado).length;
