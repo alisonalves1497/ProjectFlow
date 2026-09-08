@@ -80,6 +80,8 @@ export async function DocumentoDetalheConteudo({ workspaceId, documentoId }: { w
         responsavelId={documento.responsavelId}
         responsavelNome={responsavelNome}
         obraUsers={obraUsers.map((u) => ({ userId: u.userId, name: u.name ?? u.email }))}
+        revisaoExterna={documento.revisaoExterna}
+        temRevisao={documento.currentRevisionId !== null}
       />
 
       <Tabs defaultValue="revisoes">

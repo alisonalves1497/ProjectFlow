@@ -106,6 +106,7 @@ export const documentoUpdateSchema = z.object({
   dataReprogramada: z.string().date().nullable().optional(),
   dataPrevista: z.string().date().nullable().optional(),
   secaoId: z.string().trim().min(1).optional(),
+  revisaoExterna: z.string().trim().max(50).nullable().optional(),
 });
 
 export const documentoListQuerySchema = z.object({

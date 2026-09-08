@@ -244,20 +244,31 @@ export async function updateDocumentoAction(_prevState: ActionState, formData: F
 
   const workspaceId = String(formData.get("workspaceId") ?? "");
   const documentoId = String(formData.get("documentoId") ?? "");
+  // Só usados pelas células editáveis inline da Lista de Documentos (pra revalidar essa
+  // página também) — o formulário do cabeçalho do documento não manda esses dois.
+  const projetoId = formData.get("projetoId");
+  const obraId = formData.get("obraId");
 
   try {
     await assertObraAccessForDocumento(session.user.id, workspaceId, documentoId);
 
-    const responsavelIdRaw = formData.get("responsavelId");
-    const input = documentoUpdateSchema.parse({
-      descricao: formData.get("descricao") || undefined,
-      codigoCompleto: formData.get("codigoCompleto") || undefined,
-      secaoId: formData.get("secaoId") || undefined,
-      dataBaseline: formData.get("dataBaseline") || null,
-      dataReprogramada: formData.get("dataReprogramada") || null,
+    // Só inclui no patch os campos que o formulário realmente mandou — uma edição inline de
+    // um campo só (ex: só Responsável) não pode zerar os outros por omissão.
+    const patch: Record<string, unknown> = {};
+    if (formData.has("descricao")) patch.descricao = formData.get("descricao") || undefined;
+    if (formData.has("codigoCompleto")) patch.codigoCompleto = formData.get("codigoCompleto") || undefined;
+    if (formData.has("secaoId")) patch.secaoId = formData.get("secaoId") || undefined;
+    if (formData.has("dataBaseline")) patch.dataBaseline = formData.get("dataBaseline") || null;
+    if (formData.has("dataReprogramada")) patch.dataReprogramada = formData.get("dataReprogramada") || null;
+    if (formData.has("dataPrevista")) patch.dataPrevista = formData.get("dataPrevista") || null;
+    if (formData.has("revisaoExterna")) patch.revisaoExterna = formData.get("revisaoExterna") || null;
+    if (formData.has("responsavelId")) {
       // "" no select significa "sem responsável" — precisa virar null explícito, não some do patch.
-      responsavelId: responsavelIdRaw ? String(responsavelIdRaw) : null,
-    });
+      const responsavelIdRaw = formData.get("responsavelId");
+      patch.responsavelId = responsavelIdRaw ? String(responsavelIdRaw) : null;
+    }
+
+    const input = documentoUpdateSchema.parse(patch);
     await updateDocumento(workspaceId, documentoId, input);
   } catch (err) {
     if (err instanceof ApiError) return { status: "error", error: err.message };
@@ -266,6 +277,7 @@ export async function updateDocumentoAction(_prevState: ActionState, formData: F
   }
 
   revalidatePath(`/workspaces/${workspaceId}/documentos/${documentoId}`);
+  if (projetoId && obraId) revalidatePath(obraDocumentosPath(workspaceId, String(projetoId), String(obraId)));
   return { status: "success" };
 }
 

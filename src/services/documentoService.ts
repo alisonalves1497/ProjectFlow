@@ -257,6 +257,7 @@ export async function updateDocumento(
     dataReprogramada?: string | null;
     dataPrevista?: string | null;
     secaoId?: string;
+    revisaoExterna?: string | null;
   }
 ) {
   if (patch.secaoId) {
@@ -390,6 +391,7 @@ export type GrupoSecaoDocumentos = {
     comRetrabalho: boolean;
     favorito: boolean;
     statusUpdatedAt: Date;
+    responsavelId: string | null;
     responsavelNome: string | null;
     revisaoLabel: string | null;
   }[];
@@ -450,6 +452,7 @@ export async function listDocumentosAgrupadosPorSecao(
         revisaoNumero: revisoes.numero,
         revisaoLabel: revisoes.label,
         revisaoExterna: documentos.revisaoExterna,
+        responsavelId: documentos.responsavelId,
         responsavelNome: users.name,
       })
       .from(documentos)
@@ -529,6 +532,7 @@ export async function listDocumentosAgrupadosPorSecao(
           comRetrabalho: d.comRetrabalho,
           favorito: d.favorito,
           statusUpdatedAt: d.statusUpdatedAt,
+          responsavelId: d.responsavelId,
           responsavelNome: d.responsavelNome,
           // Sem revisão "de verdade" ainda (currentRevisionId nulo), mas com rótulo vindo de
           // uma sincronização com o GED do cliente (ex: "V2") — mostra esse no lugar.

@@ -29,10 +29,12 @@ import {
   bulkReprogramarAction,
   bulkExcluirAction,
   setStatusDiretoAction,
+  updateDocumentoAction,
   type ActionState,
 } from "../../../../documentos/actions";
 
 const initialActionState: ActionState = { status: "idle" };
+const initialUpdateActionState: ActionState = { status: "idle" };
 
 const CHECKBOX_CLASS = "checkbox-custom";
 
@@ -129,6 +131,207 @@ function StatusCell({
           </option>
         ))}
       </select>
+      {state.status === "error" && <p className="mt-0.5 text-xs text-destructive">{state.error}</p>}
+    </form>
+  );
+}
+
+// Campos hidden comuns às três células editáveis abaixo — todas chamam updateDocumentoAction.
+function CamposOcultosDocumento({
+  workspaceId,
+  projetoId,
+  obraId,
+  documentoId,
+}: {
+  workspaceId: string;
+  projetoId: string;
+  obraId: string;
+  documentoId: string;
+}) {
+  return (
+    <>
+      <input type="hidden" name="workspaceId" value={workspaceId} />
+      <input type="hidden" name="projetoId" value={projetoId} />
+      <input type="hidden" name="obraId" value={obraId} />
+      <input type="hidden" name="documentoId" value={documentoId} />
+    </>
+  );
+}
+
+function ResponsavelCell({
+  workspaceId,
+  projetoId,
+  obraId,
+  documentoId,
+  responsavelId,
+  responsavelNome,
+  usuarios,
+  podeGerenciar,
+}: {
+  workspaceId: string;
+  projetoId: string;
+  obraId: string;
+  documentoId: string;
+  responsavelId: string | null;
+  responsavelNome: string | null;
+  usuarios: Usuario[];
+  podeGerenciar: boolean;
+}) {
+  const [editando, setEditando] = useState(false);
+  const [state, formAction, pending] = useActionState(updateDocumentoAction, initialUpdateActionState);
+  useEffect(() => {
+    if (state.status === "success") setEditando(false);
+  }, [state]);
+
+  if (!podeGerenciar) return <>{responsavelNome ?? "—"}</>;
+
+  if (!editando) {
+    return (
+      <button type="button" onClick={() => setEditando(true)} className="group/resp inline-flex items-center gap-1">
+        <span className={responsavelNome ? "" : "text-muted-foreground"}>{responsavelNome ?? "—"}</span>
+        <Pencil className="size-3 shrink-0 text-muted-foreground opacity-0 group-hover/resp:opacity-100" />
+      </button>
+    );
+  }
+
+  return (
+    <form action={formAction} className="max-w-full">
+      <CamposOcultosDocumento workspaceId={workspaceId} projetoId={projetoId} obraId={obraId} documentoId={documentoId} />
+      <select
+        name="responsavelId"
+        defaultValue={responsavelId ?? ""}
+        disabled={pending}
+        autoFocus
+        onChange={(e) => e.currentTarget.form?.requestSubmit()}
+        className="h-7 w-full min-w-0 max-w-full rounded-md border bg-transparent px-1 text-xs"
+      >
+        <option value="">Ninguém</option>
+        {usuarios.map((u) => (
+          <option key={u.userId} value={u.userId}>
+            {u.name ?? u.email}
+          </option>
+        ))}
+      </select>
+      {state.status === "error" && <p className="mt-0.5 text-xs text-destructive">{state.error}</p>}
+    </form>
+  );
+}
+
+function PrazoCell({
+  workspaceId,
+  projetoId,
+  obraId,
+  documentoId,
+  dataPrevista,
+  reprogramado,
+  podeGerenciar,
+}: {
+  workspaceId: string;
+  projetoId: string;
+  obraId: string;
+  documentoId: string;
+  dataPrevista: string | null;
+  reprogramado: boolean;
+  podeGerenciar: boolean;
+}) {
+  const [editando, setEditando] = useState(false);
+  const [state, formAction, pending] = useActionState(updateDocumentoAction, initialUpdateActionState);
+  useEffect(() => {
+    if (state.status === "success") setEditando(false);
+  }, [state]);
+
+  // +"T00:00:00": sem isso, `new Date("2026-12-25")` é interpretado como meia-noite UTC, que em
+  // fusos atrás do UTC (ex: Brasil) vira o dia anterior ao formatar pro horário local.
+  const rotulo = dataPrevista ? new Date(dataPrevista + "T00:00:00").toLocaleDateString("pt-BR") : "—";
+
+  if (!podeGerenciar) return <>{rotulo}</>;
+
+  if (!editando) {
+    return (
+      <button type="button" onClick={() => setEditando(true)} className="group/prazo inline-flex items-center gap-1">
+        <span className={dataPrevista ? "" : "text-muted-foreground"}>{rotulo}</span>
+        <Pencil className="size-3 shrink-0 text-muted-foreground opacity-0 group-hover/prazo:opacity-100" />
+      </button>
+    );
+  }
+
+  // Se já tem data reprogramada, o Prazo mostrado vem dela — editar aqui tem que continuar
+  // mexendo nessa mesma data, não na baseline original (dataPrevista), senão a edição
+  // pareceria "não fazer nada" (a reprogramada continuaria mandando no valor exibido).
+  const campo = reprogramado ? "dataReprogramada" : "dataPrevista";
+
+  return (
+    <form action={formAction} className="max-w-full">
+      <CamposOcultosDocumento workspaceId={workspaceId} projetoId={projetoId} obraId={obraId} documentoId={documentoId} />
+      <input
+        type="date"
+        name={campo}
+        defaultValue={dataPrevista ?? ""}
+        disabled={pending}
+        autoFocus
+        onBlur={(e) => e.currentTarget.value && e.currentTarget.form?.requestSubmit()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.form?.requestSubmit();
+        }}
+        className="h-7 w-full min-w-0 max-w-full rounded-md border bg-transparent px-1 text-xs"
+      />
+      {state.status === "error" && <p className="mt-0.5 text-xs text-destructive">{state.error}</p>}
+    </form>
+  );
+}
+
+function RevisaoCell({
+  workspaceId,
+  projetoId,
+  obraId,
+  documentoId,
+  revisaoLabel,
+  temRevisao,
+  podeGerenciar,
+}: {
+  workspaceId: string;
+  projetoId: string;
+  obraId: string;
+  documentoId: string;
+  revisaoLabel: string | null;
+  temRevisao: boolean;
+  podeGerenciar: boolean;
+}) {
+  const [editando, setEditando] = useState(false);
+  const [state, formAction, pending] = useActionState(updateDocumentoAction, initialUpdateActionState);
+  useEffect(() => {
+    if (state.status === "success") setEditando(false);
+  }, [state]);
+
+  // Documento com revisão de verdade (currentRevisionId) tem o rótulo governado pelo fluxo
+  // de revisões (letra/número, aprovação...) — não dá pra sobrescrever isso livremente aqui,
+  // só o rótulo "solto" que vem de sincronização externa (GED) quando não tem revisão ainda.
+  if (!podeGerenciar || temRevisao) return <>{revisaoLabel ?? "—"}</>;
+
+  if (!editando) {
+    return (
+      <button type="button" onClick={() => setEditando(true)} className="group/rev inline-flex items-center gap-1">
+        <span className={revisaoLabel ? "" : "text-muted-foreground"}>{revisaoLabel ?? "—"}</span>
+        <Pencil className="size-3 shrink-0 text-muted-foreground opacity-0 group-hover/rev:opacity-100" />
+      </button>
+    );
+  }
+
+  return (
+    <form action={formAction} className="max-w-full">
+      <CamposOcultosDocumento workspaceId={workspaceId} projetoId={projetoId} obraId={obraId} documentoId={documentoId} />
+      <input
+        type="text"
+        name="revisaoExterna"
+        defaultValue={revisaoLabel ?? ""}
+        disabled={pending}
+        autoFocus
+        onBlur={(e) => e.currentTarget.form?.requestSubmit()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.form?.requestSubmit();
+        }}
+        className="h-7 w-full min-w-0 max-w-full rounded-md border bg-transparent px-1 font-mono text-xs"
+      />
       {state.status === "error" && <p className="mt-0.5 text-xs text-destructive">{state.error}</p>}
     </form>
   );
@@ -277,10 +480,31 @@ export function DocumentosLista({
             )}
           </div>
         </TableCell>
-        {colunasVisiveis.resp && <TableCell className="text-muted-foreground">{d.responsavelNome ?? "—"}</TableCell>}
+        {colunasVisiveis.resp && (
+          <TableCell className="text-muted-foreground">
+            <ResponsavelCell
+              workspaceId={workspaceId}
+              projetoId={projetoId}
+              obraId={obraId}
+              documentoId={d.id}
+              responsavelId={d.responsavelId}
+              responsavelNome={d.responsavelNome}
+              usuarios={usuarios}
+              podeGerenciar={podeGerenciar}
+            />
+          </TableCell>
+        )}
         {colunasVisiveis.prazo && (
           <TableCell className="text-muted-foreground">
-            {d.dataPrevista ? new Date(d.dataPrevista).toLocaleDateString("pt-BR") : "—"}
+            <PrazoCell
+              workspaceId={workspaceId}
+              projetoId={projetoId}
+              obraId={obraId}
+              documentoId={d.id}
+              dataPrevista={d.dataPrevista}
+              reprogramado={d.reprogramado}
+              podeGerenciar={podeGerenciar}
+            />
           </TableCell>
         )}
         {colunasVisiveis.fluxo && (
@@ -288,7 +512,19 @@ export function DocumentosLista({
             <FluxoIndicator status={d.status as StatusDocumento} />
           </TableCell>
         )}
-        {colunasVisiveis.rev && <TableCell className="font-mono text-xs text-muted-foreground">{d.revisaoLabel ?? "—"}</TableCell>}
+        {colunasVisiveis.rev && (
+          <TableCell className="font-mono text-xs text-muted-foreground">
+            <RevisaoCell
+              workspaceId={workspaceId}
+              projetoId={projetoId}
+              obraId={obraId}
+              documentoId={d.id}
+              revisaoLabel={d.revisaoLabel}
+              temRevisao={d.temRevisao}
+              podeGerenciar={podeGerenciar}
+            />
+          </TableCell>
+        )}
         {colunasVisiveis.status && (
           <TableCell>
             <StatusCell

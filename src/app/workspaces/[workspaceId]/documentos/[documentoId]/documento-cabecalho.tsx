@@ -14,6 +14,7 @@ import {
   UserSearch,
   Clock,
   History,
+  Hash,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -81,6 +82,8 @@ export function DocumentoCabecalho({
   responsavelId,
   responsavelNome,
   obraUsers,
+  revisaoExterna,
+  temRevisao,
 }: {
   workspaceId: string;
   documentoId: string;
@@ -99,6 +102,8 @@ export function DocumentoCabecalho({
   responsavelId: string | null;
   responsavelNome: string | null;
   obraUsers: { userId: string; name: string }[];
+  revisaoExterna: string | null;
+  temRevisao: boolean;
 }) {
   const router = useRouter();
   const [editando, setEditando] = useState(false);
@@ -196,6 +201,16 @@ export function DocumentoCabecalho({
             <Grupo titulo="Classificação">
               <Campo icon={Building2} label="Projeto" valor={obraNome} />
               <Campo icon={Layers} label="Disciplina" valor={disciplinaNome} />
+              {editando && !temRevisao ? (
+                <CampoEditavel icon={Hash} label="Revisão">
+                  <Input name="revisaoExterna" defaultValue={revisaoExterna ?? ""} maxLength={50} className="h-7 w-24 font-mono text-sm" />
+                </CampoEditavel>
+              ) : (
+                // Documento com revisão de verdade (currentRevisionId) mostra o rótulo dela na
+                // aba Revisões, governado por esse fluxo — aqui só o rótulo "solto" que vem de
+                // sincronização externa (GED), que é o único que dá pra editar livremente.
+                <Campo icon={Hash} label="Revisão" valor={temRevisao ? "ver aba Revisões" : (revisaoExterna ?? "—")} />
+              )}
             </Grupo>
             <Grupo titulo="Prazos">
               {editando ? (
