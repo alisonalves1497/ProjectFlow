@@ -87,14 +87,17 @@ function StatusCell({
 }) {
   const [editando, setEditando] = useState(false);
   const [state, formAction, pending] = useActionState(setStatusDiretoAction, initialStatusActionState);
-  // Sem useEffect pra fechar: um sucesso encerra a edição derivando direto do estado da
-  // action (evita o "setState dentro de effect" só pra sincronizar duas coisas que já
-  // nascem juntas aqui — a próxima vez que abrir, `editando` volta a true e mostra de novo).
-  const mostrandoSelect = editando && state.status !== "success";
+  // `state` do useActionState não volta sozinho pra "idle" depois de um sucesso — fechar
+  // aqui SEM resetar editando via effect fazia o lápis travar pra sempre depois da primeira
+  // troca (mostrandoSelect derivado de state.status ficava preso em "success" e nunca mais
+  // reabria o select, só um F5 recarregava o estado do zero).
+  useEffect(() => {
+    if (state.status === "success") setEditando(false);
+  }, [state]);
 
   if (!podeGerenciar) return <StatusBadge status={status} />;
 
-  if (!mostrandoSelect) {
+  if (!editando) {
     return (
       <button type="button" onClick={() => setEditando(true)} className="group/status inline-flex items-center gap-1">
         <StatusBadge status={status} />
