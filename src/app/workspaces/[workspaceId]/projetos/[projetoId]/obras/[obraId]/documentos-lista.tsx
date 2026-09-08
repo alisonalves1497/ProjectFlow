@@ -337,13 +337,13 @@ function RevisaoCell({
   );
 }
 
-export type ColunasVisiveis = { resp: boolean; prazo: boolean; fluxo: boolean; rev: boolean; status: boolean };
+export type ColunasVisiveis = { resp: boolean; prazo: boolean; fluxo: boolean; rev: boolean; ged: boolean; status: boolean };
 
 // Fluxo começa oculta por pedido — quem quiser vê liga de novo no popover de Colunas.
-export const COLUNAS_PADRAO: ColunasVisiveis = { resp: true, prazo: true, fluxo: false, rev: true, status: true };
+export const COLUNAS_PADRAO: ColunasVisiveis = { resp: true, prazo: true, fluxo: false, rev: true, ged: true, status: true };
 
-type LarguraColuna = "resp" | "prazo" | "fluxo" | "rev" | "status";
-const LARGURAS_PADRAO: Record<LarguraColuna, number> = { resp: 112, prazo: 96, fluxo: 96, rev: 56, status: 176 };
+type LarguraColuna = "resp" | "prazo" | "fluxo" | "rev" | "ged" | "status";
+const LARGURAS_PADRAO: Record<LarguraColuna, number> = { resp: 112, prazo: 96, fluxo: 96, rev: 56, ged: 88, status: 176 };
 const LARGURA_MINIMA = 48;
 
 // Alça de redimensionar: fica em cima do "traço" divisório de cada coluna (borda direita
@@ -525,6 +525,9 @@ export function DocumentosLista({
             />
           </TableCell>
         )}
+        {colunasVisiveis.ged && (
+          <TableCell className="text-xs text-muted-foreground">{d.gedOrigem ?? "—"}</TableCell>
+        )}
         {colunasVisiveis.status && (
           <TableCell>
             <StatusCell
@@ -571,6 +574,12 @@ export function DocumentosLista({
             <TableHead className="relative" style={{ width: larguras.rev }}>
               Rev.
               <ResizeHandle onResize={(d) => redimensionar("rev", d)} />
+            </TableHead>
+          )}
+          {colunasVisiveis.ged && (
+            <TableHead className="relative" style={{ width: larguras.ged }}>
+              GED
+              <ResizeHandle onResize={(d) => redimensionar("ged", d)} />
             </TableHead>
           )}
           {colunasVisiveis.status && (

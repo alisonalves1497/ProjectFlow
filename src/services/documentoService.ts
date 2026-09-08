@@ -405,6 +405,7 @@ export type GrupoSecaoDocumentos = {
     responsavelId: string | null;
     responsavelNome: string | null;
     revisaoLabel: string | null;
+    gedOrigem: string | null;
   }[];
   total: number;
   concluidos: number;
@@ -463,6 +464,7 @@ export async function listDocumentosAgrupadosPorSecao(
         revisaoNumero: revisoes.numero,
         revisaoLabel: revisoes.label,
         revisaoExterna: documentos.revisaoExterna,
+        gedOrigem: documentos.gedOrigem,
         responsavelId: documentos.responsavelId,
         responsavelNome: users.name,
       })
@@ -548,6 +550,7 @@ export async function listDocumentosAgrupadosPorSecao(
           // Sem revisão "de verdade" ainda (currentRevisionId nulo), mas com rótulo vindo de
           // uma sincronização com o GED do cliente (ex: "V2") — mostra esse no lugar.
           revisaoLabel: d.revisaoLabel ?? d.revisaoExterna,
+          gedOrigem: d.gedOrigem,
         })),
         total: docsDaSecao.length,
         concluidos,

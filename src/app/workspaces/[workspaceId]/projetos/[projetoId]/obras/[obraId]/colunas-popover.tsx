@@ -9,6 +9,7 @@ const OPCOES: { key: keyof ColunasVisiveis; label: string }[] = [
   { key: "prazo", label: "Prazo" },
   { key: "fluxo", label: "Fluxo" },
   { key: "rev", label: "Rev." },
+  { key: "ged", label: "GED" },
   { key: "status", label: "Status" },
 ];
 
