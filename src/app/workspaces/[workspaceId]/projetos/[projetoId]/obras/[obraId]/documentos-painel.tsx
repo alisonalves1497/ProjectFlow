@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { Filter, ChevronsDownUp, ChevronsUpDown, X } from "lucide-react";
+import { Filter, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
 import { AlertaAtualizacoes } from "@/components/alerta-atualizacoes";
 import { FiltrosPopover } from "./filtros-popover";
 import { ColunasPopover } from "./colunas-popover";
@@ -71,8 +70,6 @@ export function DocumentosPainel({
   contadoresToggles: { somenteEmAtraso: number; recentes: number; comRetrabalho: number; favoritos: number; paraObra: number };
   podeGerenciar: boolean;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
   const [colunasVisiveis, setColunasVisiveis] = useState(COLUNAS_PADRAO);
   const [secoesColapsadas, setSecoesColapsadas] = useState<Set<string>>(new Set());
   const [filtroAberto, setFiltroAberto] = useState(false);
@@ -126,16 +123,6 @@ export function DocumentosPainel({
             <Filter className="size-4" />
             {filtroAtivo && <span className="absolute -top-1 -right-1 size-1.5 rounded-full bg-primary" />}
           </button>
-          {filtroAtivo && (
-            <button
-              type="button"
-              onClick={() => router.push(pathname)}
-              className={ICONE_QUADRADO}
-              title="Limpar filtros"
-            >
-              <X className="size-4" />
-            </button>
-          )}
           <ColunasPopover value={colunasVisiveis} onChange={setColunasVisiveis} className={ICONE_QUADRADO} />
           {agrupado && grupos.length > 0 && (
             <button

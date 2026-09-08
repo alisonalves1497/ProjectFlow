@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import type { StatusDocumento } from "@/lib/statusGraph";
@@ -260,6 +260,16 @@ export function FiltrosPopover({
             count={contadoresToggles.comRetrabalho}
             defaultChecked={comRetrabalho}
           />
+          {!nenhumFiltroAtivo && (
+            <button
+              type="button"
+              onClick={() => router.push(pathname)}
+              className="ml-auto flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-3.5" />
+              Limpar filtros
+            </button>
+          )}
         </div>
       </form>
     </div>
