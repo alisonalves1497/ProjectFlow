@@ -9,7 +9,7 @@ import { STATUS_LABELS, type StatusDocumento } from "@/lib/statusGraph";
 
 type Documento = { id: string; codigoCompleto: string; descricao: string; status: StatusDocumento; obraId: string };
 
-const LIMITE = 8;
+const LIMITE = 15;
 
 export function MeusDocumentosCard({
   workspaceId,
@@ -49,13 +49,13 @@ export function MeusDocumentosCard({
           </select>
         </CardAction>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex min-h-0 flex-1 flex-col">
         {filtrados.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             {documentos.length === 0 ? "Nenhum documento atribuído a você." : "Nenhum documento com esse status."}
           </p>
         ) : (
-          <ul className="max-h-80 space-y-2 overflow-y-auto">
+          <ul className="flex-1 space-y-2 overflow-y-auto">
             {filtrados.slice(0, LIMITE).map((d) => (
               <li key={d.id} className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
                 <Link href={`/workspaces/${workspaceId}/documentos/${d.id}`} className="min-w-0 hover:underline">

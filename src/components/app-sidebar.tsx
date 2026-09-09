@@ -148,12 +148,12 @@ export function AppSidebar({
   const nomeExibido = userName || userEmail;
 
   return (
-    <aside className="flex min-h-screen w-56 shrink-0 flex-col border-r bg-muted">
-      <div className="flex justify-center border-b p-4">
+    <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r bg-muted">
+      <div className="flex shrink-0 justify-center border-b p-4">
         <Image src="/logo-enermais.png" alt="EnerMais" width={160} height={48} className="h-10 w-auto" priority />
       </div>
 
-      <nav className="p-3">
+      <nav className="flex-1 overflow-y-auto p-3">
         <div className="mb-4">
           {renderGrupoHeader(principalGroup.label, principalGroup.icon, principalGroup.items.some(isActive))}
           {!colapsados.has(principalGroup.label) && (
@@ -261,7 +261,7 @@ export function AppSidebar({
         ))}
       </nav>
 
-      <div className="flex items-center gap-2 border-t p-3">
+      <div className="flex shrink-0 items-center gap-2 border-t p-3">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
           {iniciaisDoNome(nomeExibido)}
         </div>
