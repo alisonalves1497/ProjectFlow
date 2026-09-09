@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { getCalendarioEventos, type CalendarioEvento } from "@/services/calendarioService";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { MonthPicker } from "./month-picker";
 
 type Params = {
   params: Promise<{ workspaceId: string }>;
@@ -95,7 +96,7 @@ export default async function CalendarioPage({ params, searchParams }: Params) {
           <a href={hrefMes(mesProximo)} className="h-9 rounded-md border px-3 text-sm leading-9 hover:bg-accent">
             Próximo →
           </a>
-          <span className="ml-2 text-sm font-medium capitalize">{nomeMes}</span>
+          <MonthPicker ano={ano} mesNum={mesNum} escopo={escopo} label={nomeMes} />
         </div>
         <div className="flex items-center gap-2">
           <a
