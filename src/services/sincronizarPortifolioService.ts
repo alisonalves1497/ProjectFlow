@@ -109,6 +109,10 @@ export async function parseLinhasPortifolio(buffer: Buffer, sheetName: string): 
     else if (texto === "SISTEMA" && sistema === -1) sistema = idx; // primeira ocorrência = a Obra de verdade
     else if (texto.includes("CODIGO1") || texto.includes("CÓDIGO1")) codigo1 = idx;
     else if ((texto.includes("CODIGO2") || texto.includes("CODIGO 2") || texto.includes("CÓGIDO 2")) && codigo2 === -1) codigo2 = idx;
+    // Algumas planilhas (ex: PORT-LOTE) não separam Código1/Código2 — é só uma coluna
+    // "CÓDIGO" mesmo. Sem essa checagem, nem codigo1 nem codigo2 batiam e a validação do
+    // cabeçalho abaixo rejeitava a planilha inteira mesmo com a coluna presente.
+    else if (texto === "CODIGO" && codigo1 === -1) codigo1 = idx;
     else if (texto === "TIPO") tipo = idx;
     else if (texto.includes("COORDENA")) coordenacao = idx;
     else if (texto.includes("DATA PREVIST")) dataPrevista = idx;
