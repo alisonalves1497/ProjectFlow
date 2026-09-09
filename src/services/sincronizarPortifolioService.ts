@@ -1,6 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
-import { documentos, secoes, secoesPadrao, obraDisciplinas, projetos, obras, fases, workspaceMembers, users } from "@/db/schema";
+import { documentos, secoes, secoesPadrao, obraDisciplinas, projetos, obras, fases, workspaceMembers, users, linhaDoTempo } from "@/db/schema";
 import { newId } from "@/lib/id";
 import { badRequest, isUniqueViolation } from "@/lib/errors";
 import { type StatusDocumento } from "@/lib/statusGraph";
@@ -387,6 +387,15 @@ export async function aplicarSincronizacaoPortifolio(workspaceId: string, userId
   for (const linha of linhas) {
     try {
       if (linha.documentoIdExistente) {
+        // Pra saber se o status realmente mudou (e só nesse caso logar na linha do tempo —
+        // usada pela Curva de Avanço; sem isso, resincronizar sem mudança nenhuma criaria
+        // evento à toa toda vez).
+        const [antes] = await db
+          .select({ status: documentos.status })
+          .from(documentos)
+          .where(eq(documentos.id, linha.documentoIdExistente))
+          .limit(1);
+
         await db
           .update(documentos)
           .set({
@@ -400,6 +409,18 @@ export async function aplicarSincronizacaoPortifolio(workspaceId: string, userId
             updatedAt: new Date(),
           })
           .where(eq(documentos.id, linha.documentoIdExistente));
+
+        if (antes && antes.status !== linha.status) {
+          await db.insert(linhaDoTempo).values({
+            id: newId("tl"),
+            workspaceId,
+            documentoId: linha.documentoIdExistente,
+            evento: "status_alterado_direto",
+            autorId: userId,
+            metadata: { statusAnterior: antes.status, statusNovo: linha.status, origem: "sincronizacao_portfolio" },
+          });
+        }
+
         atualizados.push(linha.codigo);
         continue;
       }

@@ -208,17 +208,39 @@ export async function getDocumentoOrThrow(workspaceId: string, documentoId: stri
 
 // Pedido explícito do time: trocar o Status direto, sem passar pelo fluxo de revisão
 // (isValidInPlaceTransition/nextRevisionSpec). Ao contrário de transitionRevisaoStatus,
-// NÃO cria/atualiza revisão nem grava evento na linha do tempo — só o campo em si muda.
-// Único requisito é o status ser um dos valores válidos do enum (não é "campo livre" de
-// texto); a checagem de QUEM pode fazer isso fica na action (administrador/coordenador).
-export async function setStatusDireto(workspaceId: string, documentoId: string, status: StatusDocumento) {
-  const [updated] = await db
-    .update(documentos)
-    .set({ status, statusUpdatedAt: new Date(), updatedAt: new Date() })
-    .where(and(eq(documentos.id, documentoId), eq(documentos.workspaceId, workspaceId), isNull(documentos.deletedAt)))
-    .returning();
-  if (!updated) throw notFound("DOCUMENTO_NOT_FOUND", "Documento não encontrado.");
-  return updated;
+// NÃO cria/atualiza revisão — só o campo em si muda. Único requisito é o status ser um dos
+// valores válidos do enum (não é "campo livre" de texto); a checagem de QUEM pode fazer isso
+// fica na action (administrador/coordenador).
+// Grava evento na linha do tempo (status_alterado_direto) — usado pela Curva de Avanço pra
+// reconstruir a contagem por status ao longo do tempo; antes essa troca não deixava rastro
+// nenhum, então a curva não conseguia enxergar boa parte das mudanças de status reais.
+export async function setStatusDireto(workspaceId: string, documentoId: string, status: StatusDocumento, autorId: string) {
+  return db.transaction(async (tx) => {
+    const [antes] = await tx
+      .select({ status: documentos.status })
+      .from(documentos)
+      .where(and(eq(documentos.id, documentoId), eq(documentos.workspaceId, workspaceId), isNull(documentos.deletedAt)))
+      .limit(1);
+    if (!antes) throw notFound("DOCUMENTO_NOT_FOUND", "Documento não encontrado.");
+
+    const [updated] = await tx
+      .update(documentos)
+      .set({ status, statusUpdatedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(documentos.id, documentoId), eq(documentos.workspaceId, workspaceId), isNull(documentos.deletedAt)))
+      .returning();
+
+    if (antes.status !== status) {
+      await logTimelineEvent(tx, {
+        workspaceId,
+        documentoId,
+        evento: "status_alterado_direto",
+        autorId,
+        metadata: { statusAnterior: antes.status, statusNovo: status },
+      });
+    }
+
+    return updated;
+  });
 }
 
 // Confirma que `secaoId` pertence à mesma obra+disciplina de `documentoId` — a Seção não

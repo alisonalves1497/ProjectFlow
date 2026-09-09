@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { listDocumentosParaDashboard } from "@/services/dashboardService";
+import { listDocumentosParaDashboard, getCurvaAvanco } from "@/services/dashboardService";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardResponsavel } from "./dashboard-responsavel";
 import { DashboardResumoObra } from "./dashboard-resumo-obra";
+import { DashboardCurvaAvanco } from "./dashboard-curva-avanco";
 
 type Params = { params: Promise<{ workspaceId: string }> };
 
@@ -12,7 +13,10 @@ export default async function DashboardsPage({ params }: Params) {
   if (!session?.user?.id) redirect("/login");
 
   const { workspaceId } = await params;
-  const documentos = await listDocumentosParaDashboard(workspaceId, session.user.id);
+  const [documentos, curvaAvanco] = await Promise.all([
+    listDocumentosParaDashboard(workspaceId, session.user.id),
+    getCurvaAvanco(workspaceId, session.user.id),
+  ]);
 
   return (
     <div className="p-8">
@@ -23,6 +27,7 @@ export default async function DashboardsPage({ params }: Params) {
         <TabsList variant="line" className="mb-6 w-full justify-start border-b">
           <TabsTrigger value="responsavel">Por responsável</TabsTrigger>
           <TabsTrigger value="obra">Resumo por obra</TabsTrigger>
+          <TabsTrigger value="curva">Curva de avanço</TabsTrigger>
         </TabsList>
 
         <TabsContent value="responsavel">
@@ -31,6 +36,10 @@ export default async function DashboardsPage({ params }: Params) {
 
         <TabsContent value="obra">
           <DashboardResumoObra documentos={documentos} />
+        </TabsContent>
+
+        <TabsContent value="curva">
+          <DashboardCurvaAvanco pontos={curvaAvanco} />
         </TabsContent>
       </Tabs>
     </div>

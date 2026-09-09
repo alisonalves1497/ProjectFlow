@@ -2,6 +2,7 @@ export const EVENTO_LABELS: Record<string, string> = {
   documento_criado: "Documento criado",
   revisao_criada: "Revisão criada",
   status_transicionado: "Status alterado",
+  status_alterado_direto: "Status alterado",
   comentario_adicionado: "Comentário adicionado",
   copia_controlada_criada: "Cópia controlada criada",
   copia_controlada_substituida: "Cópia controlada trocada",

@@ -303,7 +303,7 @@ export async function setStatusDiretoAction(_prevState: ActionState, formData: F
     await requireWorkspaceRole(session.user.id, workspaceId, ["administrador", "coordenador"]);
     await requireObraAccess(session.user.id, workspaceId, obraId);
     const input = setStatusDiretoSchema.parse({ status: formData.get("status") });
-    await setStatusDireto(workspaceId, documentoId, input.status);
+    await setStatusDireto(workspaceId, documentoId, input.status, session.user.id);
   } catch (err) {
     if (err instanceof ApiError) return { status: "error", error: err.message };
     if (err instanceof ZodError) return { status: "error", error: "Status inválido." };
