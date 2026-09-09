@@ -27,7 +27,7 @@ export default async function WorkspaceShellLayout({ params, children, modal }: 
         userName={session.user.name ?? ""}
         userEmail={session.user.email ?? ""}
       />
-      <main className="flex-1 overflow-y-auto">{children}</main>
+      <main className="ml-56 flex-1">{children}</main>
       {modal}
     </div>
   );

@@ -148,7 +148,7 @@ export function AppSidebar({
   const nomeExibido = userName || userEmail;
 
   return (
-    <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r bg-muted">
+    <aside className="fixed top-0 left-0 flex h-screen w-56 shrink-0 flex-col border-r bg-muted">
       <div className="flex shrink-0 justify-center border-b p-4">
         <Image src="/logo-enermais.png" alt="EnerMais" width={160} height={48} className="h-10 w-auto" priority />
       </div>
