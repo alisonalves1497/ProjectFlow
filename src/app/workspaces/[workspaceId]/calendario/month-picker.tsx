@@ -41,11 +41,11 @@ export function MonthPicker({
       }}
     >
       <PopoverTrigger
-        render={<button type="button" className="ml-2 rounded-md px-1.5 text-sm font-medium capitalize hover:bg-accent" />}
+        render={<button type="button" className="h-9 px-2 text-sm font-medium capitalize hover:bg-accent" />}
       >
         {label}
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-56">
+      <PopoverContent align="start" className="w-64">
         <div className="mb-2 flex items-center justify-between">
           <button
             type="button"
@@ -65,7 +65,7 @@ export function MonthPicker({
             <ChevronRight className="size-4" />
           </button>
         </div>
-        <div className="grid grid-cols-3 gap-1">
+        <div className="grid grid-cols-4 gap-1">
           {MESES_ABREV.map((nome, idx) => {
             const selecionado = anoExibido === ano && idx + 1 === mesNum;
             return (

@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { auth } from "@/auth";
 import { getCalendarioEventos, type CalendarioEvento } from "@/services/calendarioService";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { MonthPicker } from "./month-picker";
+import { PendenciasMesList } from "./pendencias-mes-list";
 
 type Params = {
   params: Promise<{ workspaceId: string }>;
@@ -87,16 +88,26 @@ export default async function CalendarioPage({ params, searchParams }: Params) {
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <a href={hrefMes(mesAnterior)} className="h-9 rounded-md border px-3 text-sm leading-9 hover:bg-accent">
-            ← Anterior
-          </a>
           <a href={`?mes=${hojeStr.slice(0, 7)}&escopo=${escopo}`} className="h-9 rounded-md border px-3 text-sm leading-9 hover:bg-accent">
             Hoje
           </a>
-          <a href={hrefMes(mesProximo)} className="h-9 rounded-md border px-3 text-sm leading-9 hover:bg-accent">
-            Próximo →
-          </a>
-          <MonthPicker ano={ano} mesNum={mesNum} escopo={escopo} label={nomeMes} />
+          <div className="flex items-center rounded-md border">
+            <a
+              href={hrefMes(mesAnterior)}
+              aria-label="Mês anterior"
+              className="flex h-9 w-9 items-center justify-center rounded-l-md text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              <ChevronLeft className="size-4" />
+            </a>
+            <MonthPicker ano={ano} mesNum={mesNum} escopo={escopo} label={nomeMes} />
+            <a
+              href={hrefMes(mesProximo)}
+              aria-label="Próximo mês"
+              className="flex h-9 w-9 items-center justify-center rounded-r-md text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              <ChevronRight className="size-4" />
+            </a>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <a
@@ -176,27 +187,7 @@ export default async function CalendarioPage({ params, searchParams }: Params) {
 
         <aside>
           <h2 className="mb-3 text-sm font-medium text-muted-foreground">Pendências do mês ({eventosDoMes.length})</h2>
-          {eventosDoMes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nada previsto neste mês.</p>
-          ) : (
-            <ul className="space-y-2">
-              {eventosDoMes.map((e) => (
-                <li key={`${e.tipo}-${e.id}`} className="rounded-md border p-2 text-sm">
-                  <Link href={e.href} className="hover:underline">
-                    <span className="font-mono text-xs">{e.codigo}</span>
-                  </Link>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(e.data + "T00:00:00").toLocaleDateString("pt-BR")}
-                    {e.minhaPendencia && (
-                      <Badge variant="warning" className="ml-1">
-                        Minha
-                      </Badge>
-                    )}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
+          <PendenciasMesList eventos={eventosDoMes} />
         </aside>
       </div>
     </div>
