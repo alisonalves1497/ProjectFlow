@@ -9,8 +9,6 @@ import { STATUS_LABELS, type StatusDocumento } from "@/lib/statusGraph";
 
 type Documento = { id: string; codigoCompleto: string; descricao: string; status: StatusDocumento; obraId: string };
 
-const LIMITE = 15;
-
 export function MeusDocumentosCard({
   workspaceId,
   documentos,
@@ -55,8 +53,12 @@ export function MeusDocumentosCard({
             {documentos.length === 0 ? "Nenhum documento atribuído a você." : "Nenhum documento com esse status."}
           </p>
         ) : (
-          <ul className="flex-1 space-y-2 overflow-y-auto">
-            {filtrados.slice(0, LIMITE).map((d) => (
+          // min-h: garante uns 10 itens visíveis mesmo se o card ficar baixo (esticado só até
+          // a altura da "Programação da semana" ao lado, que pode ter pouca coisa) — flex-1
+          // ainda deixa crescer além disso quando o card fica mais alto. Sem corte por
+          // quantidade: rola pra ver o resto em vez de esconder atrás de "Mostrando N de M".
+          <ul className="min-h-[480px] flex-1 space-y-2 overflow-y-auto">
+            {filtrados.map((d) => (
               <li key={d.id} className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
                 <Link href={`/workspaces/${workspaceId}/documentos/${d.id}`} className="min-w-0 hover:underline">
                   <span className="font-mono text-xs">{d.codigoCompleto}</span>{" "}
@@ -66,9 +68,6 @@ export function MeusDocumentosCard({
               </li>
             ))}
           </ul>
-        )}
-        {filtrados.length > LIMITE && (
-          <p className="mt-2 text-xs text-muted-foreground">Mostrando {LIMITE} de {filtrados.length}. Refine pelo filtro de status acima.</p>
         )}
       </CardContent>
     </Card>
