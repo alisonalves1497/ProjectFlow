@@ -137,7 +137,47 @@ export default async function PainelPage({ params }: Params) {
         </Card>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="grid gap-8 sm:grid-cols-4">
+        <Card className="sm:col-span-1">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <CalendarDays className="size-4 text-primary" />
+              <CardTitle>Programação da semana</CardTitle>
+            </div>
+            {painel.programacaoSemana.length > LIMITE_PROGRAMACAO_PAINEL && (
+              <CardAction>
+                <Link href={`/workspaces/${workspaceId}/programacao-semana`} className="text-xs text-primary hover:underline">
+                  Ver mais ({painel.programacaoSemana.length}) →
+                </Link>
+              </CardAction>
+            )}
+          </CardHeader>
+          <CardContent>
+            {painel.programacaoSemana.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma entrega prevista nos próximos 7 dias.</p>
+            ) : (
+              <ul className="space-y-2">
+                {painel.programacaoSemana.slice(0, LIMITE_PROGRAMACAO_PAINEL).map((d) => (
+                  <li key={d.id} className="flex items-start justify-between gap-3 rounded-md border px-3 py-2 text-sm">
+                    <Link href={`/workspaces/${workspaceId}/documentos/${d.id}`} className="min-w-0 hover:underline">
+                      <p className="font-mono text-sm font-bold">{d.codigoCompleto}</p>
+                      <p className="text-sm text-foreground">{d.descricao}</p>
+                    </Link>
+                    <span className="shrink-0 text-muted-foreground">
+                      {new Date(d.dataPrevista).toLocaleDateString("pt-BR")}
+                      {d.reprogramado && <span className="ml-1 text-xs">(reprogramado)</span>}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <MeusDocumentosCard workspaceId={workspaceId} documentos={painel.meusDocumentos} className="sm:col-span-3" />
+      </div>
+
+      <div className="mt-8 grid gap-8 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -219,46 +259,6 @@ export default async function PainelPage({ params }: Params) {
             )}
           </CardContent>
         </Card>
-      </div>
-
-      <div className="mt-8 grid gap-8 sm:grid-cols-4">
-        <Card className="sm:col-span-1">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <CalendarDays className="size-4 text-primary" />
-              <CardTitle>Programação da semana</CardTitle>
-            </div>
-            {painel.programacaoSemana.length > LIMITE_PROGRAMACAO_PAINEL && (
-              <CardAction>
-                <Link href={`/workspaces/${workspaceId}/programacao-semana`} className="text-xs text-primary hover:underline">
-                  Ver mais ({painel.programacaoSemana.length}) →
-                </Link>
-              </CardAction>
-            )}
-          </CardHeader>
-          <CardContent>
-            {painel.programacaoSemana.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhuma entrega prevista nos próximos 7 dias.</p>
-            ) : (
-              <ul className="space-y-2">
-                {painel.programacaoSemana.slice(0, LIMITE_PROGRAMACAO_PAINEL).map((d) => (
-                  <li key={d.id} className="flex items-start justify-between gap-3 rounded-md border px-3 py-2 text-sm">
-                    <Link href={`/workspaces/${workspaceId}/documentos/${d.id}`} className="min-w-0 hover:underline">
-                      <p className="font-mono text-sm font-bold">{d.codigoCompleto}</p>
-                      <p className="text-sm text-foreground">{d.descricao}</p>
-                    </Link>
-                    <span className="shrink-0 text-muted-foreground">
-                      {new Date(d.dataPrevista).toLocaleDateString("pt-BR")}
-                      {d.reprogramado && <span className="ml-1 text-xs">(reprogramado)</span>}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        <MeusDocumentosCard workspaceId={workspaceId} documentos={painel.meusDocumentos} className="sm:col-span-3" />
       </div>
     </div>
   );
