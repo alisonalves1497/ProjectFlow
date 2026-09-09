@@ -139,7 +139,7 @@ export function ProjetosTree({
                 type="button"
                 onClick={() => toggleProjeto(projeto.id)}
                 className={cn(
-                  "flex flex-1 items-center gap-1.5 rounded-md px-2 py-1.5 text-sm",
+                  "flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-2 py-1.5 text-sm",
                   projeto.id === projetoAtivoId
                     ? "font-semibold text-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -219,7 +219,7 @@ export function ProjetosTree({
                           type="button"
                           onClick={() => toggleObra(obra.id)}
                           className={cn(
-                            "flex flex-1 items-center gap-1.5 rounded-md px-2 py-1.5 text-sm",
+                            "flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-2 py-1.5 text-sm",
                             obra.id === obraAtivaId
                               ? "font-semibold text-foreground"
                               : "text-muted-foreground hover:bg-accent hover:text-foreground"

@@ -4,8 +4,24 @@ import { obras, obraMembers, users, projetos, workspaceMembers } from "@/db/sche
 import { newId } from "@/lib/id";
 import { conflict, notFound } from "@/lib/errors";
 import { softDeleteDocumentosPorObra, restoreDocumentosPorObra } from "./documentoService";
+import { normalizar } from "./importDocumentosService";
 
 const RETENCAO_LIXEIRA_DIAS = 30;
+
+// Duas obras com o mesmo nome (mesmo só diferindo em maiúscula/acento) dentro do mesmo
+// Projeto confundem quem tá navegando ou renomeando manualmente — normalizar() já é o
+// mesmo critério usado pra evitar duplicar Obra na sincronização de portfólio (garantirObra).
+// `ignorarObraId` deixa renomear uma obra pro nome que ela já tem (sem sinalizar conflito
+// dela consigo mesma).
+async function assertNomeObraDisponivel(projetoId: string, nome: string, ignorarObraId?: string) {
+  const obrasDoProjeto = await db
+    .select({ id: obras.id, name: obras.name })
+    .from(obras)
+    .where(and(eq(obras.projetoId, projetoId), isNull(obras.deletedAt)));
+  const alvo = normalizar(nome);
+  const conflitante = obrasDoProjeto.find((o) => o.id !== ignorarObraId && normalizar(o.name) === alvo);
+  if (conflitante) throw conflict("OBRA_NAME_TAKEN", "Já existe uma obra com esse nome neste projeto.");
+}
 
 // criadoPorUserId ganha acesso explícito (obra_members) automaticamente — quem cria não
 // é necessariamente administrador (ex: coordenador), então sem isso perderia acesso à
@@ -29,6 +45,8 @@ export async function createObra(
     .where(and(eq(obras.projetoId, projetoId), eq(obras.code, input.code)))
     .limit(1);
   if (existing) throw conflict("OBRA_CODE_TAKEN", "Já existe uma obra com este código neste projeto.");
+
+  await assertNomeObraDisponivel(projetoId, input.name);
 
   return db.transaction(async (tx) => {
     const [obra] = await tx
@@ -65,6 +83,11 @@ export async function getObraOrThrow(workspaceId: string, obraId: string) {
 }
 
 export async function updateObra(workspaceId: string, obraId: string, patch: { name?: string }) {
+  if (patch.name) {
+    const obraAtual = await getObraOrThrow(workspaceId, obraId);
+    await assertNomeObraDisponivel(obraAtual.projetoId, patch.name, obraId);
+  }
+
   const [updated] = await db
     .update(obras)
     .set({ ...patch, updatedAt: new Date() })
