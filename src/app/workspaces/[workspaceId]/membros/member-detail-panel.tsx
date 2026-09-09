@@ -16,6 +16,7 @@ import {
 import { ALL_WORKSPACE_ROLES, WORKSPACE_ROLE_LABELS, WORKSPACE_ROLE_DESCRIPTIONS, type WorkspaceRole } from "@/lib/roles";
 import { updateMemberAction, removeMemberAction, type ActionState } from "./actions";
 import { EditMemberEmailDialog } from "./edit-member-email-dialog";
+import { EditMemberPasswordDialog } from "./edit-member-password-dialog";
 import { iniciais, type Membro, type Obra } from "./membros-screen";
 
 const initialState: ActionState = { status: "idle" };
@@ -119,6 +120,9 @@ export function MemberDetailPanel({
             <p className="flex items-center truncate text-xs text-muted-foreground">
               {membro.email}
               {canManage && <EditMemberEmailDialog workspaceId={workspaceId} userId={membro.userId} emailAtual={membro.email} />}
+              {canManage && (
+                <EditMemberPasswordDialog workspaceId={workspaceId} userId={membro.userId} nome={membro.name ?? membro.email} />
+              )}
             </p>
           </div>
         </div>

@@ -7,6 +7,7 @@ import { ApiError } from "@/lib/errors";
 import {
   workspaceMemberAddSchema,
   workspaceMemberEmailUpdateSchema,
+  workspaceMemberPasswordUpdateSchema,
   workspaceMemberUpdateSchema,
 } from "@/lib/validators";
 import {
@@ -14,6 +15,7 @@ import {
   removeWorkspaceMember,
   updateWorkspaceMemberRole,
   updateWorkspaceMemberEmail,
+  setWorkspaceMemberPassword,
 } from "@/services/workspaceService";
 import { addObraMemberByUserId, removeObraMember, listObraIdsDoMembro } from "@/services/obraService";
 import { requireWorkspaceRole, requireObraAccess } from "@/services/permissions";
@@ -75,6 +77,26 @@ export async function updateMemberEmailAction(_prevState: ActionState, formData:
   }
 
   revalidatePath(`/workspaces/${workspaceId}/membros`);
+  return { status: "success" };
+}
+
+export async function updateMemberPasswordAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const userId = String(formData.get("userId") ?? "");
+
+  try {
+    await requireWorkspaceRole(session.user.id, workspaceId, ["administrador", "coordenador"]);
+    const input = workspaceMemberPasswordUpdateSchema.parse({ senha: formData.get("senha") });
+    await setWorkspaceMemberPassword(workspaceId, userId, input.senha);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };
+    throw err;
+  }
+
   return { status: "success" };
 }
 

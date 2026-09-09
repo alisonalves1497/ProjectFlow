@@ -162,6 +162,23 @@ export async function updateWorkspaceMemberEmail(workspaceId: string, userId: st
   return updated;
 }
 
+// Define a senha de outra pessoa direto (sem link por email) — pedido explícito do time
+// enquanto o envio de email de redefinição não funciona de verdade (precisa de domínio
+// verificado no Resend, que ainda não tem). Mesmo escopo por segurança do e-mail acima.
+export async function setWorkspaceMemberPassword(workspaceId: string, userId: string, novaSenha: string) {
+  const [membro] = await db
+    .select({ id: workspaceMembers.id })
+    .from(workspaceMembers)
+    .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)))
+    .limit(1);
+  if (!membro) throw notFound("WORKSPACE_MEMBER_NOT_FOUND", "Membro não encontrado neste workspace.");
+
+  const passwordHash = await bcrypt.hash(novaSenha, 10);
+  const [updated] = await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, userId)).returning();
+  if (!updated) throw notFound("USUARIO_NOT_FOUND", "Usuário não encontrado.");
+  return updated;
+}
+
 export async function removeWorkspaceMember(workspaceId: string, userId: string) {
   await assertNotLastOwnerDemotion(workspaceId, userId, null);
   const deleted = await db

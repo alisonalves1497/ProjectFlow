@@ -31,6 +31,10 @@ export const workspaceMemberEmailUpdateSchema = z.object({
   email: z.string().trim().email(),
 });
 
+export const workspaceMemberPasswordUpdateSchema = z.object({
+  senha: z.string().min(6, "A senha precisa ter pelo menos 6 caracteres."),
+});
+
 export const workspaceMemberUpdateSchema = z.object({
   role: workspaceRoleSchema,
   obraIds: z.array(z.string()),
