@@ -11,7 +11,15 @@ type Documento = { id: string; codigoCompleto: string; descricao: string; status
 
 const LIMITE = 8;
 
-export function MeusDocumentosCard({ workspaceId, documentos }: { workspaceId: string; documentos: Documento[] }) {
+export function MeusDocumentosCard({
+  workspaceId,
+  documentos,
+  className,
+}: {
+  workspaceId: string;
+  documentos: Documento[];
+  className?: string;
+}) {
   const [statusFiltro, setStatusFiltro] = useState<string>("");
 
   const filtrados = statusFiltro ? documentos.filter((d) => d.status === statusFiltro) : documentos;
@@ -20,7 +28,7 @@ export function MeusDocumentosCard({ workspaceId, documentos }: { workspaceId: s
   const statusDisponiveis = [...new Set(documentos.map((d) => d.status))];
 
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
         <div className="flex items-center gap-2">
           <FolderKanban className="size-4 text-primary" />

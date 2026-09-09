@@ -185,8 +185,8 @@ export default async function PainelPage({ params }: Params) {
             </CardContent>
           </Card>
 
-          <div className="grid gap-8 sm:grid-cols-2">
-            <Card>
+          <div className="grid gap-8 sm:grid-cols-4">
+            <Card className="sm:col-span-1">
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <CalendarDays className="size-4 text-primary" />
@@ -206,12 +206,12 @@ export default async function PainelPage({ params }: Params) {
                 ) : (
                   <ul className="space-y-2">
                     {painel.programacaoSemana.slice(0, LIMITE_PROGRAMACAO_PAINEL).map((d) => (
-                      <li key={d.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                        <Link href={`/workspaces/${workspaceId}/documentos/${d.id}`} className="hover:underline">
-                          <span className="font-mono text-xs">{d.codigoCompleto}</span>{" "}
-                          <span className="text-muted-foreground">{d.descricao}</span>
+                      <li key={d.id} className="flex items-start justify-between gap-3 rounded-md border px-3 py-2 text-sm">
+                        <Link href={`/workspaces/${workspaceId}/documentos/${d.id}`} className="min-w-0 hover:underline">
+                          <p className="font-mono text-sm font-bold">{d.codigoCompleto}</p>
+                          <p className="text-sm text-foreground">{d.descricao}</p>
                         </Link>
-                        <span className="text-muted-foreground">
+                        <span className="shrink-0 text-muted-foreground">
                           {new Date(d.dataPrevista).toLocaleDateString("pt-BR")}
                           {d.reprogramado && <span className="ml-1 text-xs">(reprogramado)</span>}
                         </span>
@@ -222,7 +222,7 @@ export default async function PainelPage({ params }: Params) {
               </CardContent>
             </Card>
 
-            <MeusDocumentosCard workspaceId={workspaceId} documentos={painel.meusDocumentos} />
+            <MeusDocumentosCard workspaceId={workspaceId} documentos={painel.meusDocumentos} className="sm:col-span-3" />
           </div>
         </div>
 
