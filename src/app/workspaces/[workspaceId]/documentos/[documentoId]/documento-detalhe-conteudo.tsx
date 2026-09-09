@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { auth } from "@/auth";
+import { getWorkspaceRole } from "@/services/permissions";
 import { getDocumentoOrThrow } from "@/services/documentoService";
 import { getObraOrThrow, listObraAccessUsers } from "@/services/obraService";
 import { listRevisoesComConferidoPorNome } from "@/services/revisaoService";
@@ -24,6 +26,10 @@ import { CreateItemDialog } from "../../projetos/[projetoId]/obras/[obraId]/conh
 export async function DocumentoDetalheConteudo({ workspaceId, documentoId }: { workspaceId: string; documentoId: string }) {
   const documento = await getDocumentoOrThrow(workspaceId, documentoId);
   const obra = await getObraOrThrow(workspaceId, documento.obraId);
+
+  const session = await auth();
+  const usuarioId = session?.user?.id ?? "";
+  const ehAdministrador = usuarioId ? (await getWorkspaceRole(usuarioId, workspaceId)) === "administrador" : false;
 
   const [revisoes, timeline, disciplinas, obraUsers, fotos, itensConhecimento, categoriasConhecimento, disciplinasComSecoes, mensagensChat] =
     await Promise.all([
@@ -101,7 +107,13 @@ export async function DocumentoDetalheConteudo({ workspaceId, documentoId }: { w
         </TabsList>
 
         <TabsContent value="chat">
-          <ChatTab workspaceId={workspaceId} documentoId={documentoId} mensagens={mensagensChat} />
+          <ChatTab
+            workspaceId={workspaceId}
+            documentoId={documentoId}
+            mensagens={mensagensChat}
+            usuarioId={usuarioId}
+            podeExcluir={ehAdministrador}
+          />
         </TabsContent>
 
         <TabsContent value="revisoes">

@@ -17,6 +17,7 @@ import {
   secaoRenameSchema,
   setStatusDiretoSchema,
   chatMensagemCreateSchema,
+  chatMensagemUpdateSchema,
 } from "@/lib/validators";
 import {
   createDocumento,
@@ -30,7 +31,7 @@ import {
 } from "@/services/documentoService";
 import { createRevisao, transitionRevisaoStatus, toggleConferido, setArquivoRevisao } from "@/services/revisaoService";
 import { createComentario } from "@/services/comentarioService";
-import { createMensagemChat } from "@/services/documentoChatService";
+import { createMensagemChat, updateMensagemChat, deleteMensagemChat } from "@/services/documentoChatService";
 import { toggleFavorito } from "@/services/favoritoService";
 import { createAnexoRevisao, deleteAnexo } from "@/services/anexoService";
 import { renomearSecao, getSecaoPadraoOrThrow, contarSecoesDaObraDisciplina } from "@/services/catalogoService";
@@ -530,6 +531,52 @@ export async function addChatMensagemAction(_prevState: ActionState, formData: F
   } catch (err) {
     if (err instanceof ApiError) return { status: "error", error: err.message };
     if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };
+    throw err;
+  }
+
+  revalidatePath(`/workspaces/${workspaceId}/documentos/${documentoId}`);
+  return { status: "success" };
+}
+
+export async function updateChatMensagemAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const documentoId = String(formData.get("documentoId") ?? "");
+  const mensagemId = String(formData.get("mensagemId") ?? "");
+
+  try {
+    await assertObraAccessForDocumento(session.user.id, workspaceId, documentoId);
+    const input = chatMensagemUpdateSchema.parse({ corpo: formData.get("corpo") });
+    // updateMensagemChat só altera a linha se o autorId bater — não-autor cai no erro de permissão.
+    await updateMensagemChat(workspaceId, documentoId, mensagemId, session.user.id, input.corpo);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };
+    throw err;
+  }
+
+  revalidatePath(`/workspaces/${workspaceId}/documentos/${documentoId}`);
+  return { status: "success" };
+}
+
+export async function deleteChatMensagemAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const documentoId = String(formData.get("documentoId") ?? "");
+  const mensagemId = String(formData.get("mensagemId") ?? "");
+
+  try {
+    await assertObraAccessForDocumento(session.user.id, workspaceId, documentoId);
+    // Apagar mensagem do chat é definitivo e pode atingir mensagem de qualquer pessoa —
+    // restrito a administrador, coerente com as demais ações destrutivas do documento.
+    await requireWorkspaceRole(session.user.id, workspaceId, ["administrador"]);
+    await deleteMensagemChat(workspaceId, documentoId, mensagemId);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
     throw err;
   }
 

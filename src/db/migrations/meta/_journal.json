@@ -162,6 +162,13 @@
       "when": 1788908691631,
       "tag": "0022_abandoned_amphibian",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1788974916905,
+      "tag": "0023_violet_vin_gonzales",
+      "breakpoints": true
     }
   ]
 }

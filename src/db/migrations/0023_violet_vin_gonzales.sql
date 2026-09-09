@@ -1,0 +1,1 @@
+ALTER TABLE "documento_chat_mensagens" ADD COLUMN "edited_at" timestamp with time zone;
