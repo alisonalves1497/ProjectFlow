@@ -45,8 +45,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/login",
   },
   callbacks: {
-    jwt: ({ token, user }) => {
-      if (user) token.sub = user.id;
+    // Sessão JWT não sabe sozinha que o email mudou (o token guarda o que era verdade no
+    // login, ninguém avisa o cookie) — sem isso, trocar o email de alguém logado (ver
+    // updateWorkspaceMemberEmail) deixava a sessão antiga válida até expirar sozinha,
+    // mesmo com a conta já apontando pra outro email. Comparando o email do token contra
+    // o atual no banco a cada request, deslogamos assim que detecta a troca.
+    jwt: async ({ token, user }) => {
+      if (user) {
+        token.sub = user.id;
+        token.email = user.email;
+        return token;
+      }
+      if (token.sub) {
+        const [atual] = await db.select({ email: users.email }).from(users).where(eq(users.id, token.sub)).limit(1);
+        if (!atual || atual.email !== token.email) return null;
+      }
       return token;
     },
     session: ({ session, token }) => {

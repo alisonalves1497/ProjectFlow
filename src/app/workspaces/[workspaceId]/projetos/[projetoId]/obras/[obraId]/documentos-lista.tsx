@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Fragment, useActionState, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,6 +73,14 @@ function ResumoSecao({ total, concluidos, percentual }: { total: number; conclui
 
 const initialStatusActionState: ActionState = { status: "idle" };
 
+// Reconstrói um FormData igual ao que o <form> das células editáveis manda — usado pra
+// re-disparar a mesma action com o valor ANTERIOR quando clica em "Desfazer" no toast.
+function formDataDoDesfazer(campos: Record<string, string>): FormData {
+  const fd = new FormData();
+  for (const [chave, valor] of Object.entries(campos)) fd.set(chave, valor);
+  return fd;
+}
+
 // Pedido explícito do time: trocar o Status direto na linha da tabela, sem passar pela
 // revisão. Só administrador/coordenador vê o lápis — pra quem não pode, é só o badge normal.
 function StatusCell({
@@ -90,20 +99,39 @@ function StatusCell({
   podeGerenciar: boolean;
 }) {
   const [editando, setEditando] = useState(false);
+  const [statusAnterior, setStatusAnterior] = useState(status);
   const [state, formAction, pending] = useActionState(setStatusDiretoAction, initialStatusActionState);
   // `state` do useActionState não volta sozinho pra "idle" depois de um sucesso — fechar
   // aqui SEM resetar editando via effect fazia o lápis travar pra sempre depois da primeira
   // troca (mostrandoSelect derivado de state.status ficava preso em "success" e nunca mais
   // reabria o select, só um F5 recarregava o estado do zero).
   useEffect(() => {
-    if (state.status === "success") setEditando(false);
+    if (state.status === "success") {
+      setEditando(false);
+      const valorAntes = statusAnterior;
+      toast("Status alterado.", {
+        action: {
+          label: "Desfazer",
+          onClick: () =>
+            formAction(formDataDoDesfazer({ workspaceId, projetoId, obraId, documentoId, status: valorAntes })),
+        },
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só dispara uma vez por submissão bem-sucedida
   }, [state]);
 
   if (!podeGerenciar) return <StatusBadge status={status} />;
 
   if (!editando) {
     return (
-      <button type="button" onClick={() => setEditando(true)} className="group/status inline-flex items-center gap-1">
+      <button
+        type="button"
+        onClick={() => {
+          setStatusAnterior(status);
+          setEditando(true);
+        }}
+        className="group/status inline-flex items-center gap-1"
+      >
         <StatusBadge status={status} />
         <Pencil className="size-3 shrink-0 text-muted-foreground opacity-0 group-hover/status:opacity-100" />
       </button>
@@ -180,16 +208,37 @@ function ResponsavelCell({
   podeGerenciar: boolean;
 }) {
   const [editando, setEditando] = useState(false);
+  const [responsavelIdAnterior, setResponsavelIdAnterior] = useState(responsavelId);
   const [state, formAction, pending] = useActionState(updateDocumentoAction, initialUpdateActionState);
   useEffect(() => {
-    if (state.status === "success") setEditando(false);
+    if (state.status === "success") {
+      setEditando(false);
+      const valorAntes = responsavelIdAnterior;
+      toast("Responsável alterado.", {
+        action: {
+          label: "Desfazer",
+          onClick: () =>
+            formAction(
+              formDataDoDesfazer({ workspaceId, projetoId, obraId, documentoId, responsavelId: valorAntes ?? "" })
+            ),
+        },
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só dispara uma vez por submissão bem-sucedida
   }, [state]);
 
   if (!podeGerenciar) return <>{responsavelNome ?? "—"}</>;
 
   if (!editando) {
     return (
-      <button type="button" onClick={() => setEditando(true)} className="group/resp inline-flex items-center gap-1">
+      <button
+        type="button"
+        onClick={() => {
+          setResponsavelIdAnterior(responsavelId);
+          setEditando(true);
+        }}
+        className="group/resp inline-flex items-center gap-1"
+      >
         <span className={responsavelNome ? "" : "text-muted-foreground"}>{responsavelNome ?? "—"}</span>
         <Pencil className="size-3 shrink-0 text-muted-foreground opacity-0 group-hover/resp:opacity-100" />
       </button>
@@ -237,9 +286,23 @@ function PrazoCell({
   podeGerenciar: boolean;
 }) {
   const [editando, setEditando] = useState(false);
+  const [anterior, setAnterior] = useState({ campo: reprogramado ? "dataReprogramada" : "dataPrevista", valor: dataPrevista });
   const [state, formAction, pending] = useActionState(updateDocumentoAction, initialUpdateActionState);
   useEffect(() => {
-    if (state.status === "success") setEditando(false);
+    if (state.status === "success") {
+      setEditando(false);
+      const valorAntes = anterior;
+      toast("Prazo alterado.", {
+        action: {
+          label: "Desfazer",
+          onClick: () =>
+            formAction(
+              formDataDoDesfazer({ workspaceId, projetoId, obraId, documentoId, [valorAntes.campo]: valorAntes.valor ?? "" })
+            ),
+        },
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só dispara uma vez por submissão bem-sucedida
   }, [state]);
 
   // +"T00:00:00": sem isso, `new Date("2026-12-25")` é interpretado como meia-noite UTC, que em
@@ -250,7 +313,14 @@ function PrazoCell({
 
   if (!editando) {
     return (
-      <button type="button" onClick={() => setEditando(true)} className="group/prazo inline-flex items-center gap-1">
+      <button
+        type="button"
+        onClick={() => {
+          setAnterior({ campo: reprogramado ? "dataReprogramada" : "dataPrevista", valor: dataPrevista });
+          setEditando(true);
+        }}
+        className="group/prazo inline-flex items-center gap-1"
+      >
         <span className={dataPrevista ? "" : "text-muted-foreground"}>{rotulo}</span>
         <Pencil className="size-3 shrink-0 text-muted-foreground opacity-0 group-hover/prazo:opacity-100" />
       </button>
@@ -300,9 +370,23 @@ function RevisaoCell({
   podeGerenciar: boolean;
 }) {
   const [editando, setEditando] = useState(false);
+  const [revisaoAnterior, setRevisaoAnterior] = useState(revisaoLabel);
   const [state, formAction, pending] = useActionState(updateDocumentoAction, initialUpdateActionState);
   useEffect(() => {
-    if (state.status === "success") setEditando(false);
+    if (state.status === "success") {
+      setEditando(false);
+      const valorAntes = revisaoAnterior;
+      toast("Revisão alterada.", {
+        action: {
+          label: "Desfazer",
+          onClick: () =>
+            formAction(
+              formDataDoDesfazer({ workspaceId, projetoId, obraId, documentoId, revisaoExterna: valorAntes ?? "" })
+            ),
+        },
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só dispara uma vez por submissão bem-sucedida
   }, [state]);
 
   // Documento com revisão de verdade (currentRevisionId) tem o rótulo governado pelo fluxo
@@ -312,7 +396,14 @@ function RevisaoCell({
 
   if (!editando) {
     return (
-      <button type="button" onClick={() => setEditando(true)} className="group/rev inline-flex items-center gap-1">
+      <button
+        type="button"
+        onClick={() => {
+          setRevisaoAnterior(revisaoLabel);
+          setEditando(true);
+        }}
+        className="group/rev inline-flex items-center gap-1"
+      >
         <span className={revisaoLabel ? "" : "text-muted-foreground"}>{revisaoLabel ?? "—"}</span>
         <Pencil className="size-3 shrink-0 text-muted-foreground opacity-0 group-hover/rev:opacity-100" />
       </button>
