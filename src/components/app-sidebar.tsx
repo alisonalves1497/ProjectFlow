@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
@@ -36,6 +36,13 @@ type Role = WorkspaceRole;
 type NavItem = { href: string; label: string; icon: LucideIcon; matchKeyword?: string };
 type NavGroup = { label: string; icon?: LucideIcon; items: NavItem[] };
 
+// Largura da sidebar: arrastável pela borda direita e lembrada por navegador (localStorage).
+// O `<main>` do layout acompanha via a CSS var --app-sidebar-w (default 14rem = 224px).
+const LARGURA_MIN = 208;
+const LARGURA_MAX = 480;
+const LARGURA_PADRAO = 224;
+const LARGURA_KEY = "app-sidebar-w";
+
 function iniciaisDoNome(nome: string): string {
   const partes = nome.trim().split(/\s+/);
   const primeira = partes[0]?.[0] ?? "";
@@ -61,6 +68,55 @@ export function AppSidebar({
   const pathname = usePathname();
   const [colapsados, setColapsados] = useState<Set<string>>(new Set());
   const [novoProjetoOpen, setNovoProjetoOpen] = useState(false);
+  const [largura, setLargura] = useState(LARGURA_PADRAO);
+  const larguraRef = useRef(LARGURA_PADRAO);
+  const arrastandoRef = useRef(false);
+
+  const aplicarLargura = useCallback((px: number) => {
+    const clamp = Math.min(LARGURA_MAX, Math.max(LARGURA_MIN, Math.round(px)));
+    larguraRef.current = clamp;
+    setLargura(clamp);
+    document.documentElement.style.setProperty("--app-sidebar-w", `${clamp}px`);
+  }, []);
+
+  // Recupera a largura salva no primeiro render do cliente. localStorage não existe no SSR,
+  // então a leitura tem que ser num effect mesmo — o "set-state-in-effect" aqui é intencional
+  // e roda uma vez só.
+  useEffect(() => {
+    try {
+      const salvo = Number(localStorage.getItem(LARGURA_KEY));
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- leitura de localStorage só dá no cliente, roda 1x
+      if (salvo) aplicarLargura(salvo);
+    } catch {
+      // localStorage indisponível (aba privada etc.) — segue com o padrão.
+    }
+  }, [aplicarLargura]);
+
+  function iniciarArraste(e: React.PointerEvent) {
+    e.preventDefault();
+    arrastandoRef.current = true;
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+
+    function mover(ev: PointerEvent) {
+      if (!arrastandoRef.current) return;
+      aplicarLargura(ev.clientX);
+    }
+    function soltar() {
+      arrastandoRef.current = false;
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+      window.removeEventListener("pointermove", mover);
+      window.removeEventListener("pointerup", soltar);
+      try {
+        localStorage.setItem(LARGURA_KEY, String(larguraRef.current));
+      } catch {
+        // sem persistência se localStorage falhar
+      }
+    }
+    window.addEventListener("pointermove", mover);
+    window.addEventListener("pointerup", soltar);
+  }
 
   const wsBase = `/workspaces/${workspaceId}`;
 
@@ -148,7 +204,16 @@ export function AppSidebar({
   const nomeExibido = userName || userEmail;
 
   return (
-    <aside className="fixed top-0 left-0 flex h-screen w-56 shrink-0 flex-col border-r bg-muted">
+    <aside
+      style={{ width: largura }}
+      className="fixed top-0 left-0 flex h-screen shrink-0 flex-col border-r bg-muted"
+    >
+      {/* Alça de redimensionamento na borda direita — arrasta pra alargar/estreitar. */}
+      <div
+        onPointerDown={iniciarArraste}
+        title="Arraste pra ajustar a largura"
+        className="absolute top-0 -right-1 z-10 h-full w-2 cursor-col-resize hover:bg-primary/20"
+      />
       <div className="flex shrink-0 justify-center border-b p-4">
         <Image src="/logo-enermais.png" alt="EnerMais" width={160} height={48} className="h-10 w-auto" priority />
       </div>

@@ -27,7 +27,9 @@ export default async function WorkspaceShellLayout({ params, children, modal }: 
         userName={session.user.name ?? ""}
         userEmail={session.user.email ?? ""}
       />
-      <main className="ml-56 flex-1">{children}</main>
+      <main className="flex-1" style={{ marginLeft: "var(--app-sidebar-w, 14rem)" }}>
+        {children}
+      </main>
       {modal}
     </div>
   );
