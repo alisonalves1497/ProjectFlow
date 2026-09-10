@@ -6,8 +6,10 @@ import {
   getOpcoesFiltroDashboard,
   type FiltrosDashboard,
 } from "@/services/dashboardService";
+import { listVisoesDashboard } from "@/services/dashboardVisaoService";
 import type { StatusDocumento } from "@/lib/statusGraph";
-import { DashboardFiltros } from "./dashboard-filtros";
+import type { BlocoDashboard } from "@/lib/dashboardFiltros";
+import { DashboardShell } from "./dashboard-shell";
 import { DashboardContadores } from "./dashboard-contadores";
 import { DashboardBarras } from "./dashboard-barras";
 import { DashboardResponsavel } from "./dashboard-responsavel";
@@ -41,7 +43,7 @@ export default async function DashboardsPage({ params, searchParams }: Params) {
     dataAte: typeof sp.ate === "string" ? sp.ate : null,
   };
 
-  const [opcoes, documentos, curvaAvanco] = await Promise.all([
+  const [opcoes, documentos, curvaAvanco, visoes] = await Promise.all([
     getOpcoesFiltroDashboard(workspaceId, session.user.id),
     listDocumentosParaDashboard(workspaceId, session.user.id, filtros),
     getCurvaAvanco(workspaceId, session.user.id, {
@@ -49,28 +51,26 @@ export default async function DashboardsPage({ params, searchParams }: Params) {
       disciplinas: filtros.disciplinas,
       responsavelIds: filtros.responsavelIds,
     }),
+    listVisoesDashboard(workspaceId, session.user.id),
   ]);
+
+  const blocos: Record<BlocoDashboard, React.ReactNode> = {
+    contadores: <DashboardContadores documentos={documentos} />,
+    barras: <DashboardBarras documentos={documentos} />,
+    curva: <DashboardCurvaAvanco pontos={curvaAvanco} />,
+    resumo: <DashboardResumoObra documentos={documentos} />,
+    responsavel: <DashboardResponsavel documentos={documentos} workspaceId={workspaceId} />,
+  };
 
   return (
     <div className="p-8">
       <h1 className="mb-1 text-2xl font-semibold">Dashboards</h1>
       <p className="mb-6 text-sm text-muted-foreground">
-        Acompanhamento do portfólio. Os filtros abaixo valem pra todos os blocos (a curva de avanço ignora status e período).
+        Filtros valem pra todos os blocos (a curva de avanço ignora status e período). Em “Blocos” dá pra
+        ligar/desligar e reordenar; em “Visões”, salvar um conjunto de blocos + filtros pra reabrir depois.
       </p>
 
-      <DashboardFiltros opcoes={opcoes} />
-      <DashboardContadores documentos={documentos} />
-      <DashboardBarras documentos={documentos} />
-
-      <div className="mb-6">
-        <DashboardCurvaAvanco pontos={curvaAvanco} />
-      </div>
-
-      <div className="mb-6">
-        <DashboardResumoObra documentos={documentos} />
-      </div>
-
-      <DashboardResponsavel documentos={documentos} workspaceId={workspaceId} />
+      <DashboardShell workspaceId={workspaceId} opcoes={opcoes} visoes={visoes} blocos={blocos} />
     </div>
   );
 }

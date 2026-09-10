@@ -15,3 +15,4 @@ export * from "./conhecimento";
 export * from "./visitas";
 export * from "./favoritos";
 export * from "./chat";
+export * from "./dashboards";
