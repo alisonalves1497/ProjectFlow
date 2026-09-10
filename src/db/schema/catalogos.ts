@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, unique, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, unique, integer, jsonb, boolean } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 
 // Catálogos de referência: os componentes validados do código do documento
@@ -52,6 +52,15 @@ export const secoesPadrao = pgTable(
     disciplinaId: text("disciplina_id").notNull().references(() => disciplinas.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     ordem: integer("ordem").notNull(),
+    // Regras de casamento automático usadas na Sincronização de Portfólio. Cada item é um
+    // "grupo" de palavras: o TIPO do documento casa nesta Seção se TODAS as palavras de ALGUM
+    // grupo aparecerem no texto (E dentro do grupo, OU entre grupos). Ex:
+    // [["CASA DE COMANDO","ARQUITETURA"],["CASA DE CONTROLE","ARQUITETURA"]].
+    // Null/vazio = usa o casamento antigo (o próprio nome da Seção como substring).
+    palavrasChave: jsonb("palavras_chave").$type<string[][]>(),
+    // Seção "balde": só é sugerida quando NENHUMA Seção específica (não-fallback) casou —
+    // ex: "Sem Seção atribuída". Impede o balde genérico de roubar de Seções específicas.
+    fallback: boolean("fallback").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique().on(table.disciplinaId, table.name)]

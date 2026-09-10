@@ -1,6 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
-import { documentos, secoes, secoesPadrao, obraDisciplinas, projetos, obras, fases, workspaceMembers, users, linhaDoTempo } from "@/db/schema";
+import { documentos, secoes, secoesPadrao, disciplinas, obraDisciplinas, projetos, obras, fases, workspaceMembers, users, linhaDoTempo } from "@/db/schema";
 import { newId } from "@/lib/id";
 import { badRequest, isUniqueViolation } from "@/lib/errors";
 import { type StatusDocumento } from "@/lib/statusGraph";
@@ -230,6 +230,93 @@ export function sugerirNomeSecaoPorTipo(tipo: string, nomesSecoesConhecidas: str
   return melhor?.nome ?? melhorPredio?.nome ?? null;
 }
 
+// Nome fixo do "balde" pra onde vai todo documento que o casamento automático não conseguiu
+// classificar — o time pediu pra NÃO ter que escolher Seção linha por linha na sincronização.
+// Fica dentro da Disciplina do documento (coordenação), então dá pra reorganizar depois.
+export const SECAO_SEM_ATRIBUICAO = "Sem Seção atribuída";
+
+// Igual a normalizar(), mas também derruba hífen/barra/parênteses/ponto pra espaço — deixa
+// "CORTA-FOGO" casar com "CORTA FOGO", "TC/TP" com "TC TP" etc. As regras de palavra-chave
+// do catálogo já são gravadas nesse formato.
+function afrouxarTexto(s: string): string {
+  return normalizar(s)
+    .replace(/[-/().]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export type SecaoCatalogo = {
+  disciplinaNome: string;
+  nome: string;
+  grupos: string[][]; // já em afrouxarTexto(); [] = sem regra, cai no casamento por substring do nome
+  fallback: boolean;
+};
+
+// Casamento automático "v2" pra Sincronização de Portfólio:
+//  - regras de palavra-chave por Seção (E dentro do grupo, OU entre grupos), com escopo de
+//    Disciplina (documento CIVIL só casa Seção CIVIL);
+//  - Seção `fallback` (ex: "Sem Seção atribuída") só ganha se nenhuma Seção específica casou;
+//  - Seção sem regra volta pro comportamento antigo (nome como substring do TIPO), pra não
+//    quebrar workspace que ainda não tem catálogo com regras.
+export function sugerirSecaoPorTipoComRegras(
+  tipo: string,
+  coordenacao: string,
+  catalogo: SecaoCatalogo[]
+): string | null {
+  const alvo = afrouxarTexto(tipo);
+  const disciplinaAlvo = normalizar(coordenacao);
+  let melhorNormal: { nome: string; score: number } | null = null;
+  let melhorFallback: { nome: string; score: number } | null = null;
+
+  for (const secao of catalogo) {
+    if (disciplinaAlvo && normalizar(secao.disciplinaNome) !== disciplinaAlvo) continue;
+
+    let scoreDaSecao = -1;
+    if (secao.grupos.length > 0) {
+      for (const grupo of secao.grupos) {
+        if (grupo.every((token) => alvo.includes(token))) {
+          const score = grupo.reduce((soma, t) => soma + t.length, 0) + grupo.length * 4;
+          if (score > scoreDaSecao) scoreDaSecao = score;
+        }
+      }
+    } else {
+      // Sem regra: nome (cabeça) como substring — mesmo critério do casamento antigo.
+      const cabeca = afrouxarTexto(cabecaDoNome(secao.nome));
+      if (cabeca && alvo.includes(cabeca)) scoreDaSecao = cabeca.length;
+    }
+    if (scoreDaSecao < 0) continue;
+
+    if (secao.fallback) {
+      if (!melhorFallback || scoreDaSecao > melhorFallback.score) melhorFallback = { nome: secao.nome, score: scoreDaSecao };
+    } else {
+      if (!melhorNormal || scoreDaSecao > melhorNormal.score) melhorNormal = { nome: secao.nome, score: scoreDaSecao };
+    }
+  }
+  return (melhorNormal ?? melhorFallback)?.nome ?? null;
+}
+
+// Catálogo de Seções sugeridas do workspace (secoesPadrao), já com o nome da Disciplina
+// resolvido e as regras de palavra-chave prontas pro matcher.
+export async function listarCatalogoSecoes(workspaceId: string): Promise<SecaoCatalogo[]> {
+  const rows = await db
+    .select({
+      nome: secoesPadrao.name,
+      palavrasChave: secoesPadrao.palavrasChave,
+      fallback: secoesPadrao.fallback,
+      disciplinaNome: disciplinas.name,
+    })
+    .from(secoesPadrao)
+    .innerJoin(disciplinas, eq(disciplinas.id, secoesPadrao.disciplinaId))
+    .where(eq(secoesPadrao.workspaceId, workspaceId));
+
+  return rows.map((r) => ({
+    disciplinaNome: r.disciplinaNome,
+    nome: r.nome,
+    fallback: r.fallback,
+    grupos: (r.palavrasChave ?? []).map((grupo) => grupo.map((token) => afrouxarTexto(token))),
+  }));
+}
+
 // "ROGER", "CEZAR/ROGER" etc — tenta achar UM membro do workspace cujo nome contenha esse
 // texto como palavra. Nome composto tipo "MAURO/DANIELA" (duas pessoas): usa sempre o
 // primeiro nome como responsável (decisão do usuário — não pergunta qual dos dois).
@@ -333,7 +420,8 @@ export type LinhaPortifolioAnalisada = LinhaPortifolio & {
 };
 
 export async function analisarLinhasPortifolio(workspaceId: string, linhas: LinhaPortifolio[]): Promise<LinhaPortifolioAnalisada[]> {
-  const [vocabularioSecoes, membros, documentosExistentes] = await Promise.all([
+  const [catalogoSecoes, vocabularioSecoes, membros, documentosExistentes] = await Promise.all([
+    listarCatalogoSecoes(workspaceId),
     listarVocabularioSecoes(workspaceId),
     listarMembrosWorkspace(workspaceId),
     db
@@ -345,11 +433,18 @@ export async function analisarLinhasPortifolio(workspaceId: string, linhas: Linh
 
   return linhas.map((l) => {
     const existente = existentePorCodigo.get(l.codigo.trim().toUpperCase()) ?? null;
+    // Casamento por regras de palavra-chave do catálogo (com escopo de disciplina); se o
+    // catálogo não resolver, tenta o casamento antigo por nome; e se nem esse resolver, o
+    // documento vai pro balde "Sem Seção atribuída" da disciplina — sem pendência manual.
+    const secaoNomeSugerida =
+      sugerirSecaoPorTipoComRegras(l.tipo, l.coordenacao, catalogoSecoes) ??
+      sugerirNomeSecaoPorTipo(l.tipo, vocabularioSecoes) ??
+      SECAO_SEM_ATRIBUICAO;
     return {
       ...l,
       documentoIdExistente: existente?.id ?? null,
       statusAtual: existente?.status ?? null,
-      secaoNomeSugerida: sugerirNomeSecaoPorTipo(l.tipo, vocabularioSecoes),
+      secaoNomeSugerida,
       statusSugerido: sugerirStatusPorTexto(l.statusTexto),
       responsavelIdSugerido: sugerirResponsavelPorNome(l.projetista, membros),
     };

@@ -69,7 +69,6 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
   const [linhas, setLinhas] = useState<LinhaAnalisada[]>([]);
   const [membros, setMembros] = useState<{ userId: string; name: string | null }[]>([]);
 
-  const [resolvedSecao, setResolvedSecao] = useState<Record<string, string>>({});
   const [resolvedStatus, setResolvedStatus] = useState<Record<string, StatusDocumento | "">>({});
   const [resolvedResponsavel, setResolvedResponsavel] = useState<Record<string, string>>({});
 
@@ -187,15 +186,16 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
     }
   }
 
+  // Documento novo que o casamento automático não classificou vai pro balde "Sem Seção
+  // atribuída" da disciplina — sem escolha linha por linha. Aqui só conta quantos são, pra
+  // avisar antes de confirmar.
+  const totalSemSecao = useMemo(
+    () => linhas.filter((l) => !l.documentoIdExistente && l.secaoNomeSugerida === "Sem Seção atribuída").length,
+    [linhas]
+  );
+
   // Grupos de resolução única: cada texto distinto que não bateu automaticamente só
   // precisa ser resolvido UMA vez, mesmo aparecendo em centenas de linhas.
-  const gruposSecaoPendentes = useMemo(() => {
-    const mapa = new Map<string, number>();
-    for (const l of linhas) {
-      if (!l.documentoIdExistente && !l.secaoNomeSugerida) mapa.set(l.tipo, (mapa.get(l.tipo) ?? 0) + 1);
-    }
-    return [...mapa.entries()].sort((a, b) => b[1] - a[1]);
-  }, [linhas]);
 
   const gruposStatusPendentes = useMemo(() => {
     const mapa = new Map<string, number>();
@@ -218,13 +218,11 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
     return [...mapa.entries()].sort((a, b) => b[1] - a[1]);
   }, [linhas]);
 
-  const resolucaoCompleta =
-    gruposSecaoPendentes.every(([tipo]) => resolvedSecao[tipo]?.trim()) &&
-    gruposStatusPendentes.every(([texto]) => resolvedStatus[texto]);
+  const resolucaoCompleta = gruposStatusPendentes.every(([texto]) => resolvedStatus[texto]);
 
   function irParaConfirmacao() {
     if (!resolucaoCompleta) {
-      toast.error("Ainda tem Seção ou Status sem definir — resolve todos antes de continuar.");
+      toast.error("Ainda tem Status sem definir — resolve todos antes de continuar.");
       return;
     }
     setEtapa("confirmacao");
@@ -253,7 +251,7 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
     try {
       const linhasParaAplicar = linhas
         .map((l) => {
-          const secaoNome = l.secaoNomeSugerida ?? resolvedSecao[l.tipo] ?? null;
+          const secaoNome = l.secaoNomeSugerida;
           const status = l.statusSugerido ?? (resolvedStatus[l.statusTexto] || null);
           const responsavelId = l.responsavelIdSugerido ?? (l.projetista ? resolvedResponsavel[l.projetista] || null : null);
           const chave = chaveGrupo(l.contrato, l.sistema);
@@ -300,7 +298,6 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
     setGrupos([]);
     setGruposSelecionados(new Set());
     setLinhas([]);
-    setResolvedSecao({});
     setResolvedStatus({});
     setResolvedResponsavel({});
     setObraCriarFlags({});
@@ -438,38 +435,11 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
           </div>
         )}
 
-        {gruposSecaoPendentes.length > 0 && (
-          <div>
-            <h2 className="mb-2 text-sm font-semibold">Seção sem correspondência ({gruposSecaoPendentes.length})</h2>
-            <p className="mb-2 text-xs text-muted-foreground">Só aparece aqui o que seria documento novo — atualização não precisa de Seção.</p>
-            <div className="rounded-lg border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tipo na planilha</TableHead>
-                    <TableHead className="w-24 text-right">Linhas</TableHead>
-                    <TableHead className="w-64">Seção</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {gruposSecaoPendentes.map(([tipo, qtd]) => (
-                    <TableRow key={tipo}>
-                      <TableCell className="truncate text-sm">{tipo}</TableCell>
-                      <TableCell className="text-right text-sm">{qtd}</TableCell>
-                      <TableCell>
-                        <input
-                          type="text"
-                          value={resolvedSecao[tipo] ?? ""}
-                          onChange={(e) => setResolvedSecao((prev) => ({ ...prev, [tipo]: e.target.value }))}
-                          placeholder="Nome da seção"
-                          className={`h-8 w-full rounded-md border bg-transparent px-1.5 text-xs ${!resolvedSecao[tipo]?.trim() ? "border-amber-500" : ""}`}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+        {totalSemSecao > 0 && (
+          <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">{totalSemSecao} documento{totalSemSecao !== 1 ? "s" : ""} novo{totalSemSecao !== 1 ? "s" : ""}</span>{" "}
+            sem seção identificada pelo casamento automático. Vão entrar na seção{" "}
+            <span className="font-medium text-foreground">&ldquo;Sem Seção atribuída&rdquo;</span> da própria disciplina — dá pra reorganizar depois na lista da obra.
           </div>
         )}
 
@@ -513,7 +483,7 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
           </div>
         )}
 
-        {gruposSecaoPendentes.length === 0 && gruposStatusPendentes.length === 0 && gruposResponsavelPendentes.length === 0 && (
+        {totalSemSecao === 0 && gruposStatusPendentes.length === 0 && gruposResponsavelPendentes.length === 0 && (
           <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-400">
             <CheckCircle2 className="size-5 shrink-0" />
             <p className="text-sm">Tudo bateu automaticamente — nenhuma resolução manual necessária.</p>
@@ -596,7 +566,7 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
   const PASSOS = [
     { icon: FileSpreadsheet, titulo: "Envie a planilha", texto: "Uma aba com Contrato, Sistema, Código, Tipo e Status." },
     { icon: FolderKanban, titulo: "Escolha as obras", texto: "Marque quais combinações Contrato/Sistema entram na sincronização." },
-    { icon: ListChecks, titulo: "Resolva as pendências", texto: "Seção, Status ou Responsável que não bateram sozinhos — uma vez só, não linha por linha." },
+    { icon: ListChecks, titulo: "Resolva as pendências", texto: "Só Status que não bateu sozinho — uma vez só, não linha por linha. Seção é automática (o que não casar vai pra “Sem Seção atribuída”)." },
     { icon: ShieldCheck, titulo: "Confirme por obra", texto: "Documento novo só entra depois de você aprovar, obra por obra." },
   ];
 

@@ -1,0 +1,1335 @@
+{
+  "CIVIL": [
+    {
+      "nome": "Ampliação de Subestações",
+      "ordem": 1,
+      "fallback": true,
+      "grupos": [
+        [
+          "AMPLIACAO",
+          "SUBESTACAO"
+        ]
+      ]
+    },
+    {
+      "nome": "Arranjo Geral de Fundações",
+      "ordem": 2,
+      "fallback": false,
+      "grupos": [
+        [
+          "ARRANJO GERAL DE FUNDACOES"
+        ],
+        [
+          "LOCACAO DE FUNDACAO"
+        ],
+        [
+          "LOCACAO DE FUNDACOES"
+        ],
+        [
+          "LISTA DE CONTROLE DE FUNDACOES"
+        ]
+      ]
+    },
+    {
+      "nome": "Canaletas, Dutos e Caixas de Passagem",
+      "ordem": 3,
+      "fallback": false,
+      "grupos": [
+        [
+          "CANALETA"
+        ],
+        [
+          "ELETRODUTO"
+        ],
+        [
+          "CAIXA DE JUNCAO"
+        ],
+        [
+          "CAIXA DE PASSAGEM"
+        ],
+        [
+          "DUTOS E CANALETAS"
+        ],
+        [
+          "TAMPAS",
+          "CANALETA"
+        ]
+      ]
+    },
+    {
+      "nome": "Casa de Comando / Controle - Arquitetura",
+      "ordem": 4,
+      "fallback": false,
+      "grupos": [
+        [
+          "CASA DE COMANDO",
+          "ARQUITETURA"
+        ],
+        [
+          "CASA DE CONTROLE",
+          "ARQUITETURA"
+        ]
+      ]
+    },
+    {
+      "nome": "Casa de Comando / Controle - Climatização",
+      "ordem": 5,
+      "fallback": false,
+      "grupos": [
+        [
+          "CASA DE COMANDO",
+          "CLIMATIZACAO"
+        ],
+        [
+          "CASA DE CONTROLE",
+          "CLIMATIZACAO"
+        ],
+        [
+          "CASA DE CONTROLE",
+          "AR CONDICIONADO"
+        ],
+        [
+          "CASA DE COMANDO",
+          "AR CONDICIONADO"
+        ]
+      ]
+    },
+    {
+      "nome": "Casa de Comando / Controle - Estrutural",
+      "ordem": 6,
+      "fallback": false,
+      "grupos": [
+        [
+          "CASA DE COMANDO",
+          "ESTRUTURAL"
+        ],
+        [
+          "CASA DE CONTROLE",
+          "ESTRUTURAL"
+        ],
+        [
+          "CASA DE COMANDO",
+          "LAJE"
+        ],
+        [
+          "CASA DE CONTROLE",
+          "LAJE"
+        ],
+        [
+          "CASA DE COMANDO",
+          "BLOCO DE FUNDACAO"
+        ],
+        [
+          "CASA DE CONTROLE",
+          "ESTACA"
+        ]
+      ]
+    },
+    {
+      "nome": "Casa de Comando / Controle - Geral",
+      "ordem": 7,
+      "fallback": true,
+      "grupos": [
+        [
+          "CASA DE COMANDO"
+        ],
+        [
+          "CASA DE CONTROLE"
+        ]
+      ]
+    },
+    {
+      "nome": "Casa de Comando / Controle - Hidrossanitário",
+      "ordem": 8,
+      "fallback": false,
+      "grupos": [
+        [
+          "CASA DE COMANDO",
+          "HIDROSSANITARIO"
+        ],
+        [
+          "CASA DE CONTROLE",
+          "HIDROSSANITARIO"
+        ],
+        [
+          "CASA DE CONTROLE",
+          "AGUA"
+        ],
+        [
+          "CASA DE CONTROLE",
+          "ESGOTO"
+        ],
+        [
+          "CASA DE COMANDO",
+          "ESGOTO"
+        ],
+        [
+          "EDIFICACOES",
+          "HIDROSANITARIO"
+        ]
+      ]
+    },
+    {
+      "nome": "Casa de Relés",
+      "ordem": 9,
+      "fallback": false,
+      "grupos": [
+        [
+          "CASA DE RELES"
+        ]
+      ]
+    },
+    {
+      "nome": "Chave AVR / Adaptações Civis de Equipamentos",
+      "ordem": 10,
+      "fallback": false,
+      "grupos": [
+        [
+          "CHAVE AVR"
+        ]
+      ]
+    },
+    {
+      "nome": "Critérios de Projeto e Diretrizes",
+      "ordem": 11,
+      "fallback": false,
+      "grupos": [
+        [
+          "CRITERIO"
+        ],
+        [
+          "DIRETRIZ"
+        ],
+        [
+          "LISTA DE DOCUMENTOS"
+        ]
+      ]
+    },
+    {
+      "nome": "Drenagem",
+      "ordem": 12,
+      "fallback": false,
+      "grupos": [
+        [
+          "DRENAGEM"
+        ]
+      ]
+    },
+    {
+      "nome": "Drenagem e Separação de Água e Óleo (CSAO)",
+      "ordem": 13,
+      "fallback": false,
+      "grupos": [
+        [
+          "CSAO"
+        ],
+        [
+          "SEPARADORA DE AGUA E OLEO"
+        ],
+        [
+          "BACIA COLETORA DE OLEO"
+        ],
+        [
+          "BACIA DE CAPTACAO DE OLEO"
+        ],
+        [
+          "COLETA DO OLEO"
+        ],
+        [
+          "CAPTACAO DE OLEO"
+        ]
+      ]
+    },
+    {
+      "nome": "Estruturas de Concreto - Equipamentos e Pórticos",
+      "ordem": 14,
+      "fallback": false,
+      "grupos": [
+        [
+          "PORTICO"
+        ],
+        [
+          "ESTRUTURAS DE CONCRETO"
+        ],
+        [
+          "ESTRUTURA METALICA",
+          "PORTICO"
+        ]
+      ]
+    },
+    {
+      "nome": "Fundações de Equipamentos e Estruturas de Pátio",
+      "ordem": 15,
+      "fallback": true,
+      "grupos": [
+        [
+          "FUNDACAO"
+        ],
+        [
+          "FUNDACOES"
+        ],
+        [
+          "SUPORTE DE CONCRETO"
+        ],
+        [
+          "FUNDACOES E MONTAGEM"
+        ],
+        [
+          "BASE",
+          "TRAFO"
+        ],
+        [
+          "BASE",
+          "REATOR"
+        ],
+        [
+          "BASE",
+          "CUBICULO"
+        ],
+        [
+          "NOVA BASE"
+        ],
+        [
+          "ADAPTACAO DA ESTRUTURA SUPORTE"
+        ],
+        [
+          "SETOR",
+          "FORMA E ARMACAO"
+        ],
+        [
+          "DISJUNTOR",
+          "FORMA E ARMACAO"
+        ]
+      ]
+    },
+    {
+      "nome": "Fundações de Torres de LT",
+      "ordem": 16,
+      "fallback": false,
+      "grupos": [
+        [
+          "FUNDACAO",
+          "TORRE"
+        ],
+        [
+          "FUNDACAO",
+          "MASTRO"
+        ],
+        [
+          "FUNDACAO",
+          "ESTAI"
+        ],
+        [
+          "FUNDACAO",
+          "IIEL"
+        ],
+        [
+          "FUNDACAO",
+          "IIAA"
+        ],
+        [
+          "FUNDACAO",
+          "IISM"
+        ],
+        [
+          "FUNDACAO",
+          "IISE"
+        ]
+      ]
+    },
+    {
+      "nome": "Guarita",
+      "ordem": 17,
+      "fallback": false,
+      "grupos": [
+        [
+          "GUARITA"
+        ]
+      ]
+    },
+    {
+      "nome": "Investigação do Solo, Topografia e Terraplenagem",
+      "ordem": 18,
+      "fallback": false,
+      "grupos": [
+        [
+          "SONDAGEM"
+        ],
+        [
+          "TERRAPLENAGEM"
+        ],
+        [
+          "PLANIALTIMETRICO"
+        ],
+        [
+          "FUROS DE SONDAGEM"
+        ],
+        [
+          "PARAMETROS DE SOLO"
+        ],
+        [
+          "INVESTIGACAO",
+          "SOLO"
+        ]
+      ]
+    },
+    {
+      "nome": "Parede Corta-Fogo",
+      "ordem": 19,
+      "fallback": false,
+      "grupos": [
+        [
+          "CORTA FOGO"
+        ],
+        [
+          "PCF"
+        ]
+      ]
+    },
+    {
+      "nome": "Proteção Contra Incêndio / AVCB",
+      "ordem": 20,
+      "fallback": false,
+      "grupos": [
+        [
+          "INCENDIO"
+        ],
+        [
+          "AVCB"
+        ],
+        [
+          "PPCI"
+        ],
+        [
+          "PREVENTIVO"
+        ],
+        [
+          "PANICO"
+        ],
+        [
+          "EXTINTOR"
+        ],
+        [
+          "COMBATE A INCENDIO"
+        ]
+      ]
+    },
+    {
+      "nome": "Pátio de Manobra - Diagramas de Montagem e Suportes",
+      "ordem": 21,
+      "fallback": false,
+      "grupos": [
+        [
+          "DIAGRAMA DE MONTAGEM"
+        ],
+        [
+          "DIAGRAMAS DE MONTAGEM"
+        ]
+      ]
+    },
+    {
+      "nome": "Urbanização, Cercas, Portões e Vias",
+      "ordem": 22,
+      "fallback": false,
+      "grupos": [
+        [
+          "URBANIZACAO"
+        ],
+        [
+          "URBANISTICO"
+        ],
+        [
+          "CERCA"
+        ],
+        [
+          "CERCAMENTO"
+        ],
+        [
+          "PORTAO"
+        ],
+        [
+          "ARRUAMENTO"
+        ],
+        [
+          "VIAS DE CIRCULACAO"
+        ]
+      ]
+    }
+  ],
+  "ELÉTRICA": [
+    {
+      "nome": "Arquitetura Detalhada de Painéis/Salas",
+      "ordem": 1,
+      "fallback": false,
+      "grupos": [
+        [
+          "ARQUITETURA DETALHADA"
+        ],
+        [
+          "ARQUITETURA",
+          "PAINEL"
+        ],
+        [
+          "ARQUITETURA",
+          "SALA"
+        ],
+        [
+          "ARQUITETURA DE REDE"
+        ]
+      ]
+    },
+    {
+      "nome": "Caixas de Distribuição CA/CC / Quadros de Distribuição",
+      "ordem": 2,
+      "fallback": false,
+      "grupos": [
+        [
+          "CAIXA DE DISTRIBUICAO"
+        ],
+        [
+          "CAIXAS DE DISTRIBUICAO"
+        ],
+        [
+          "QUADRO DE DISTRIBUICAO"
+        ],
+        [
+          "QDCA"
+        ],
+        [
+          "QDCC"
+        ],
+        [
+          "DISTRIBUICAO CA"
+        ],
+        [
+          "DISTRIBUICAO CC"
+        ],
+        [
+          "QDA1"
+        ],
+        [
+          "QDA2"
+        ]
+      ]
+    },
+    {
+      "nome": "Caixas de Junção de TC/TP",
+      "ordem": 3,
+      "fallback": false,
+      "grupos": [
+        [
+          "CAIXA DE JUNCAO"
+        ],
+        [
+          "CAIXAS DE JUNCAO"
+        ],
+        [
+          "CJ",
+          "TC"
+        ],
+        [
+          "CJTC"
+        ],
+        [
+          "CJTP"
+        ]
+      ]
+    },
+    {
+      "nome": "Diagramas Funcionais e Construtivos de Painéis",
+      "ordem": 4,
+      "fallback": false,
+      "grupos": [
+        [
+          "FUNCIONAIS E CONSTRUTIVOS"
+        ]
+      ]
+    },
+    {
+      "nome": "Diagramas Unifilares e Trifilares",
+      "ordem": 5,
+      "fallback": false,
+      "grupos": [
+        [
+          "UNIFILAR"
+        ],
+        [
+          "TRIFILAR"
+        ]
+      ]
+    },
+    {
+      "nome": "Diagramas de Interligação de Painéis",
+      "ordem": 6,
+      "fallback": false,
+      "grupos": [
+        [
+          "INTERLIGACAO"
+        ]
+      ]
+    },
+    {
+      "nome": "Diagramas de Painéis por Subestação - Construtivo",
+      "ordem": 7,
+      "fallback": false,
+      "grupos": [
+        [
+          "CONSTRUTIVO"
+        ]
+      ]
+    },
+    {
+      "nome": "Diagramas de Painéis por Subestação - Fiação Interna",
+      "ordem": 8,
+      "fallback": false,
+      "grupos": [
+        [
+          "FIACAO INTERNA"
+        ],
+        [
+          "TABELA DE FIACAO"
+        ],
+        [
+          "PAINEL",
+          "FIACAO"
+        ],
+        [
+          "PAINEIS",
+          "FIACAO"
+        ]
+      ]
+    },
+    {
+      "nome": "Diagramas de Painéis por Subestação - Funcional",
+      "ordem": 9,
+      "fallback": false,
+      "grupos": [
+        [
+          "FUNCIONAL"
+        ]
+      ]
+    },
+    {
+      "nome": "Diagramas de Painéis por Subestação - Lógico",
+      "ordem": 10,
+      "fallback": false,
+      "grupos": [
+        [
+          "LOGICO"
+        ]
+      ]
+    },
+    {
+      "nome": "Dimensionamentos e Memórias de Cálculo Elétricas",
+      "ordem": 11,
+      "fallback": false,
+      "grupos": [
+        [
+          "DIMENSIONAMENTO"
+        ],
+        [
+          "MEMORIAL DE CALCULO"
+        ],
+        [
+          "MEMORIA DE CALCULO",
+          "ELETRIC"
+        ],
+        [
+          "MEMORIA DE CALCULO",
+          "CABO"
+        ],
+        [
+          "MEMORIA DE CALCULO",
+          "SERVICOS AUXILIARES"
+        ],
+        [
+          "MEMORIA DE CALCULO",
+          "CORRENTE DE CURTO"
+        ],
+        [
+          "MEMORIA DE CALCULO",
+          "BATERIA"
+        ],
+        [
+          "MEMORIA DE CALCULO",
+          "TSA"
+        ],
+        [
+          "MEMORIA DE CALCULO DOS CABOS"
+        ]
+      ]
+    },
+    {
+      "nome": "Fornecimento SPCS",
+      "ordem": 12,
+      "fallback": false,
+      "grupos": [
+        [
+          "SPCS"
+        ]
+      ]
+    },
+    {
+      "nome": "Lista de Cabos e Pontos",
+      "ordem": 13,
+      "fallback": false,
+      "grupos": [
+        [
+          "LISTA DE CABOS"
+        ],
+        [
+          "LISTA DOS CABOS"
+        ],
+        [
+          "LISTA DE PONTOS"
+        ],
+        [
+          "CABOS E PONTOS"
+        ],
+        [
+          "LISTA DE INTERLIGACAO"
+        ]
+      ]
+    },
+    {
+      "nome": "Lista de Documentos do Projeto",
+      "ordem": 14,
+      "fallback": false,
+      "grupos": [
+        [
+          "LISTA DE DOCUMENTOS"
+        ]
+      ]
+    },
+    {
+      "nome": "Painéis Elétricos",
+      "ordem": 15,
+      "fallback": true,
+      "grupos": [
+        [
+          "PAINEL"
+        ],
+        [
+          "PAINEIS"
+        ]
+      ]
+    },
+    {
+      "nome": "Plano/Relatório de Inspeção e Testes",
+      "ordem": 16,
+      "fallback": false,
+      "grupos": [
+        [
+          "INSPECAO E TESTES"
+        ],
+        [
+          "PLANO DE TESTES"
+        ],
+        [
+          "RELATORIO DE INSPECAO"
+        ],
+        [
+          "PLANO DE INSPECAO"
+        ],
+        [
+          "PLANO",
+          "TESTES"
+        ]
+      ]
+    },
+    {
+      "nome": "Proteção, Controle e Supervisão (SAGE/IHM)",
+      "ordem": 17,
+      "fallback": false,
+      "grupos": [
+        [
+          "SAGE"
+        ],
+        [
+          "IHM"
+        ],
+        [
+          "PROTECAO, CONTROLE E SUPERVISAO"
+        ],
+        [
+          "SUPERVISORIO"
+        ],
+        [
+          "TELAS DO SUPERVISORIO"
+        ]
+      ]
+    }
+  ],
+  "ELETROMECÂNICO": [
+    {
+      "nome": "Acessórios de Montagem, Materiais e Lista de Construção",
+      "ordem": 1,
+      "fallback": false,
+      "grupos": [
+        [
+          "ACESSORIO",
+          "MONTAGEM"
+        ],
+        [
+          "LISTA DE CONSTRUCAO"
+        ],
+        [
+          "MATERIAIS DE MONTAGEM"
+        ]
+      ]
+    },
+    {
+      "nome": "Arranjo Físico - Plantas, Cortes e Localização",
+      "ordem": 2,
+      "fallback": true,
+      "grupos": [
+        [
+          "ARRANJO FISICO"
+        ],
+        [
+          "ARRANJO",
+          "CORTE"
+        ],
+        [
+          "ARRANJO",
+          "PLANTA"
+        ],
+        [
+          "ARRANJO",
+          "LOCALIZACAO"
+        ],
+        [
+          "ARRANJO",
+          "SITUACAO"
+        ],
+        [
+          "ARRANJO GERAL",
+          "PLANTA"
+        ],
+        [
+          "PLANTA DE LOCALIZACAO"
+        ]
+      ]
+    },
+    {
+      "nome": "Blindagem",
+      "ordem": 3,
+      "fallback": false,
+      "grupos": [
+        [
+          "BLINDAGEM"
+        ]
+      ]
+    },
+    {
+      "nome": "Cadeias de Isoladores e Ferragens",
+      "ordem": 4,
+      "fallback": false,
+      "grupos": [
+        [
+          "CADEIA"
+        ],
+        [
+          "CADEIAS"
+        ],
+        [
+          "ISOLADORES E FERRAGENS"
+        ],
+        [
+          "FERRAGENS"
+        ]
+      ]
+    },
+    {
+      "nome": "Caixas de Junção TC/TP",
+      "ordem": 5,
+      "fallback": false,
+      "grupos": [
+        [
+          "CAIXA DE JUNCAO"
+        ],
+        [
+          "CAIXAS DE JUNCAO"
+        ]
+      ]
+    },
+    {
+      "nome": "Características e Dados dos Equipamentos Principais",
+      "ordem": 6,
+      "fallback": false,
+      "grupos": [
+        [
+          "CARACTERISTICAS",
+          "EQUIPAMENTO"
+        ],
+        [
+          "DADOS",
+          "EQUIPAMENTO"
+        ],
+        [
+          "CARACTERISTICAS TECNICAS",
+          "EQUIPAMENTOS"
+        ]
+      ]
+    },
+    {
+      "nome": "Casa de Comando / Controle - Elétrico e Instalações",
+      "ordem": 7,
+      "fallback": false,
+      "grupos": [
+        [
+          "CASA DE COMANDO",
+          "ELETRIC"
+        ],
+        [
+          "CASA DE CONTROLE",
+          "ELETRIC"
+        ],
+        [
+          "CASA DE CONTROLE",
+          "INSTALACOES"
+        ],
+        [
+          "CASA DE COMANDO",
+          "INSTALACOES"
+        ]
+      ]
+    },
+    {
+      "nome": "Critérios de Projeto Eletromecânicos",
+      "ordem": 8,
+      "fallback": false,
+      "grupos": [
+        [
+          "CRITERIO",
+          "ELETROMECANIC"
+        ]
+      ]
+    },
+    {
+      "nome": "Detalhes de Montagem de Equipamentos de Pátio",
+      "ordem": 9,
+      "fallback": false,
+      "grupos": [
+        [
+          "DETALHES DE MONTAGEM"
+        ],
+        [
+          "DETALHE DE MONTAGEM"
+        ],
+        [
+          "DETALHE PARA MONTAGEM"
+        ]
+      ]
+    },
+    {
+      "nome": "Dimensionamentos e Memórias de Cálculo de Cabos MT",
+      "ordem": 10,
+      "fallback": false,
+      "grupos": [
+        [
+          "MEMORIA DE CALCULO",
+          "CABO"
+        ],
+        [
+          "DIMENSIONAMENTO",
+          "CABO"
+        ]
+      ]
+    },
+    {
+      "nome": "Eletrocalhas, Leitos e Dutos Embutidos",
+      "ordem": 11,
+      "fallback": false,
+      "grupos": [
+        [
+          "ELETROCALHA"
+        ],
+        [
+          "LEITO",
+          "CABO"
+        ],
+        [
+          "DUTO EMBUTIDO"
+        ],
+        [
+          "DUTOS EMBUTIDOS"
+        ],
+        [
+          "LEITOS E DUTOS"
+        ],
+        [
+          "DUTOS E CANALETAS"
+        ],
+        [
+          "ELETRODUTOS E CANALETAS"
+        ],
+        [
+          "ELETRODUTOS, CANALETAS"
+        ]
+      ]
+    },
+    {
+      "nome": "Especificações Técnicas de Materiais e Equipamentos",
+      "ordem": 12,
+      "fallback": false,
+      "grupos": [
+        [
+          "ESPECIFICACAO TECNICA"
+        ],
+        [
+          "ESPECIFICACOES TECNICAS"
+        ]
+      ]
+    },
+    {
+      "nome": "Estudos e Tabelas de Cabos Condutores/Para-raios",
+      "ordem": 13,
+      "fallback": false,
+      "grupos": [
+        [
+          "CABO CONDUTOR"
+        ],
+        [
+          "CONDUTORES",
+          "PARA RAIOS"
+        ],
+        [
+          "TABELA",
+          "CONDUTOR"
+        ],
+        [
+          "FLECHA",
+          "TRACAO"
+        ],
+        [
+          "TABELA DE FLECHAS"
+        ],
+        [
+          "ESTUDO",
+          "CONDUTOR"
+        ],
+        [
+          "TABELA DE ESTICAMENTO"
+        ],
+        [
+          "ESTICAMENTO DE CABOS"
+        ],
+        [
+          "GRAMPEAMENTO"
+        ],
+        [
+          "TABELA DE TRACIONAMENTO"
+        ]
+      ]
+    },
+    {
+      "nome": "Fibra Óptica - Percurso e Detalhes",
+      "ordem": 14,
+      "fallback": false,
+      "grupos": [
+        [
+          "FIBRA OPTICA"
+        ],
+        [
+          "OPGW"
+        ],
+        [
+          "CABO OPTICO"
+        ]
+      ]
+    },
+    {
+      "nome": "Iluminação e Tomadas",
+      "ordem": 15,
+      "fallback": false,
+      "grupos": [
+        [
+          "ILUMINACAO"
+        ],
+        [
+          "TOMADA"
+        ]
+      ]
+    },
+    {
+      "nome": "Lista de Documentos do Projeto",
+      "ordem": 16,
+      "fallback": false,
+      "grupos": [
+        [
+          "LISTA DE DOCUMENTOS"
+        ]
+      ]
+    },
+    {
+      "nome": "Malha de Aterramento e Resistividade do Solo",
+      "ordem": 17,
+      "fallback": false,
+      "grupos": [
+        [
+          "MALHA DE ATERRAMENTO"
+        ],
+        [
+          "MALHA DE TERRA"
+        ],
+        [
+          "RESISTIVIDADE"
+        ],
+        [
+          "ATERRAMENTO"
+        ]
+      ]
+    },
+    {
+      "nome": "Memorial Descritivo da LT",
+      "ordem": 18,
+      "fallback": false,
+      "grupos": [
+        [
+          "MEMORIAL DESCRITIVO",
+          "LT"
+        ],
+        [
+          "MEMORIAL DESCRITIVO",
+          "LINHA"
+        ]
+      ]
+    },
+    {
+      "nome": "Memórias de Cálculo de Esforços em Estruturas e Suportes",
+      "ordem": 19,
+      "fallback": false,
+      "grupos": [
+        [
+          "ESFORCO",
+          "SUPORTE"
+        ],
+        [
+          "ESFORCOS EM ESTRUTURAS"
+        ],
+        [
+          "MEMORIA",
+          "ESFORCOS"
+        ]
+      ]
+    },
+    {
+      "nome": "Perfil e Planta da LT (por trecho)",
+      "ordem": 20,
+      "fallback": false,
+      "grupos": [
+        [
+          "PERFIL E PLANTA"
+        ],
+        [
+          "PLANTA E PERFIL"
+        ],
+        [
+          "PERFIL",
+          "TRECHO"
+        ],
+        [
+          "PLANTA DE LOCACAO DA LT"
+        ],
+        [
+          "FASEAMENTO DA LT"
+        ],
+        [
+          "DETALHE DE ENTRADA NA SE"
+        ],
+        [
+          "DETALHE DE CHEGADA NA SE"
+        ],
+        [
+          "DETALHE DE SAIDA DA SE"
+        ]
+      ]
+    },
+    {
+      "nome": "Pátio de Manobra - Arranjo e Equipamento Elétrico (Plantas, Cortes, Módulos)",
+      "ordem": 21,
+      "fallback": false,
+      "grupos": [
+        [
+          "PATIO DE MANOBRA",
+          "ARRANJO"
+        ],
+        [
+          "PATIO DE MANOBRA",
+          "MODULO"
+        ],
+        [
+          "PATIO DE MANOBRA",
+          "PLANTA"
+        ],
+        [
+          "PATIO DE MANOBRA",
+          "CORTE"
+        ]
+      ]
+    },
+    {
+      "nome": "Quadros de Distribuição de Pátio",
+      "ordem": 22,
+      "fallback": false,
+      "grupos": [
+        [
+          "QUADRO DE DISTRIBUICAO",
+          "PATIO"
+        ]
+      ]
+    },
+    {
+      "nome": "Ramal Externo / Subestação de Consumo Auxiliar",
+      "ordem": 23,
+      "fallback": false,
+      "grupos": [
+        [
+          "RAMAL EXTERNO"
+        ],
+        [
+          "CONSUMO AUXILIAR"
+        ],
+        [
+          "SUBESTACAO DE CONSUMO"
+        ]
+      ]
+    },
+    {
+      "nome": "Rede Aérea / Ligações no Pátio",
+      "ordem": 24,
+      "fallback": false,
+      "grupos": [
+        [
+          "REDE AEREA"
+        ],
+        [
+          "LIGACOES NO PATIO"
+        ],
+        [
+          "LIGACAO",
+          "PATIO"
+        ]
+      ]
+    },
+    {
+      "nome": "Requisitos de Estruturas Metálicas e Suportes",
+      "ordem": 25,
+      "fallback": false,
+      "grupos": [
+        [
+          "REQUISITO",
+          "ESTRUTURA METALICA"
+        ],
+        [
+          "REQUISITO",
+          "SUPORTE"
+        ],
+        [
+          "REQUISITOS",
+          "ESTRUTURAS METALICAS"
+        ]
+      ]
+    },
+    {
+      "nome": "SPDA",
+      "ordem": 26,
+      "fallback": false,
+      "grupos": [
+        [
+          "SPDA"
+        ],
+        [
+          "DESCARGA ATMOSFERICA"
+        ],
+        [
+          "PROTECAO CONTRA DESCARGAS"
+        ]
+      ]
+    },
+    {
+      "nome": "Sinalização",
+      "ordem": 27,
+      "fallback": false,
+      "grupos": [
+        [
+          "SINALIZACAO"
+        ]
+      ]
+    },
+    {
+      "nome": "Torres de Linha de Transmissão - Projeto Estrutural",
+      "ordem": 28,
+      "fallback": false,
+      "grupos": [
+        [
+          "TORRE"
+        ],
+        [
+          "SILHUETA"
+        ],
+        [
+          "STUB"
+        ],
+        [
+          "CABECA",
+          "PARTE"
+        ],
+        [
+          "TRONCO COMUM"
+        ],
+        [
+          "EXTENSAO",
+          "M"
+        ],
+        [
+          "DETALHAMENTO",
+          "II"
+        ],
+        [
+          "LISTA DE MATERIAIS",
+          "II"
+        ],
+        [
+          "CALCULO ESTRUTURAL",
+          "II"
+        ],
+        [
+          "MEMORIA DE CALCULO",
+          "II"
+        ],
+        [
+          "LOCACAO",
+          "TORRE"
+        ],
+        [
+          "LOCACAO DOS PES"
+        ],
+        [
+          "ARVORE DE CARREGAMENTO"
+        ],
+        [
+          "PROGRAMA DE TESTES",
+          "TORRE"
+        ],
+        [
+          "LISTA DE PARAFUSOS"
+        ],
+        [
+          "PARAFUSOS E FERRAGENS"
+        ]
+      ]
+    },
+    {
+      "nome": "Travessias da LT",
+      "ordem": 29,
+      "fallback": false,
+      "grupos": [
+        [
+          "TRAVESSIA"
+        ]
+      ]
+    }
+  ]
+}

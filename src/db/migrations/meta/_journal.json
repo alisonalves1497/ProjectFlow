@@ -169,6 +169,13 @@
       "when": 1788974916905,
       "tag": "0023_violet_vin_gonzales",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1789044125977,
+      "tag": "0024_goofy_micromacro",
+      "breakpoints": true
     }
   ]
 }
