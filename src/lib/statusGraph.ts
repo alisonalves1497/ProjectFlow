@@ -165,8 +165,8 @@ export const STATUS_LABELS: Record<StatusDocumento, string> = {
 export const STATUS_COR: Record<StatusDocumento, { badge: string; ponto: string }> = {
   // planejado, ainda não começou
   previsto: { badge: "bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-300", ponto: "bg-slate-400" },
-  // time produzindo (em uso: em_rascunho) — âmbar
-  em_rascunho: { badge: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400", ponto: "bg-amber-400" },
+  // rascunho é meio "tanto faz" — violeta, deixa o âmbar livre pro "em análise do cliente"
+  em_rascunho: { badge: "bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-400", ponto: "bg-violet-500" },
   em_elaboracao: { badge: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400", ponto: "bg-amber-400" },
   // precisa de retrabalho interno — laranja (atenção, mas não é falha)
   devolvido_correcao: { badge: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-400", ponto: "bg-orange-400" },
@@ -176,8 +176,8 @@ export const STATUS_COR: Record<StatusDocumento, { badge: string; ponto: string 
   aprovacao_lider_tecnico: { badge: "bg-cyan-100 text-cyan-800 dark:bg-cyan-500/15 dark:text-cyan-400", ponto: "bg-cyan-500" },
   // na fila pra sair pro GED — índigo
   aguardando_envio_ged: { badge: "bg-indigo-100 text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-400", ponto: "bg-indigo-500" },
-  // na mão do cliente (em uso) — violeta
-  em_analise_cliente: { badge: "bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-400", ponto: "bg-violet-500" },
+  // na mão do cliente (em uso) — amarelo/âmbar, cor padrão pra "aguardando"
+  em_analise_cliente: { badge: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400", ponto: "bg-amber-400" },
   // aprovado, ainda não liberado — verde-azulado
   aprovado: { badge: "bg-teal-100 text-teal-800 dark:bg-teal-500/15 dark:text-teal-400", ponto: "bg-teal-500" },
   aprovado_com_comentarios: { badge: "bg-teal-100 text-teal-800 dark:bg-teal-500/15 dark:text-teal-400", ponto: "bg-teal-500" },
