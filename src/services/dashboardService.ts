@@ -1,9 +1,31 @@
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, or, type SQL } from "drizzle-orm";
 import { db } from "@/db/client";
 import { documentos, obras, disciplinas, revisoes, users, linhaDoTempo } from "@/db/schema";
 import { listAccessibleObraIdsInWorkspace } from "./permissions";
 import { isDocumentoFechado, dataEfetivaPrevista } from "@/lib/documentoStatus";
 import type { StatusDocumento } from "@/lib/statusGraph";
+import { SEM_RESPONSAVEL, type FiltrosDashboard, type OpcoesFiltroDashboard } from "@/lib/dashboardFiltros";
+
+export { SEM_RESPONSAVEL };
+export type { FiltrosDashboard, OpcoesFiltroDashboard };
+
+// Monta os WHERE clauses de documento a partir dos filtros. A data efetiva depende de
+// COALESCE(reprogramada, prevista) e é aplicada em JS depois do map (aqui só o que dá em SQL).
+function whereDosFiltros(f: FiltrosDashboard | undefined): SQL[] {
+  const cs: SQL[] = [];
+  if (!f) return cs;
+  if (f.disciplinas?.length) cs.push(inArray(disciplinas.name, f.disciplinas));
+  if (f.status?.length) cs.push(inArray(documentos.status, f.status));
+  if (f.responsavelIds?.length) {
+    const reais = f.responsavelIds.filter((r) => r !== SEM_RESPONSAVEL);
+    const temSem = f.responsavelIds.includes(SEM_RESPONSAVEL);
+    const ors: SQL[] = [];
+    if (reais.length) ors.push(inArray(documentos.responsavelId, reais));
+    if (temSem) ors.push(isNull(documentos.responsavelId));
+    if (ors.length) cs.push(ors.length === 1 ? ors[0] : or(...ors)!);
+  }
+  return cs;
+}
 
 export type DocumentoDashboard = {
   id: string;
@@ -24,8 +46,15 @@ export type DocumentoDashboard = {
 // Todos os documentos ativos das obras que o usuário acessa no workspace — base pros
 // dashboards de Gestão (por enquanto só o de Responsável, mas dá pra reaproveitar pra
 // outros recortes: por obra, por disciplina, por status).
-export async function listDocumentosParaDashboard(workspaceId: string, userId: string): Promise<DocumentoDashboard[]> {
-  const obraIds = await listAccessibleObraIdsInWorkspace(userId, workspaceId);
+export async function listDocumentosParaDashboard(
+  workspaceId: string,
+  userId: string,
+  filtros?: FiltrosDashboard
+): Promise<DocumentoDashboard[]> {
+  const acessiveis = await listAccessibleObraIdsInWorkspace(userId, workspaceId);
+  if (acessiveis.length === 0) return [];
+  // Interseção do que o usuário acessa com o filtro de obra (se houver).
+  const obraIds = filtros?.obraIds?.length ? acessiveis.filter((id) => filtros.obraIds!.includes(id)) : acessiveis;
   if (obraIds.length === 0) return [];
 
   const rows = await db
@@ -51,11 +80,29 @@ export async function listDocumentosParaDashboard(workspaceId: string, userId: s
     .innerJoin(disciplinas, eq(disciplinas.id, documentos.disciplinaId))
     .leftJoin(revisoes, eq(revisoes.id, documentos.currentRevisionId))
     .leftJoin(users, eq(users.id, documentos.responsavelId))
-    .where(and(inArray(documentos.obraId, obraIds), eq(documentos.workspaceId, workspaceId), isNull(documentos.deletedAt)));
+    .where(
+      and(
+        inArray(documentos.obraId, obraIds),
+        eq(documentos.workspaceId, workspaceId),
+        isNull(documentos.deletedAt),
+        ...whereDosFiltros(filtros)
+      )
+    );
 
   const hoje = new Date().toISOString().slice(0, 10);
+  const dataDe = filtros?.dataDe || null;
+  const dataAte = filtros?.dataAte || null;
 
-  return rows.map((d) => {
+  return rows
+    .filter((d) => {
+      if (!dataDe && !dataAte) return true;
+      const efetiva = dataEfetivaPrevista(d).data;
+      if (!efetiva) return false; // com filtro de período, documento sem data fica de fora
+      if (dataDe && efetiva < dataDe) return false;
+      if (dataAte && efetiva > dataAte) return false;
+      return true;
+    })
+    .map((d) => {
     const fechado = isDocumentoFechado(d);
     const efetiva = dataEfetivaPrevista(d);
     return {
@@ -100,14 +147,35 @@ function inicioDaSemana(data: Date): string {
 // setStatusDireto e aplicarSincronizacaoPortifolio); documentos sem nenhum evento ainda
 // (criados antes disso) usam o status ATUAL como aproximação pras semanas passadas, já que
 // não tem como saber de verdade qual era o status deles antes de começar a registrar.
-export async function getCurvaAvanco(workspaceId: string, userId: string): Promise<PontoCurvaAvanco[]> {
-  const obraIds = await listAccessibleObraIdsInWorkspace(userId, workspaceId);
+// A curva é uma série temporal — filtro de status/período não faz sentido aqui (o status
+// muda ao longo do tempo). Ela responde só a obra / disciplina / responsável.
+export async function getCurvaAvanco(
+  workspaceId: string,
+  userId: string,
+  filtros?: Pick<FiltrosDashboard, "obraIds" | "disciplinas" | "responsavelIds">
+): Promise<PontoCurvaAvanco[]> {
+  const acessiveis = await listAccessibleObraIdsInWorkspace(userId, workspaceId);
+  if (acessiveis.length === 0) return [];
+  const obraIds = filtros?.obraIds?.length ? acessiveis.filter((id) => filtros.obraIds!.includes(id)) : acessiveis;
   if (obraIds.length === 0) return [];
+
+  const filtrosDoc: FiltrosDashboard = {
+    disciplinas: filtros?.disciplinas,
+    responsavelIds: filtros?.responsavelIds,
+  };
 
   const docsAtuais = await db
     .select({ id: documentos.id, status: documentos.status, createdAt: documentos.createdAt })
     .from(documentos)
-    .where(and(inArray(documentos.obraId, obraIds), eq(documentos.workspaceId, workspaceId), isNull(documentos.deletedAt)));
+    .innerJoin(disciplinas, eq(disciplinas.id, documentos.disciplinaId))
+    .where(
+      and(
+        inArray(documentos.obraId, obraIds),
+        eq(documentos.workspaceId, workspaceId),
+        isNull(documentos.deletedAt),
+        ...whereDosFiltros(filtrosDoc)
+      )
+    );
   if (docsAtuais.length === 0) return [];
 
   const eventos = await db
@@ -155,4 +223,40 @@ export async function getCurvaAvanco(workspaceId: string, userId: string): Promi
     }
     return { semana, ...contagem, total: docsAtuais.length };
   });
+}
+
+// Popula os seletores da barra de filtros — só o que aparece nos documentos das obras que o
+// usuário acessa (não adianta oferecer disciplina/responsável que ele nunca vai ver).
+export async function getOpcoesFiltroDashboard(workspaceId: string, userId: string): Promise<OpcoesFiltroDashboard> {
+  const obraIds = await listAccessibleObraIdsInWorkspace(userId, workspaceId);
+  if (obraIds.length === 0) return { obras: [], disciplinas: [], responsaveis: [] };
+
+  const rows = await db
+    .select({
+      obraId: documentos.obraId,
+      obraNome: obras.name,
+      disciplinaNome: disciplinas.name,
+      responsavelId: documentos.responsavelId,
+      responsavelNome: users.name,
+    })
+    .from(documentos)
+    .innerJoin(obras, eq(obras.id, documentos.obraId))
+    .innerJoin(disciplinas, eq(disciplinas.id, documentos.disciplinaId))
+    .leftJoin(users, eq(users.id, documentos.responsavelId))
+    .where(and(inArray(documentos.obraId, obraIds), eq(documentos.workspaceId, workspaceId), isNull(documentos.deletedAt)));
+
+  const obrasMap = new Map<string, string>();
+  const discSet = new Set<string>();
+  const respMap = new Map<string, string>();
+  for (const r of rows) {
+    obrasMap.set(r.obraId, r.obraNome);
+    if (r.disciplinaNome) discSet.add(r.disciplinaNome);
+    if (r.responsavelId) respMap.set(r.responsavelId, r.responsavelNome ?? "—");
+  }
+
+  return {
+    obras: [...obrasMap.entries()].map(([id, nome]) => ({ id, nome })).sort((a, b) => a.nome.localeCompare(b.nome, "pt")),
+    disciplinas: [...discSet].sort((a, b) => a.localeCompare(b, "pt")),
+    responsaveis: [...respMap.entries()].map(([id, nome]) => ({ id, nome })).sort((a, b) => a.nome.localeCompare(b.nome, "pt")),
+  };
 }
