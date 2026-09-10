@@ -196,7 +196,6 @@ function ResponsavelCell({
   responsavelId,
   responsavelNome,
   usuarios,
-  podeGerenciar,
 }: {
   workspaceId: string;
   projetoId: string;
@@ -205,7 +204,6 @@ function ResponsavelCell({
   responsavelId: string | null;
   responsavelNome: string | null;
   usuarios: Usuario[];
-  podeGerenciar: boolean;
 }) {
   const [editando, setEditando] = useState(false);
   const [responsavelIdAnterior, setResponsavelIdAnterior] = useState(responsavelId);
@@ -227,8 +225,8 @@ function ResponsavelCell({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só dispara uma vez por submissão bem-sucedida
   }, [state]);
 
-  if (!podeGerenciar) return <>{responsavelNome ?? "—"}</>;
-
+  // Responsável pode ser alterado por qualquer pessoa com acesso à obra (pedido do time) —
+  // sem o gate de administrador/coordenador que as outras células inline têm.
   if (!editando) {
     return (
       <button
@@ -587,7 +585,6 @@ export function DocumentosLista({
               responsavelId={d.responsavelId}
               responsavelNome={d.responsavelNome}
               usuarios={usuarios}
-              podeGerenciar={podeGerenciar}
             />
           </TableCell>
         )}
