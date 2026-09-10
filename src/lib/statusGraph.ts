@@ -156,3 +156,39 @@ export const STATUS_LABELS: Record<StatusDocumento, string> = {
   informativo: "Informativo",
   cancelado: "Cancelado",
 };
+
+// Cor de cada status — fonte única pro badge e pra bolinha da legenda.
+// Prioridade de cores DISTINTAS foi dada aos status realmente em uso hoje em produção
+// (liberado p/ construção, em rascunho, em revisão interna, em análise do cliente, cancelado,
+// previsto). Os demais herdam uma cor coerente com a fase, mesmo que compartilhem tom entre si.
+//   `badge` = classes do rótulo (claro + escuro); `ponto` = bolinha sólida da legenda.
+export const STATUS_COR: Record<StatusDocumento, { badge: string; ponto: string }> = {
+  // planejado, ainda não começou
+  previsto: { badge: "bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-300", ponto: "bg-slate-400" },
+  // time produzindo (em uso: em_rascunho) — âmbar
+  em_rascunho: { badge: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400", ponto: "bg-amber-400" },
+  em_elaboracao: { badge: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400", ponto: "bg-amber-400" },
+  // precisa de retrabalho interno — laranja (atenção, mas não é falha)
+  devolvido_correcao: { badge: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-400", ponto: "bg-orange-400" },
+  // na nossa mão, revisando (em uso) — azul
+  em_revisao_interna: { badge: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-400", ponto: "bg-blue-500" },
+  // porta de aprovação interna — ciano
+  aprovacao_lider_tecnico: { badge: "bg-cyan-100 text-cyan-800 dark:bg-cyan-500/15 dark:text-cyan-400", ponto: "bg-cyan-500" },
+  // na fila pra sair pro GED — índigo
+  aguardando_envio_ged: { badge: "bg-indigo-100 text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-400", ponto: "bg-indigo-500" },
+  // na mão do cliente (em uso) — violeta
+  em_analise_cliente: { badge: "bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-400", ponto: "bg-violet-500" },
+  // aprovado, ainda não liberado — verde-azulado
+  aprovado: { badge: "bg-teal-100 text-teal-800 dark:bg-teal-500/15 dark:text-teal-400", ponto: "bg-teal-500" },
+  aprovado_com_comentarios: { badge: "bg-teal-100 text-teal-800 dark:bg-teal-500/15 dark:text-teal-400", ponto: "bg-teal-500" },
+  // reprovado — vermelho (ação necessária)
+  reprovado: { badge: "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-400", ponto: "bg-red-500" },
+  // released (em uso, maioria) — verde
+  liberado_para_construcao: { badge: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-400", ponto: "bg-emerald-500" },
+  // cliente devolveu — rosa (atenção externa)
+  devolvido_pelo_cliente: { badge: "bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-400", ponto: "bg-rose-500" },
+  // sem fluxo, só informativo — cinza
+  informativo: { badge: "bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-300", ponto: "bg-slate-400" },
+  // encerrado (em uso) — cinza neutro "morto" (diferente do vermelho de reprovado)
+  cancelado: { badge: "bg-zinc-200 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-300", ponto: "bg-zinc-400" },
+};

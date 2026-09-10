@@ -2,25 +2,7 @@
 
 import { HelpCircle, BellRing } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { STATUS_LABELS, type StatusDocumento } from "@/lib/statusGraph";
-
-const STATUS_COR: Record<StatusDocumento, string> = {
-  previsto: "bg-amber-400",
-  em_rascunho: "bg-slate-300",
-  em_elaboracao: "bg-amber-400",
-  devolvido_correcao: "bg-amber-400",
-  em_revisao_interna: "bg-amber-400",
-  aprovacao_lider_tecnico: "bg-amber-400",
-  aguardando_envio_ged: "bg-amber-400",
-  em_analise_cliente: "bg-amber-400",
-  aprovado: "bg-emerald-500",
-  aprovado_com_comentarios: "bg-emerald-500",
-  liberado_para_construcao: "bg-emerald-500",
-  reprovado: "bg-red-500",
-  devolvido_pelo_cliente: "bg-red-500",
-  cancelado: "bg-red-500",
-  informativo: "bg-slate-400",
-};
+import { STATUS_LABELS, STATUS_COR, type StatusDocumento } from "@/lib/statusGraph";
 
 const STATUS_ORDEM: StatusDocumento[] = [
   "previsto",
@@ -51,7 +33,7 @@ export function LegendaPopover({ className }: { className?: string }) {
         <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
           {STATUS_ORDEM.map((s) => (
             <span key={s} className="flex items-center gap-1.5 text-xs">
-              <span className={`size-2 shrink-0 rounded-full ${STATUS_COR[s]}`} />
+              <span className={`size-2 shrink-0 rounded-full ${STATUS_COR[s].ponto}`} />
               {STATUS_LABELS[s]}
             </span>
           ))}
