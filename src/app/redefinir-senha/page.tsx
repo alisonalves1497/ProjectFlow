@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -19,7 +18,8 @@ export default async function RedefinirSenhaPage({
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <Image src="/logo-enermais.png" alt="EnerMais" width={200} height={60} className="mx-auto h-12 w-auto" priority />
+          {/* Espaço reservado pra logo — sem imagem por enquanto. */}
+          <div className="mx-auto h-12" />
           <CardDescription className="text-center">Escolha uma nova senha</CardDescription>
         </CardHeader>
         <CardContent>

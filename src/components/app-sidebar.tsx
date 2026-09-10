@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { signOut } from "next-auth/react";
@@ -214,9 +213,9 @@ export function AppSidebar({
         title="Arraste pra ajustar a largura"
         className="absolute top-0 -right-1 z-10 h-full w-2 cursor-col-resize hover:bg-primary/20"
       />
-      <div className="flex shrink-0 justify-center border-b p-4">
-        <Image src="/logo-enermais.png" alt="EnerMais" width={160} height={48} className="h-10 w-auto" priority />
-      </div>
+      {/* Espaço reservado pra logo — sem imagem por enquanto (troca de marca em andamento). */}
+      <div className="flex h-[72px] shrink-0 items-center justify-center border-b p-4" />
+
 
       <nav className="flex-1 overflow-y-auto p-3">
         <div className="mb-4">
