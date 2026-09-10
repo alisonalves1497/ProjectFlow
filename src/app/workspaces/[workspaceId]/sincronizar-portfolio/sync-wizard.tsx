@@ -208,7 +208,12 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
   const gruposResponsavelPendentes = useMemo(() => {
     const mapa = new Map<string, number>();
     for (const l of linhas) {
-      if (!l.responsavelIdSugerido && l.projetista) mapa.set(l.projetista, (mapa.get(l.projetista) ?? 0) + 1);
+      // Só documento NOVO usa o responsável da planilha — em documento que já existe a
+      // sincronização não mexe no responsável (o time ajusta na mão), então nem cobra
+      // resolução aqui.
+      if (!l.documentoIdExistente && !l.responsavelIdSugerido && l.projetista) {
+        mapa.set(l.projetista, (mapa.get(l.projetista) ?? 0) + 1);
+      }
     }
     return [...mapa.entries()].sort((a, b) => b[1] - a[1]);
   }, [linhas]);

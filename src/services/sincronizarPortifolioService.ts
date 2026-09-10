@@ -400,16 +400,19 @@ export async function aplicarSincronizacaoPortifolio(workspaceId: string, userId
           .where(eq(documentos.id, linha.documentoIdExistente))
           .limit(1);
 
+        // Documento que JÁ existe: a sincronização só atualiza o que é "verdade do portfólio"
+        // (descrição/status/revisão/GED). Prazo, responsável, seção e horas ficam de fora de
+        // propósito — o time ajusta essas coisas na mão no sistema e um re-sync não pode
+        // atropelar o valor manual. (Em documento novo esses campos entram normalmente, mais
+        // abaixo, porque aí não há nada manual pra proteger.)
         await db
           .update(documentos)
           .set({
             descricao: linha.tipo,
             status: linha.status,
-            dataPrevista: linha.dataPrevista,
             statusUpdatedAt: linha.dataAlteracao ? new Date(linha.dataAlteracao) : new Date(),
             revisaoExterna: linha.revisao || null,
             gedOrigem: linha.gedOrigem || null,
-            responsavelId: linha.responsavelId,
             updatedAt: new Date(),
           })
           .where(eq(documentos.id, linha.documentoIdExistente));
