@@ -11,9 +11,10 @@ import { cn } from "@/lib/utils";
 import type { MeusDocumentosLinha } from "@/services/painelService";
 
 type LarguraColuna = "prazo" | "rev" | "ged" | "status";
-// Status ganha mais espaço de largada — pedido do time pra sempre deixar mais espaço pra ele
-// (mesmo critério aplicado na Lista de Documentos de uma Obra).
-const LARGURAS_PADRAO: Record<LarguraColuna, number> = { prazo: 130, rev: 90, ged: 90, status: 220 };
+// Larguras de largada mais folgadas — pedido do time (GED tipo "Colaborativo" e Status tipo
+// "Aprovação do líder técnico" ficavam meio espremidos). É só o ponto de partida: continua
+// dando pra arrastar e ajustar por sessão (ver ResizeHandle) depois de aberto.
+const LARGURAS_PADRAO: Record<LarguraColuna, number> = { prazo: 140, rev: 110, ged: 120, status: 230 };
 const LARGURA_MINIMA = 48;
 
 // Mesma linguagem visual da Lista de Documentos de uma Obra (tabela com cabeçalho de grupo
