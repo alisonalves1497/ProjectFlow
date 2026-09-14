@@ -1,86 +1,108 @@
-import { and, eq, desc } from "drizzle-orm";
+import { and, eq, gte, lte } from "drizzle-orm";
 import { db } from "@/db/client";
-import { diarioEntradas, documentos } from "@/db/schema";
-import { forbidden, badRequest } from "@/lib/errors";
+import { diarioHoras } from "@/db/schema";
 import { newId } from "@/lib/id";
+import { getMeusDocumentos } from "./painelService";
 
-export type EntradaDiario = {
-  id: string;
-  data: string;
-  texto: string;
-  documentoId: string | null;
-  documentoCodigo: string | null;
-  documentoDescricao: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+export type CelulaHora = { data: string; horaInicio: number; projeto: string };
+
+// Grade é estritamente privada — TODA query aqui filtra por userId (o dono), sem exceção
+// nem pra administrador. Não existe "ver a grade de outra pessoa" no sistema.
+export async function getHorasSemana(
+  workspaceId: string,
+  userId: string,
+  segundaISO: string,
+  sextaISO: string
+): Promise<CelulaHora[]> {
+  const linhas = await db
+    .select({ data: diarioHoras.data, horaInicio: diarioHoras.horaInicio, projeto: diarioHoras.projeto })
+    .from(diarioHoras)
+    .where(
+      and(
+        eq(diarioHoras.workspaceId, workspaceId),
+        eq(diarioHoras.userId, userId),
+        gte(diarioHoras.data, segundaISO),
+        lte(diarioHoras.data, sextaISO)
+      )
+    );
+  return linhas;
+}
+
+// Upsert por (userId, data, horaInicio) — projeto vazio remove a célula (limpar campo).
+export async function salvarHoraCelula(
+  workspaceId: string,
+  userId: string,
+  input: { data: string; horaInicio: number; projeto: string }
+) {
+  const projeto = input.projeto.trim();
+
+  if (!projeto) {
+    await db
+      .delete(diarioHoras)
+      .where(and(eq(diarioHoras.userId, userId), eq(diarioHoras.data, input.data), eq(diarioHoras.horaInicio, input.horaInicio)));
+    return;
+  }
+
+  await db
+    .insert(diarioHoras)
+    .values({ id: newId("diahora"), workspaceId, userId, data: input.data, horaInicio: input.horaInicio, projeto })
+    .onConflictDoUpdate({
+      target: [diarioHoras.userId, diarioHoras.data, diarioHoras.horaInicio],
+      set: { projeto, updatedAt: new Date() },
+    });
+}
+
+export type HorasPorProjeto = { projeto: string; horas: number };
+
+// Total histórico (desde o início) por projeto, só do usuário logado — cada célula
+// preenchida vale 1 hora.
+export async function getHorasAcumuladasPorProjeto(workspaceId: string, userId: string): Promise<HorasPorProjeto[]> {
+  const linhas = await db
+    .select({ projeto: diarioHoras.projeto })
+    .from(diarioHoras)
+    .where(and(eq(diarioHoras.workspaceId, workspaceId), eq(diarioHoras.userId, userId)));
+
+  const totais = new Map<string, number>();
+  for (const l of linhas) totais.set(l.projeto, (totais.get(l.projeto) ?? 0) + 1);
+
+  return Array.from(totais, ([projeto, horas]) => ({ projeto, horas })).sort((a, b) => b.horas - a.horas);
+}
+
+// Projetos já usados pelo usuário nessa workspace — vira sugestão (datalist) na hora de
+// preencher a grade, pra não escrever o mesmo projeto de formas diferentes.
+export async function getProjetosUsados(workspaceId: string, userId: string): Promise<string[]> {
+  const linhas = await db
+    .selectDistinct({ projeto: diarioHoras.projeto })
+    .from(diarioHoras)
+    .where(and(eq(diarioHoras.workspaceId, workspaceId), eq(diarioHoras.userId, userId)));
+  return linhas.map((l) => l.projeto).sort((a, b) => a.localeCompare(b));
+}
+
+export type PrazoProximo = {
+  documentoId: string;
+  descricao: string;
+  obraNome: string;
+  dataPrevista: string;
 };
 
-// Diário é estritamente privado — TODA query aqui filtra por userId (o dono), sem exceção
-// nem pra administrador. Não existe "ver o diário de outra pessoa" no sistema.
-export async function listEntradasDiario(workspaceId: string, userId: string): Promise<EntradaDiario[]> {
-  return db
-    .select({
-      id: diarioEntradas.id,
-      data: diarioEntradas.data,
-      texto: diarioEntradas.texto,
-      documentoId: diarioEntradas.documentoId,
-      documentoCodigo: documentos.codigoCompleto,
-      documentoDescricao: documentos.descricao,
-      createdAt: diarioEntradas.createdAt,
-      updatedAt: diarioEntradas.updatedAt,
-    })
-    .from(diarioEntradas)
-    .leftJoin(documentos, eq(documentos.id, diarioEntradas.documentoId))
-    .where(and(eq(diarioEntradas.workspaceId, workspaceId), eq(diarioEntradas.userId, userId)))
-    .orderBy(desc(diarioEntradas.data), desc(diarioEntradas.createdAt));
-}
+// Os `limite` prazos mais próximos (pra frente ou já em atraso) entre os documentos
+// atribuídos ao usuário — reaproveita getMeusDocumentos (mesma fonte da aba "Meus
+// documentos") e ordena pela distância absoluta até hoje, não só cronologicamente, pra
+// atraso feio não sumir lá embaixo da lista.
+export async function getPrazosProximos(workspaceId: string, userId: string, limite: number): Promise<PrazoProximo[]> {
+  const docs = await getMeusDocumentos(workspaceId, userId);
+  const hoje = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00`).getTime();
 
-export async function createEntradaDiario(
-  workspaceId: string,
-  userId: string,
-  input: { data: string; texto: string; documentoId?: string | null }
-) {
-  const texto = input.texto.trim();
-  if (!texto) throw badRequest("DIARIO_TEXTO_VAZIO", "Escreva alguma coisa antes de salvar.");
-  if (!input.data) throw badRequest("DIARIO_SEM_DATA", "Escolha a data do registro.");
-
-  const [entrada] = await db
-    .insert(diarioEntradas)
-    .values({ id: newId("diario"), workspaceId, userId, data: input.data, texto, documentoId: input.documentoId || null })
-    .returning();
-  return entrada;
-}
-
-// `userId` no WHERE garante que ninguém edita entrada alheia mesmo forjando o id no formulário
-// — mesmo padrão já usado no chat do documento (updateMensagemChat).
-export async function updateEntradaDiario(
-  workspaceId: string,
-  userId: string,
-  entradaId: string,
-  input: { texto?: string; data?: string; documentoId?: string | null }
-) {
-  const patch: { texto?: string; data?: string; documentoId?: string | null; updatedAt: Date } = { updatedAt: new Date() };
-  if (input.texto !== undefined) {
-    const texto = input.texto.trim();
-    if (!texto) throw badRequest("DIARIO_TEXTO_VAZIO", "Escreva alguma coisa antes de salvar.");
-    patch.texto = texto;
-  }
-  if (input.data !== undefined) patch.data = input.data;
-  if (input.documentoId !== undefined) patch.documentoId = input.documentoId || null;
-
-  const [entrada] = await db
-    .update(diarioEntradas)
-    .set(patch)
-    .where(and(eq(diarioEntradas.id, entradaId), eq(diarioEntradas.workspaceId, workspaceId), eq(diarioEntradas.userId, userId)))
-    .returning();
-  if (!entrada) throw forbidden("DIARIO_EDIT_DENIED", "Você só pode editar as suas próprias entradas.");
-  return entrada;
-}
-
-export async function deleteEntradaDiario(workspaceId: string, userId: string, entradaId: string) {
-  const res = await db
-    .delete(diarioEntradas)
-    .where(and(eq(diarioEntradas.id, entradaId), eq(diarioEntradas.workspaceId, workspaceId), eq(diarioEntradas.userId, userId)))
-    .returning({ id: diarioEntradas.id });
-  if (res.length === 0) throw forbidden("DIARIO_DELETE_DENIED", "Você só pode excluir as suas próprias entradas.");
+  return docs
+    .filter((d) => d.dataPrevista !== null)
+    .map((d) => ({
+      documentoId: d.id,
+      descricao: d.descricao,
+      obraNome: d.obraNome,
+      dataPrevista: d.dataPrevista as string,
+      distancia: Math.abs(new Date(`${d.dataPrevista}T00:00:00`).getTime() - hoje),
+    }))
+    .sort((a, b) => a.distancia - b.distancia)
+    .slice(0, limite)
+    .map(({ documentoId, descricao, obraNome, dataPrevista }) => ({ documentoId, descricao, obraNome, dataPrevista }));
 }

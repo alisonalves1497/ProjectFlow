@@ -1,24 +1,24 @@
-import { pgTable, text, timestamp, date } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, date, unique } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 import { users } from "./auth";
-import { documentos } from "./documentos";
 
-// Diário pessoal — registro de atividades do dia a dia, sem estrutura de horário nem
-// vínculo obrigatório com Documento (é texto livre, tipo diário de bordo, não folha de
-// ponto). Estritamente privado: cada linha pertence a um userId, e as queries de serviço
-// sempre filtram por ele — não existe leitura "de outra pessoa" nem pra administrador.
-export const diarioEntradas = pgTable("diario_entradas", {
-  id: text("id").primaryKey(),
-  workspaceId: text("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
-  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  // Dia a que o registro se refere — pode ser diferente do dia em que foi digitado (ex:
-  // lançar hoje algo que aconteceu ontem).
-  data: date("data").notNull(),
-  texto: text("texto").notNull(),
-  // Vínculo opcional com um Documento — só uma referência solta, não afeta nada no
-  // Documento em si. ON DELETE SET NULL: se o documento referenciado for excluído de
-  // verdade, o registro do diário continua existindo, só perde o link.
-  documentoId: text("documento_id").references(() => documentos.id, { onDelete: "set null" }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+// Grade de horas do "Meu Espaço" — uma célula por dia da semana (data concreta, não só
+// "segunda/terça") x hora (8 a 17, representando o intervalo horaInicio–horaInicio+1).
+// Preenchimento livre (texto), não vinculado a um Projeto/Obra formal do sistema — é comum
+// a pessoa descrever "disciplina + obra" junto (ex: "Estrutural do Cafundó do Judas"), o que
+// não mapeia 1:1 pra nenhuma entidade existente. Estritamente privado, igual ao antigo
+// diário: toda query filtra por userId, sem exceção pra administrador.
+export const diarioHoras = pgTable(
+  "diario_horas",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    data: date("data").notNull(),
+    horaInicio: integer("hora_inicio").notNull(),
+    projeto: text("projeto").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique().on(table.userId, table.data, table.horaInicio)]
+);
