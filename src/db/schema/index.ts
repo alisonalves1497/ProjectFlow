@@ -16,3 +16,4 @@ export * from "./visitas";
 export * from "./favoritos";
 export * from "./chat";
 export * from "./dashboards";
+export * from "./diario";

@@ -183,6 +183,13 @@
       "when": 1789047433839,
       "tag": "0025_far_devos",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1789412583387,
+      "tag": "0026_bitter_master_chief",
+      "breakpoints": true
     }
   ]
 }

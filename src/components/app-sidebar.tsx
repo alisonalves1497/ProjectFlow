@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   CalendarDays,
   FileText,
+  BookOpen,
   FolderKanban,
   UserCog,
   Send,
@@ -132,6 +133,7 @@ export function AppSidebar({
       { href: wsBase, label: "Painel", icon: LayoutDashboard },
       { href: `${wsBase}/calendario`, label: "Calendário", icon: CalendarDays },
       { href: `${wsBase}/meus-documentos`, label: "Meus documentos", icon: FileText },
+      { href: `${wsBase}/diario`, label: "Diário pessoal", icon: BookOpen },
     ],
   };
 
