@@ -265,6 +265,7 @@ export async function updateDocumentoAction(_prevState: ActionState, formData: F
     if (formData.has("dataReprogramada")) patch.dataReprogramada = formData.get("dataReprogramada") || null;
     if (formData.has("dataPrevista")) patch.dataPrevista = formData.get("dataPrevista") || null;
     if (formData.has("revisaoExterna")) patch.revisaoExterna = formData.get("revisaoExterna") || null;
+    if (formData.has("gedOrigem")) patch.gedOrigem = formData.get("gedOrigem") || null;
     if (formData.has("tempoEstimadoHoras")) patch.tempoEstimadoHoras = formData.get("tempoEstimadoHoras") || null;
     if (formData.has("tempoRastreadoHoras")) patch.tempoRastreadoHoras = formData.get("tempoRastreadoHoras") || null;
     if (formData.has("responsavelId")) {
@@ -283,6 +284,10 @@ export async function updateDocumentoAction(_prevState: ActionState, formData: F
 
   revalidatePath(`/workspaces/${workspaceId}/documentos/${documentoId}`);
   if (projetoId && obraId) revalidatePath(obraDocumentosPath(workspaceId, String(projetoId), String(obraId)));
+  // "Meus Documentos" junta documentos de obras diferentes numa lista só — não dá pra saber
+  // daqui se essa edição afeta ela, então revalida sempre (barato: só marca a página como
+  // stale, não recarrega nada se ninguém estiver nela).
+  revalidatePath(`/workspaces/${workspaceId}/meus-documentos`);
   return { status: "success" };
 }
 
@@ -313,6 +318,7 @@ export async function setStatusDiretoAction(_prevState: ActionState, formData: F
 
   revalidatePath(obraDocumentosPath(workspaceId, projetoId, obraId));
   revalidatePath(`/workspaces/${workspaceId}/documentos/${documentoId}`);
+  revalidatePath(`/workspaces/${workspaceId}/meus-documentos`);
   return { status: "success" };
 }
 

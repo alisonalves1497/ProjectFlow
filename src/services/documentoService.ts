@@ -280,6 +280,7 @@ export async function updateDocumento(
     dataPrevista?: string | null;
     secaoId?: string;
     revisaoExterna?: string | null;
+    gedOrigem?: string | null;
     tempoEstimadoHoras?: number | null;
     tempoRastreadoHoras?: number | null;
   }

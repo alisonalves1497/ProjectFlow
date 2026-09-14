@@ -111,6 +111,7 @@ export const documentoUpdateSchema = z.object({
   dataPrevista: z.string().date().nullable().optional(),
   secaoId: z.string().trim().min(1).optional(),
   revisaoExterna: z.string().trim().max(50).nullable().optional(),
+  gedOrigem: z.string().trim().max(120).nullable().optional(),
   tempoEstimadoHoras: z.coerce.number().min(0).max(9999).nullable().optional(),
   tempoRastreadoHoras: z.coerce.number().min(0).max(9999).nullable().optional(),
 });

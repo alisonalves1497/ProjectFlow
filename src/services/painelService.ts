@@ -169,9 +169,11 @@ export type MeusDocumentosLinha = {
   status: StatusDocumento;
   obraId: string;
   obraNome: string;
+  projetoId: string;
   dataPrevista: string | null;
   reprogramado: boolean;
   revisaoLabel: string | null;
+  temRevisao: boolean;
   gedOrigem: string | null;
   emAtraso: boolean;
 };
@@ -193,6 +195,7 @@ export async function getMeusDocumentos(workspaceId: string, userId: string): Pr
       status: documentos.status,
       obraId: documentos.obraId,
       obraNome: obras.name,
+      projetoId: obras.projetoId,
       dataPrevista: documentos.dataPrevista,
       dataReprogramada: documentos.dataReprogramada,
       currentRevisionId: documentos.currentRevisionId,
@@ -228,9 +231,11 @@ export async function getMeusDocumentos(workspaceId: string, userId: string): Pr
         status: d.status,
         obraId: d.obraId,
         obraNome: d.obraNome,
+        projetoId: d.projetoId,
         dataPrevista: efetiva.data,
         reprogramado: efetiva.reprogramado,
         revisaoLabel: d.revisaoLabel ?? d.revisaoExterna,
+        temRevisao: d.currentRevisionId !== null,
         gedOrigem: d.gedOrigem,
         emAtraso: !fechado && efetiva.data !== null && efetiva.data < hoje,
       };

@@ -4,15 +4,23 @@ import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Search } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { StatusBadge } from "@/components/status-badge";
+import { StatusCell, PrazoCell, RevisaoCell, GedCell } from "@/components/documento-inline-cells";
 import { STATUS_LABELS, type StatusDocumento } from "@/lib/statusGraph";
 import { cn } from "@/lib/utils";
 import type { MeusDocumentosLinha } from "@/services/painelService";
 
 // Mesma linguagem visual da Lista de Documentos de uma Obra (tabela com cabeçalho de grupo
-// colapsável) — só que agrupando por OBRA em vez de por Seção, já que "Meus Documentos"
-// junta documentos de obras diferentes.
-export function MeusDocumentosTabela({ workspaceId, documentos }: { workspaceId: string; documentos: MeusDocumentosLinha[] }) {
+// colapsável, mesmas células editáveis) — só que agrupando por OBRA em vez de por Seção, já
+// que "Meus Documentos" junta documentos de obras diferentes.
+export function MeusDocumentosTabela({
+  workspaceId,
+  documentos,
+  podeGerenciar,
+}: {
+  workspaceId: string;
+  documentos: MeusDocumentosLinha[];
+  podeGerenciar: boolean;
+}) {
   const [statusFiltro, setStatusFiltro] = useState("");
   const [busca, setBusca] = useState("");
   const [colapsadas, setColapsadas] = useState<Set<string>>(new Set());
@@ -143,19 +151,46 @@ export function MeusDocumentosTabela({ workspaceId, documentos }: { workspaceId:
                             </Link>
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
-                            {d.dataPrevista ? (
-                              <>
-                                {new Date(d.dataPrevista + "T00:00:00").toLocaleDateString("pt-BR")}
-                                {d.reprogramado && <span className="ml-1 text-xs">(reprog.)</span>}
-                              </>
-                            ) : (
-                              "—"
-                            )}
+                            <PrazoCell
+                              workspaceId={workspaceId}
+                              projetoId={d.projetoId}
+                              obraId={d.obraId}
+                              documentoId={d.id}
+                              dataPrevista={d.dataPrevista}
+                              reprogramado={d.reprogramado}
+                              podeGerenciar={podeGerenciar}
+                            />
                           </TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground">{d.revisaoLabel ?? "—"}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{d.gedOrigem ?? "—"}</TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground">
+                            <RevisaoCell
+                              workspaceId={workspaceId}
+                              projetoId={d.projetoId}
+                              obraId={d.obraId}
+                              documentoId={d.id}
+                              revisaoLabel={d.revisaoLabel}
+                              temRevisao={d.temRevisao}
+                              podeGerenciar={podeGerenciar}
+                            />
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            <GedCell
+                              workspaceId={workspaceId}
+                              projetoId={d.projetoId}
+                              obraId={d.obraId}
+                              documentoId={d.id}
+                              gedOrigem={d.gedOrigem}
+                              podeGerenciar={podeGerenciar}
+                            />
+                          </TableCell>
                           <TableCell>
-                            <StatusBadge status={d.status as StatusDocumento} />
+                            <StatusCell
+                              workspaceId={workspaceId}
+                              projetoId={d.projetoId}
+                              obraId={d.obraId}
+                              documentoId={d.id}
+                              status={d.status as StatusDocumento}
+                              podeGerenciar={podeGerenciar}
+                            />
                           </TableCell>
                         </TableRow>
                       ))}
