@@ -129,6 +129,19 @@ export async function restoreObra(workspaceId: string, obraId: string) {
   });
 }
 
+// Exclusão DEFINITIVA — só de obra que já está na Lixeira (soft-deleted). Todo o resto
+// (documentos, seções, membros, GRDs, itens de suprimento, cópias controladas, fotos, RFI/RNC)
+// tem FK com ON DELETE CASCADE pra `obras`, então um único DELETE já limpa a cadeia inteira
+// no banco — sem precisar apagar tabela por tabela aqui. Sem confirmação de novo aqui porque
+// a tela já exige o usuário confirmar explicitamente antes de chamar isso.
+export async function purgeObra(workspaceId: string, obraId: string) {
+  const [deletada] = await db
+    .delete(obras)
+    .where(and(eq(obras.id, obraId), eq(obras.workspaceId, workspaceId), isNotNull(obras.deletedAt)))
+    .returning({ id: obras.id });
+  if (!deletada) throw notFound("OBRA_NOT_FOUND", "Obra excluída não encontrada (ela precisa estar na Lixeira).");
+}
+
 // Obras excluídas nos últimos 30 dias que NÃO fazem parte da exclusão em cascata de um
 // Projeto (aí a Lixeira de Projetos já cobre) — ou seja, foram excluídas isoladamente.
 export async function listObrasExcluidas(workspaceId: string) {

@@ -6,6 +6,7 @@ import { listProjetosExcluidos } from "@/services/projetoService";
 import { listObrasExcluidas } from "@/services/obraService";
 import { Badge } from "@/components/ui/badge";
 import { RestoreButton } from "./restore-button";
+import { PurgeButton } from "./purge-button";
 
 type Params = { params: Promise<{ workspaceId: string }> };
 
@@ -56,7 +57,12 @@ export default async function LixeiraPage({ params }: Params) {
                         dias
                       </p>
                     </div>
-                    <RestoreButton kind="projeto" workspaceId={workspaceId} projetoId={p.id} />
+                    <div className="flex shrink-0 items-center gap-2">
+                      <RestoreButton kind="projeto" workspaceId={workspaceId} projetoId={p.id} />
+                      {role === "administrador" && (
+                        <PurgeButton kind="projeto" workspaceId={workspaceId} projetoId={p.id} nome={p.name} />
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -81,7 +87,12 @@ export default async function LixeiraPage({ params }: Params) {
                         dias
                       </p>
                     </div>
-                    <RestoreButton kind="obra" workspaceId={workspaceId} projetoId={o.projetoId} obraId={o.id} />
+                    <div className="flex shrink-0 items-center gap-2">
+                      <RestoreButton kind="obra" workspaceId={workspaceId} projetoId={o.projetoId} obraId={o.id} />
+                      {role === "administrador" && (
+                        <PurgeButton kind="obra" workspaceId={workspaceId} projetoId={o.projetoId} obraId={o.id} nome={o.name} />
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>

@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { ApiError } from "@/lib/errors";
-import { restoreProjeto } from "@/services/projetoService";
-import { restoreObra } from "@/services/obraService";
+import { restoreProjeto, purgeProjeto } from "@/services/projetoService";
+import { restoreObra, purgeObra } from "@/services/obraService";
 import { requireWorkspaceRole, requireObraAccess, getWorkspaceRole } from "@/services/permissions";
 
 export type ActionState = { status: "idle" } | { status: "error"; error: string } | { status: "success" };
@@ -51,5 +51,45 @@ export async function restoreObraAction(_prevState: ActionState, formData: FormD
 
   revalidatePath(`/workspaces/${workspaceId}/lixeira`);
   revalidatePath(`/workspaces/${workspaceId}/projetos/${projetoId}`);
+  return { status: "success" };
+}
+
+// Exclusão definitiva — só administrador (é irreversível, diferente de excluir/restaurar
+// que qualquer coordenador também pode fazer).
+export async function purgeProjetoAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const projetoId = String(formData.get("projetoId") ?? "");
+
+  try {
+    await requireWorkspaceRole(session.user.id, workspaceId, ["administrador"]);
+    await purgeProjeto(workspaceId, projetoId);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    throw err;
+  }
+
+  revalidatePath(`/workspaces/${workspaceId}/lixeira`);
+  return { status: "success" };
+}
+
+export async function purgeObraAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const obraId = String(formData.get("obraId") ?? "");
+
+  try {
+    await requireWorkspaceRole(session.user.id, workspaceId, ["administrador"]);
+    await purgeObra(workspaceId, obraId);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    throw err;
+  }
+
+  revalidatePath(`/workspaces/${workspaceId}/lixeira`);
   return { status: "success" };
 }

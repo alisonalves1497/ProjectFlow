@@ -101,6 +101,17 @@ export async function restoreProjeto(workspaceId: string, projetoId: string) {
   });
 }
 
+// Exclusão DEFINITIVA — só de projeto que já está na Lixeira. `obras` tem FK com ON DELETE
+// CASCADE pra `projetos`, e tudo que depende de obra tem cascade pra obra (ver purgeObra) —
+// um único DELETE aqui já limpa projeto + obras + documentos de tudo.
+export async function purgeProjeto(workspaceId: string, projetoId: string) {
+  const [deletado] = await db
+    .delete(projetos)
+    .where(and(eq(projetos.id, projetoId), eq(projetos.workspaceId, workspaceId), isNotNull(projetos.deletedAt)))
+    .returning({ id: projetos.id });
+  if (!deletado) throw notFound("PROJETO_NOT_FOUND", "Projeto excluído não encontrado (ele precisa estar na Lixeira).");
+}
+
 export async function listProjetosExcluidos(workspaceId: string) {
   const limite = new Date(Date.now() - RETENCAO_LIXEIRA_DIAS * 24 * 60 * 60 * 1000);
   return db
