@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { signOut } from "next-auth/react";
@@ -213,9 +214,9 @@ export function AppSidebar({
         title="Arraste pra ajustar a largura"
         className="absolute top-0 -right-1 z-10 h-full w-2 cursor-col-resize hover:bg-primary/20"
       />
-      {/* Espaço reservado pra logo — sem imagem por enquanto (troca de marca em andamento). */}
-      <div className="flex h-[72px] shrink-0 items-center justify-center border-b p-4" />
-
+      <div className="flex h-[72px] shrink-0 items-center justify-center border-b p-4">
+        <Image src="/logo-mybox.jpg" alt="MyBox" width={200} height={100} className="h-10 w-auto" priority />
+      </div>
 
       <nav className="flex-1 overflow-y-auto p-3">
         <div className="mb-4">

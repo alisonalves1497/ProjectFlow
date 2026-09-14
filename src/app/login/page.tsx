@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Image from "next/image";
 import { auth } from "@/auth";
 import { LoginForm } from "@/components/login-form";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
@@ -11,8 +12,7 @@ export default async function LoginPage() {
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          {/* Espaço reservado pra logo — sem imagem por enquanto. */}
-          <div className="mx-auto h-12" />
+          <Image src="/logo-mybox.jpg" alt="MyBox" width={200} height={100} className="mx-auto h-12 w-auto" priority />
           <CardDescription className="text-center">Entre com sua conta</CardDescription>
         </CardHeader>
         <CardContent>

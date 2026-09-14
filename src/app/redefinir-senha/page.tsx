@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
@@ -18,8 +19,7 @@ export default async function RedefinirSenhaPage({
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          {/* Espaço reservado pra logo — sem imagem por enquanto. */}
-          <div className="mx-auto h-12" />
+          <Image src="/logo-mybox.jpg" alt="MyBox" width={200} height={100} className="mx-auto h-12 w-auto" priority />
           <CardDescription className="text-center">Escolha uma nova senha</CardDescription>
         </CardHeader>
         <CardContent>
