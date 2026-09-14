@@ -7,6 +7,7 @@ import { ApiError } from "@/lib/errors";
 import {
   workspaceMemberAddSchema,
   workspaceMemberEmailUpdateSchema,
+  workspaceMemberNameUpdateSchema,
   workspaceMemberPasswordUpdateSchema,
   workspaceMemberUpdateSchema,
 } from "@/lib/validators";
@@ -15,6 +16,7 @@ import {
   removeWorkspaceMember,
   updateWorkspaceMemberRole,
   updateWorkspaceMemberEmail,
+  updateWorkspaceMemberName,
   setWorkspaceMemberPassword,
 } from "@/services/workspaceService";
 import { addObraMemberByUserId, removeObraMember, listObraIdsDoMembro } from "@/services/obraService";
@@ -70,6 +72,27 @@ export async function updateMemberEmailAction(_prevState: ActionState, formData:
     await requireWorkspaceRole(session.user.id, workspaceId, ["administrador", "coordenador"]);
     const input = workspaceMemberEmailUpdateSchema.parse({ email: formData.get("email") });
     await updateWorkspaceMemberEmail(workspaceId, userId, input.email);
+  } catch (err) {
+    if (err instanceof ApiError) return { status: "error", error: err.message };
+    if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };
+    throw err;
+  }
+
+  revalidatePath(`/workspaces/${workspaceId}/membros`);
+  return { status: "success" };
+}
+
+export async function updateMemberNameAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "error", error: "Não autenticado." };
+
+  const workspaceId = String(formData.get("workspaceId") ?? "");
+  const userId = String(formData.get("userId") ?? "");
+
+  try {
+    await requireWorkspaceRole(session.user.id, workspaceId, ["administrador", "coordenador"]);
+    const input = workspaceMemberNameUpdateSchema.parse({ nome: formData.get("nome") });
+    await updateWorkspaceMemberName(workspaceId, userId, input.nome);
   } catch (err) {
     if (err instanceof ApiError) return { status: "error", error: err.message };
     if (err instanceof ZodError) return { status: "error", error: err.issues.map((i) => i.message).join("; ") };

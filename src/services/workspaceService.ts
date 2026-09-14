@@ -162,6 +162,23 @@ export async function updateWorkspaceMemberEmail(workspaceId: string, userId: st
   return updated;
 }
 
+// Mesmo escopo por segurança do email acima — só edita nome de quem já é membro deste
+// workspace. Pedido do time: alguns nomes vieram só com o primeiro nome (sem sobrenome) e
+// não davam pra corrigir em lugar nenhum — nome do usuário nunca teve tela de edição.
+export async function updateWorkspaceMemberName(workspaceId: string, userId: string, nomeBruto: string) {
+  const nome = nomeBruto.trim();
+  const [membro] = await db
+    .select({ id: workspaceMembers.id })
+    .from(workspaceMembers)
+    .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId)))
+    .limit(1);
+  if (!membro) throw notFound("WORKSPACE_MEMBER_NOT_FOUND", "Membro não encontrado neste workspace.");
+
+  const [updated] = await db.update(users).set({ name: nome, updatedAt: new Date() }).where(eq(users.id, userId)).returning();
+  if (!updated) throw notFound("USUARIO_NOT_FOUND", "Usuário não encontrado.");
+  return updated;
+}
+
 // Define a senha de outra pessoa direto (sem link por email) — pedido explícito do time
 // enquanto o envio de email de redefinição não funciona de verdade (precisa de domínio
 // verificado no Resend, que ainda não tem). Mesmo escopo por segurança do e-mail acima.

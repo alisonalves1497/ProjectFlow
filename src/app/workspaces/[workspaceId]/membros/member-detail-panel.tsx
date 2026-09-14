@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { ALL_WORKSPACE_ROLES, WORKSPACE_ROLE_LABELS, WORKSPACE_ROLE_DESCRIPTIONS, type WorkspaceRole } from "@/lib/roles";
 import { updateMemberAction, removeMemberAction, type ActionState } from "./actions";
+import { EditMemberNameDialog } from "./edit-member-name-dialog";
 import { EditMemberEmailDialog } from "./edit-member-email-dialog";
 import { EditMemberPasswordDialog } from "./edit-member-password-dialog";
 import { iniciais, type Membro, type Obra } from "./membros-screen";
@@ -113,9 +114,12 @@ export function MemberDetailPanel({
             {iniciais(membro.name ?? membro.email)}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-lg font-semibold">
+            <p className="flex items-center truncate text-lg font-semibold">
               {membro.name ?? membro.email}
               {isSelf && <span className="ml-1.5 text-sm font-normal text-muted-foreground">(você)</span>}
+              {canManage && (
+                <EditMemberNameDialog workspaceId={workspaceId} userId={membro.userId} nomeAtual={membro.name ?? ""} />
+              )}
             </p>
             <p className="flex items-center truncate text-xs text-muted-foreground">
               {membro.email}
