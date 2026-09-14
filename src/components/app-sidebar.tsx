@@ -8,6 +8,7 @@ import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   CalendarDays,
+  FileText,
   FolderKanban,
   UserCog,
   Send,
@@ -130,6 +131,7 @@ export function AppSidebar({
     items: [
       { href: wsBase, label: "Painel", icon: LayoutDashboard },
       { href: `${wsBase}/calendario`, label: "Calendário", icon: CalendarDays },
+      { href: `${wsBase}/meus-documentos`, label: "Meus documentos", icon: FileText },
     ],
   };
 

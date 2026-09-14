@@ -24,7 +24,6 @@ export type PainelData = {
     copiasControladas: { id: string; documentoId: string; documentoCodigo: string; revisaoLabel: string | null; obraId: string }[];
   };
   programacaoSemana: { id: string; codigoCompleto: string; descricao: string; dataPrevista: string; reprogramado: boolean; obraId: string }[];
-  meusDocumentos: { id: string; codigoCompleto: string; descricao: string; status: StatusDocumento; obraId: string }[];
   atividadeRecente: {
     id: string;
     documentoId: string;
@@ -72,7 +71,6 @@ export async function getPainelData(workspaceId: string, userId: string): Promis
     documentosEmAtraso: 0,
     minhasPendencias: { documentos: [], copiasControladas: [] },
     programacaoSemana: [],
-    meusDocumentos: [],
     atividadeRecente: [],
   };
   if (obraIds.length === 0) return vazio;
@@ -120,14 +118,6 @@ export async function getPainelData(workspaceId: string, userId: string): Promis
     .map((d) => ({ id: d.id, codigoCompleto: d.codigoCompleto, descricao: d.descricao, status: d.status, obraId: d.obraId }))
     .sort((a, b) => (PRIORIDADE_PENDENCIA[b.status] ?? 0) - (PRIORIDADE_PENDENCIA[a.status] ?? 0));
 
-  // Todos os documentos atribuídos ao usuário, qualquer status (inclusive fechado/cancelado)
-  // — diferente de meusDocumentosPendentes, que só cobre os status "em aberto". Usado no
-  // painel "Meus Documentos", que tem filtro de status próprio pra quem quer ver um recorte.
-  const meusDocumentos = docsComDerivados
-    .filter((d) => d.responsavelId === userId)
-    .map((d) => ({ id: d.id, codigoCompleto: d.codigoCompleto, descricao: d.descricao, status: d.status, obraId: d.obraId }))
-    .sort((a, b) => a.codigoCompleto.localeCompare(b.codigoCompleto));
-
   // Só do responsável logado — igual meusDocumentosPendentes, senão mostra a entrega de
   // todo mundo na obra como se fosse "sua" (bug relatado: usuário sem nada atribuído via
   // documento de outra pessoa aparecendo aqui).
@@ -168,7 +158,35 @@ export async function getPainelData(workspaceId: string, userId: string): Promis
     documentosEmAtraso,
     minhasPendencias: { documentos: meusDocumentosPendentes, copiasControladas: copiasASubstituir },
     programacaoSemana,
-    meusDocumentos,
     atividadeRecente: eventos,
   };
+}
+
+// Todos os documentos atribuídos ao usuário, qualquer status (inclusive fechado/cancelado) —
+// diferente de minhasPendencias.documentos (getPainelData), que só cobre os status "em
+// aberto". Usado na própria página "Meus Documentos" (aba ao lado de Calendário), que tem
+// filtro de status próprio pra quem quer ver um recorte — por isso não corta por status aqui.
+export async function getMeusDocumentos(workspaceId: string, userId: string) {
+  const obraIds = await listAccessibleObraIdsInWorkspace(userId, workspaceId);
+  if (obraIds.length === 0) return [];
+
+  const docs = await db
+    .select({
+      id: documentos.id,
+      codigoCompleto: documentos.codigoCompleto,
+      descricao: documentos.descricao,
+      status: documentos.status,
+      obraId: documentos.obraId,
+    })
+    .from(documentos)
+    .where(
+      and(
+        inArray(documentos.obraId, obraIds),
+        eq(documentos.workspaceId, workspaceId),
+        eq(documentos.responsavelId, userId),
+        isNull(documentos.deletedAt)
+      )
+    );
+
+  return docs.sort((a, b) => a.codigoCompleto.localeCompare(b.codigoCompleto));
 }
