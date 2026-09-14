@@ -114,7 +114,7 @@ export function DashboardFiltros({ opcoes }: { opcoes: OpcoesFiltroDashboard }) 
   );
 
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-2">
+    <>
       <MultiSelect
         titulo="Obra"
         opcoes={opcoes.obras.map((o) => ({ valor: o.id, rotulo: o.nome }))}
@@ -164,6 +164,6 @@ export function DashboardFiltros({ opcoes }: { opcoes: OpcoesFiltroDashboard }) 
       ) : null}
 
       {pending && <span className="text-xs text-muted-foreground">atualizando…</span>}
-    </div>
+    </>
   );
 }

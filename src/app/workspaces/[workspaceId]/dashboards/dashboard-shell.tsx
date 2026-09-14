@@ -77,6 +77,12 @@ export function DashboardShell({
     setLayout(layout.map((b) => (b.id === id ? { ...b, visivel: !b.visivel } : b)));
   }
 
+  // "Só este": desliga todo o resto e deixa só o bloco escolhido — pra quem quer ver uma
+  // coisa direto no topo sem rolar a tela pelos outros blocos primeiro.
+  function mostrarSomenteEste(id: BlocoDashboard) {
+    setLayout(layout.map((b) => ({ ...b, visivel: b.id === id })));
+  }
+
   function filtrosAtuais(): Record<string, string> {
     return Object.fromEntries([...sp.entries()]);
   }
@@ -151,6 +157,14 @@ export function DashboardShell({
                     {b.visivel && <Check className="size-3" />}
                   </span>
                   <span className={b.visivel ? "" : "text-muted-foreground"}>{BLOCO_LABEL[b.id]}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => mostrarSomenteEste(b.id)}
+                  className="shrink-0 rounded px-1 py-0.5 text-xs text-muted-foreground hover:bg-background hover:text-primary"
+                  title="Mostrar só este bloco, no topo"
+                >
+                  só este
                 </button>
                 <button
                   type="button"
