@@ -4,10 +4,17 @@ import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Search } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { ResizeHandle } from "@/components/ui/resize-handle";
 import { StatusCell, PrazoCell, RevisaoCell, GedCell } from "@/components/documento-inline-cells";
 import { STATUS_LABELS, type StatusDocumento } from "@/lib/statusGraph";
 import { cn } from "@/lib/utils";
 import type { MeusDocumentosLinha } from "@/services/painelService";
+
+type LarguraColuna = "prazo" | "rev" | "ged" | "status";
+// Status ganha mais espaço de largada — pedido do time pra sempre deixar mais espaço pra ele
+// (mesmo critério aplicado na Lista de Documentos de uma Obra).
+const LARGURAS_PADRAO: Record<LarguraColuna, number> = { prazo: 130, rev: 90, ged: 90, status: 220 };
+const LARGURA_MINIMA = 48;
 
 // Mesma linguagem visual da Lista de Documentos de uma Obra (tabela com cabeçalho de grupo
 // colapsável, mesmas células editáveis) — só que agrupando por OBRA em vez de por Seção, já
@@ -24,6 +31,14 @@ export function MeusDocumentosTabela({
   const [statusFiltro, setStatusFiltro] = useState("");
   const [busca, setBusca] = useState("");
   const [colapsadas, setColapsadas] = useState<Set<string>>(new Set());
+  const [larguras, setLarguras] = useState<Record<LarguraColuna, number>>(LARGURAS_PADRAO);
+
+  // A alça fica na borda ESQUERDA da coluna — arrastar pra direita empurra essa borda pra
+  // dentro da coluna e ela encolhe; "Código / Descrição" não tem largura própria (ocupa o
+  // que sobra), então é ela quem absorve a diferença.
+  function redimensionar(coluna: LarguraColuna, deltaX: number) {
+    setLarguras((prev) => ({ ...prev, [coluna]: Math.max(LARGURA_MINIMA, prev[coluna] - deltaX) }));
+  }
 
   const statusDisponiveis = useMemo(() => [...new Set(documentos.map((d) => d.status))], [documentos]);
 
@@ -115,10 +130,22 @@ export function MeusDocumentosTabela({
             <TableHeader>
               <TableRow>
                 <TableHead className="relative">Código / Descrição</TableHead>
-                <TableHead style={{ width: 130 }}>Prazo</TableHead>
-                <TableHead style={{ width: 90 }}>Rev.</TableHead>
-                <TableHead style={{ width: 90 }}>GED</TableHead>
-                <TableHead style={{ width: 180 }}>Status</TableHead>
+                <TableHead className="relative" style={{ width: larguras.prazo }}>
+                  Prazo
+                  <ResizeHandle onResize={(d) => redimensionar("prazo", d)} />
+                </TableHead>
+                <TableHead className="relative" style={{ width: larguras.rev }}>
+                  Rev.
+                  <ResizeHandle onResize={(d) => redimensionar("rev", d)} />
+                </TableHead>
+                <TableHead className="relative" style={{ width: larguras.ged }}>
+                  GED
+                  <ResizeHandle onResize={(d) => redimensionar("ged", d)} />
+                </TableHead>
+                <TableHead className="relative" style={{ width: larguras.status }}>
+                  Status
+                  <ResizeHandle onResize={(d) => redimensionar("status", d)} />
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ResizeHandle } from "@/components/ui/resize-handle";
 import {
   Dialog,
   DialogContent,
@@ -76,42 +77,10 @@ export type ColunasVisiveis = { resp: boolean; prazo: boolean; fluxo: boolean; r
 export const COLUNAS_PADRAO: ColunasVisiveis = { resp: true, prazo: true, fluxo: false, rev: true, ged: true, status: true };
 
 type LarguraColuna = "resp" | "prazo" | "fluxo" | "rev" | "ged" | "status";
-const LARGURAS_PADRAO: Record<LarguraColuna, number> = { resp: 112, prazo: 96, fluxo: 96, rev: 56, ged: 88, status: 176 };
+// Status ganha mais espaço de largada — rótulos como "Aprovação do líder técnico" ficavam
+// espremidos (pedido do time: sempre deixar mais espaço pra Status).
+const LARGURAS_PADRAO: Record<LarguraColuna, number> = { resp: 112, prazo: 96, fluxo: 96, rev: 56, ged: 88, status: 220 };
 const LARGURA_MINIMA = 48;
-
-// Alça de redimensionar: fica em cima do "traço" divisório de cada coluna (borda direita
-// do header). Arrastar pra direita alarga a coluna, pra esquerda estreita — tudo em estado
-// local, só dura a sessão (não precisa persistir entre recarregamentos).
-function ResizeHandle({ onResize }: { onResize: (deltaX: number) => void }) {
-  function onMouseDown(e: React.MouseEvent) {
-    e.preventDefault();
-    const xInicial = e.clientX;
-    let ultimoX = xInicial;
-
-    function onMouseMove(ev: MouseEvent) {
-      const deltaX = ev.clientX - ultimoX;
-      ultimoX = ev.clientX;
-      onResize(deltaX);
-    }
-    function onMouseUp() {
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-    }
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-  }
-
-  return (
-    <div
-      onMouseDown={onMouseDown}
-      role="separator"
-      aria-orientation="vertical"
-      className="absolute top-0 left-0 z-10 h-full w-2 -translate-x-1/2 cursor-col-resize touch-none select-none"
-    >
-      <div className="mx-auto h-full w-px bg-border" />
-    </div>
-  );
-}
 
 export function DocumentosLista({
   workspaceId,
