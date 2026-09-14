@@ -29,7 +29,7 @@ export default async function LixeiraPage({ params }: Params) {
   const vazio = projetos.length === 0 && obras.length === 0;
 
   return (
-    <div className="max-w-2xl p-8">
+    <div className="max-w-5xl p-8">
       <div className="mb-2 flex items-center gap-2">
         <Trash2 className="size-5 shrink-0 text-muted-foreground" />
         <h1 className="text-2xl font-semibold">Lixeira</h1>
