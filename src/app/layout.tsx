@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ProjectFlow",
-  description: "Gestão documental de engenharia",
+  title: "MyBox",
+  description: "Gestão inteligente de documentos",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

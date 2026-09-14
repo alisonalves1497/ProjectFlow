@@ -6,7 +6,7 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 
 // Remetente padrão do Resend, funciona sem verificar domínio próprio — dá pra trocar
 // depois via EMAIL_FROM quando tiver um domínio verificado no Resend.
-const FROM = process.env.EMAIL_FROM || "ProjectFlow <onboarding@resend.dev>";
+const FROM = process.env.EMAIL_FROM || "MyBox <onboarding@resend.dev>";
 
 export async function sendPasswordResetEmail(email: string, link: string) {
   if (!resend) {
@@ -17,11 +17,11 @@ export async function sendPasswordResetEmail(email: string, link: string) {
   const { error } = await resend.emails.send({
     from: FROM,
     to: email,
-    subject: "Redefinir sua senha — ProjectFlow",
+    subject: "Redefinir sua senha — MyBox",
     html: `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h2 style="color: #111;">Redefinir sua senha</h2>
-        <p>Recebemos um pedido para redefinir a senha da sua conta no ProjectFlow.</p>
+        <p>Recebemos um pedido para redefinir a senha da sua conta no MyBox.</p>
         <p>
           <a href="${link}" style="display:inline-block;background:#111;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;">
             Redefinir senha
