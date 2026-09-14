@@ -214,8 +214,8 @@ export function AppSidebar({
         title="Arraste pra ajustar a largura"
         className="absolute top-0 -right-1 z-10 h-full w-2 cursor-col-resize hover:bg-primary/20"
       />
-      <div className="flex h-[72px] shrink-0 items-center justify-center border-b p-4">
-        <Image src="/logo-mybox.png" alt="MyBox" width={200} height={67} className="h-10 w-auto" priority />
+      <div className="flex h-20 shrink-0 items-center justify-center border-b p-2">
+        <Image src="/logo-mybox.png" alt="MyBox" width={200} height={67} className="h-14 w-auto max-w-full" priority />
       </div>
 
       <nav className="flex-1 overflow-y-auto p-3">
