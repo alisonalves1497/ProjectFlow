@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
-import { documentos, copiasControladas, linhaDoTempo, revisoes, users } from "@/db/schema";
+import { documentos, obras, copiasControladas, linhaDoTempo, revisoes, users } from "@/db/schema";
 import { listAccessibleObraIdsInWorkspace } from "./permissions";
 import type { StatusDocumento } from "@/lib/statusGraph";
 import { isDocumentoFechado, dataEfetivaPrevista } from "@/lib/documentoStatus";
@@ -162,11 +162,26 @@ export async function getPainelData(workspaceId: string, userId: string): Promis
   };
 }
 
+export type MeusDocumentosLinha = {
+  id: string;
+  codigoCompleto: string;
+  descricao: string;
+  status: StatusDocumento;
+  obraId: string;
+  obraNome: string;
+  dataPrevista: string | null;
+  reprogramado: boolean;
+  revisaoLabel: string | null;
+  gedOrigem: string | null;
+  emAtraso: boolean;
+};
+
 // Todos os documentos atribuídos ao usuário, qualquer status (inclusive fechado/cancelado) —
 // diferente de minhasPendencias.documentos (getPainelData), que só cobre os status "em
-// aberto". Usado na própria página "Meus Documentos" (aba ao lado de Calendário), que tem
-// filtro de status próprio pra quem quer ver um recorte — por isso não corta por status aqui.
-export async function getMeusDocumentos(workspaceId: string, userId: string) {
+// aberto". Usado na página "Meus Documentos" (aba ao lado de Calendário), que mostra os
+// mesmos campos/estilo da Lista de Documentos de uma Obra (só que juntando várias obras) —
+// por isso traz prazo/revisão/GED junto, em vez de só código+status.
+export async function getMeusDocumentos(workspaceId: string, userId: string): Promise<MeusDocumentosLinha[]> {
   const obraIds = await listAccessibleObraIdsInWorkspace(userId, workspaceId);
   if (obraIds.length === 0) return [];
 
@@ -177,8 +192,20 @@ export async function getMeusDocumentos(workspaceId: string, userId: string) {
       descricao: documentos.descricao,
       status: documentos.status,
       obraId: documentos.obraId,
+      obraNome: obras.name,
+      dataPrevista: documentos.dataPrevista,
+      dataReprogramada: documentos.dataReprogramada,
+      currentRevisionId: documentos.currentRevisionId,
+      revisaoEhAsBuilt: revisoes.ehAsBuilt,
+      revisaoLetra: revisoes.letra,
+      revisaoNumero: revisoes.numero,
+      revisaoLabel: revisoes.label,
+      revisaoExterna: documentos.revisaoExterna,
+      gedOrigem: documentos.gedOrigem,
     })
     .from(documentos)
+    .innerJoin(obras, eq(obras.id, documentos.obraId))
+    .leftJoin(revisoes, eq(revisoes.id, documentos.currentRevisionId))
     .where(
       and(
         inArray(documentos.obraId, obraIds),
@@ -188,5 +215,25 @@ export async function getMeusDocumentos(workspaceId: string, userId: string) {
       )
     );
 
-  return docs.sort((a, b) => a.codigoCompleto.localeCompare(b.codigoCompleto));
+  const hoje = new Date().toISOString().slice(0, 10);
+
+  return docs
+    .map((d) => {
+      const fechado = isDocumentoFechado(d);
+      const efetiva = dataEfetivaPrevista(d);
+      return {
+        id: d.id,
+        codigoCompleto: d.codigoCompleto,
+        descricao: d.descricao,
+        status: d.status,
+        obraId: d.obraId,
+        obraNome: d.obraNome,
+        dataPrevista: efetiva.data,
+        reprogramado: efetiva.reprogramado,
+        revisaoLabel: d.revisaoLabel ?? d.revisaoExterna,
+        gedOrigem: d.gedOrigem,
+        emAtraso: !fechado && efetiva.data !== null && efetiva.data < hoje,
+      };
+    })
+    .sort((a, b) => a.codigoCompleto.localeCompare(b.codigoCompleto));
 }
