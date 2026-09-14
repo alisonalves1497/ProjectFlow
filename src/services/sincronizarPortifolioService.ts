@@ -2,7 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { documentos, secoes, secoesPadrao, disciplinas, obraDisciplinas, projetos, obras, fases, workspaceMembers, users, linhaDoTempo } from "@/db/schema";
 import { newId } from "@/lib/id";
-import { badRequest, isUniqueViolation } from "@/lib/errors";
+import { ApiError, badRequest, isUniqueViolation } from "@/lib/errors";
 import { type StatusDocumento } from "@/lib/statusGraph";
 import {
   normalizar,
@@ -399,12 +399,23 @@ async function garantirProjeto(workspaceId: string, nome: string): Promise<strin
   return criado.id;
 }
 
+// A planilha de portfólio às vezes traz o "Sistema" sem o prefixo "SE " que as Obras já
+// cadastradas no sistema usam (ex: planilha "MORADA NOVA" vs Obra real "SE MORADA NOVA") —
+// sem isso, o match por nome exato falhava, tentava CRIAR uma obra nova com esse mesmo nome
+// base, e como o código gerado colidia com o da obra já existente, a sincronização inteira
+// travava no meio (bug real em produção: LOTE 03, obra "SE MORADA NOVA").
+function normalizarNomeObra(nome: string): string {
+  return normalizar(nome).replace(/^SE\s+/, "");
+}
+
 async function garantirObra(workspaceId: string, projetoId: string, nome: string, userId: string): Promise<string> {
   const todas = await db
     .select({ id: obras.id, name: obras.name, code: obras.code })
     .from(obras)
     .where(and(eq(obras.workspaceId, workspaceId), eq(obras.projetoId, projetoId), isNull(obras.deletedAt)));
-  const match = todas.find((o) => normalizar(o.name) === normalizar(nome));
+  const alvo = normalizar(nome);
+  const alvoSemSE = normalizarNomeObra(nome);
+  const match = todas.find((o) => normalizar(o.name) === alvo || normalizarNomeObra(o.name) === alvoSemSE);
   if (match) return match.id;
   const code = gerarCodigoCurto(nome, new Set(todas.map((o) => o.code)));
   const criada = await createObra(workspaceId, projetoId, { code, name: nome }, userId);
@@ -600,6 +611,14 @@ export async function aplicarSincronizacaoPortifolio(workspaceId: string, userId
     } catch (err) {
       if (isUniqueViolation(err)) {
         ignorados.push({ codigo: linha.codigo, motivo: "Já existe outro documento com esse código." });
+        continue;
+      }
+      // Erro de negócio numa linha (ex: colisão de código de Obra) não pode travar as
+      // centenas de outras linhas do mesmo lote — registra e segue pro próximo documento,
+      // igual já era feito pra violação de unicidade (bug real: um erro na 1ª obra de uma
+      // sincronização de ~900 linhas abortava a aplicação inteira, sem atualizar mais nada).
+      if (err instanceof ApiError) {
+        ignorados.push({ codigo: linha.codigo, motivo: err.message });
         continue;
       }
       throw err;
