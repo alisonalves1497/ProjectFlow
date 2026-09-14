@@ -19,7 +19,7 @@ export default async function RedefinirSenhaPage({
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <Image src="/logo-mybox.jpg" alt="MyBox" width={200} height={100} className="mx-auto h-12 w-auto" priority />
+          <Image src="/logo-mybox.png" alt="MyBox" width={200} height={67} className="mx-auto h-12 w-auto" priority />
           <CardDescription className="text-center">Escolha uma nova senha</CardDescription>
         </CardHeader>
         <CardContent>
