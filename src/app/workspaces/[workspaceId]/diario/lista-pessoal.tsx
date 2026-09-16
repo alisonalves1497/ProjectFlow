@@ -31,11 +31,22 @@ const COLUNAS: { id: ColunaId; label: string }[] = [
 
 const COLUNAS_PADRAO: ColunaId[] = ["projeto", "documento", "dataVencimento", "prioridade"];
 
-// Nome da tarefa tem largura própria generosa; as demais colunas visíveis, enquanto
-// ninguém arrastar nada, dividem igualmente o que sobra da tela (table-fixed distribui
-// automaticamente entre colunas sem width explícito) — só ganham um valor fixo em px aqui
-// (`larguras`) a partir do momento que a pessoa arrasta a borda de alguma.
-const LARGURA_NOME = 260;
+// "Nome da tarefa" é a ÚNICA coluna sem largura própria (flexível — absorve o que sobra),
+// igual a "Código/Descrição" em Meus Documentos/Lista de Documentos. Todas as outras colunas
+// visíveis têm largura fixa desde o início (aqui embaixo). É importante que só uma coluna
+// seja flexível: se mais de uma "auto-dividisse" o espaço, arrastar a borda de uma coluna
+// faria váááARIAS outras mudarem de tamanho ao mesmo tempo, e a direção do arrasto parece
+// errada/imprevisível. Com uma só, o efeito é sempre 1:1 com o mouse.
+const LARGURAS_PADRAO: Record<ColunaId, number> = {
+  projeto: 140,
+  documento: 140,
+  dataVencimento: 120,
+  prioridade: 90,
+  dataConclusao: 120,
+  dataInicial: 110,
+  estimativa: 110,
+  tempoRastreado: 110,
+};
 
 type PrioridadeValor = "urgente" | "alta" | "normal" | "baixa";
 
@@ -99,10 +110,9 @@ export function ListaPessoal({
   const [tarefas, setTarefas] = useState(tarefasIniciais);
   const [colunas, setColunas] = useState<ColunaId[]>(COLUNAS_PADRAO);
   const [altura, setAltura] = useState(ALTURA_PADRAO);
-  const [larguras, setLarguras] = useState<Partial<Record<ColunaId, number>>>({});
+  const [larguras, setLarguras] = useState<Record<ColunaId, number>>(LARGURAS_PADRAO);
   const [novaTarefa, setNovaTarefa] = useState("");
   const criandoRef = useRef(false);
-  const thRefs = useRef<Partial<Record<ColunaId, HTMLTableCellElement>>>({});
 
   useEffect(() => {
     try {
@@ -138,13 +148,9 @@ export function ListaPessoal({
 
   // Alça na borda ESQUERDA da coluna — arrastar pra direita empurra essa borda pra dentro e
   // ela encolhe, igual o mesmo esquema já usado em Meus Documentos/Lista de Documentos.
-  // Enquanto a coluna nunca foi arrastada ela não tem largura própria (`larguras[coluna]`
-  // indefinido) — o primeiro arrasto usa a largura atual renderizada (medida via ref) como
-  // ponto de partida, "congelando" a coluna num valor fixo a partir daí.
   function redimensionar(coluna: ColunaId, deltaX: number) {
     setLarguras((prev) => {
-      const atual = prev[coluna] ?? thRefs.current[coluna]?.getBoundingClientRect().width ?? 120;
-      const proximo = { ...prev, [coluna]: Math.max(LARGURA_MINIMA, atual - deltaX) };
+      const proximo = { ...prev, [coluna]: Math.max(LARGURA_MINIMA, prev[coluna] - deltaX) };
       try {
         localStorage.setItem(chaveLarguras(workspaceId), JSON.stringify(proximo));
       } catch {
@@ -260,22 +266,16 @@ export function ListaPessoal({
           <thead className="sticky top-0 bg-card">
             <tr className="border-b text-xs text-muted-foreground">
               <th className="w-8"></th>
-              <th className="overflow-hidden px-2 py-1 text-left font-medium text-ellipsis whitespace-nowrap" style={{ width: LARGURA_NOME }}>
-                Nome da tarefa
-              </th>
+              <th className="min-w-[160px] overflow-hidden px-2 py-1 text-left font-medium text-ellipsis whitespace-nowrap">Nome da tarefa</th>
               {/* Sempre na ordem canônica de COLUNAS (não na ordem de `colunas`, que é só o
                   conjunto ativado/desativado) — o corpo da tabela abaixo também renderiza
                   cada coluna nessa mesma ordem fixa, então cabeçalho e célula precisam
-                  concordar ou desalinham. Sem width explícito, table-fixed divide o que
-                  sobra igualmente entre as colunas ainda não arrastadas. */}
+                  concordar ou desalinham. */}
               {COLUNAS.filter((c) => colunas.includes(c.id)).map((c) => (
                 <th
                   key={c.id}
-                  ref={(el) => {
-                    thRefs.current[c.id] = el ?? undefined;
-                  }}
                   className="relative overflow-hidden px-2 py-1 text-left font-medium text-ellipsis whitespace-nowrap"
-                  style={larguras[c.id] ? { width: larguras[c.id] } : undefined}
+                  style={{ width: larguras[c.id] }}
                 >
                   {c.label}
                   <ResizeHandle curto onResize={(d) => redimensionar(c.id, d)} />
