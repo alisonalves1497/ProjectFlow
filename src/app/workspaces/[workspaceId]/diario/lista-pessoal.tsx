@@ -23,8 +23,8 @@ const COLUNAS: { id: ColunaId; label: string }[] = [
   { id: "documento", label: "Documento" },
   { id: "dataVencimento", label: "Data de vencimento" },
   { id: "prioridade", label: "Prioridade" },
-  { id: "dataConclusao", label: "Data de conclusão" },
   { id: "dataInicial", label: "Data inicial" },
+  { id: "dataConclusao", label: "Data de conclusão" },
   { id: "estimativa", label: "Estimativa de tempo" },
   { id: "tempoRastreado", label: "Tempo rastreado" },
 ];
@@ -39,11 +39,11 @@ const COLUNAS_PADRAO: ColunaId[] = ["projeto", "documento", "dataVencimento", "p
 // errada/imprevisível. Com uma só, o efeito é sempre 1:1 com o mouse.
 const LARGURAS_PADRAO: Record<ColunaId, number> = {
   projeto: 140,
-  documento: 140,
+  documento: 210,
   dataVencimento: 120,
   prioridade: 90,
-  dataConclusao: 120,
   dataInicial: 110,
+  dataConclusao: 120,
   estimativa: 110,
   tempoRastreado: 110,
 };
@@ -362,6 +362,11 @@ export function ListaPessoal({
                       <PrioridadeCampo valor={t.prioridade} onChange={(v) => alterar(t.id, { prioridade: v }, { prioridade: v })} />
                     </td>
                   )}
+                  {colunas.includes("dataInicial") && (
+                    <td className="px-2 py-1">
+                      <DatePickerField value={t.dataInicial} onChange={(v) => alterar(t.id, { dataInicial: v }, { dataInicial: v })} />
+                    </td>
+                  )}
                   {colunas.includes("dataConclusao") && (
                     <td className="px-2 py-1">
                       <DatePickerField
@@ -370,11 +375,6 @@ export function ListaPessoal({
                           alterar(t.id, { concluidaEm: v }, { concluidaEm: v ? new Date(`${v}T12:00:00`) : null, status: v ? "feito" : "pendente" })
                         }
                       />
-                    </td>
-                  )}
-                  {colunas.includes("dataInicial") && (
-                    <td className="px-2 py-1">
-                      <DatePickerField value={t.dataInicial} onChange={(v) => alterar(t.id, { dataInicial: v }, { dataInicial: v })} />
                     </td>
                   )}
                   {colunas.includes("estimativa") && (

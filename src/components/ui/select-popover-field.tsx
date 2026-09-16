@@ -39,7 +39,7 @@ export function SelectPopoverField({
           <button
             type="button"
             className={cn(
-              "flex h-6 items-center gap-1.5 rounded-md border border-transparent px-1.5 text-xs text-muted-foreground transition-colors hover:border-input hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 focus-visible:border-input focus-visible:outline-none",
+              "flex h-6 w-full min-w-0 items-center gap-1.5 rounded-md border border-transparent px-1.5 text-xs text-muted-foreground transition-colors hover:border-input hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 focus-visible:border-input focus-visible:outline-none",
               triggerClassName
             )}
           />
