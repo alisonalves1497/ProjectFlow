@@ -31,16 +31,11 @@ const COLUNAS: { id: ColunaId; label: string }[] = [
 
 const COLUNAS_PADRAO: ColunaId[] = ["projeto", "documento", "dataVencimento", "prioridade"];
 
-const LARGURAS_PADRAO: Record<ColunaId, number> = {
-  projeto: 160,
-  documento: 160,
-  dataVencimento: 120,
-  prioridade: 110,
-  dataConclusao: 120,
-  dataInicial: 120,
-  estimativa: 110,
-  tempoRastreado: 110,
-};
+// Nome da tarefa tem largura própria generosa; as demais colunas visíveis, enquanto
+// ninguém arrastar nada, dividem igualmente o que sobra da tela (table-fixed distribui
+// automaticamente entre colunas sem width explícito) — só ganham um valor fixo em px aqui
+// (`larguras`) a partir do momento que a pessoa arrasta a borda de alguma.
+const LARGURA_NOME = 260;
 
 type PrioridadeValor = "urgente" | "alta" | "normal" | "baixa";
 
@@ -104,9 +99,10 @@ export function ListaPessoal({
   const [tarefas, setTarefas] = useState(tarefasIniciais);
   const [colunas, setColunas] = useState<ColunaId[]>(COLUNAS_PADRAO);
   const [altura, setAltura] = useState(ALTURA_PADRAO);
-  const [larguras, setLarguras] = useState<Record<ColunaId, number>>(LARGURAS_PADRAO);
+  const [larguras, setLarguras] = useState<Partial<Record<ColunaId, number>>>({});
   const [novaTarefa, setNovaTarefa] = useState("");
   const criandoRef = useRef(false);
+  const thRefs = useRef<Partial<Record<ColunaId, HTMLTableCellElement>>>({});
 
   useEffect(() => {
     try {
@@ -142,9 +138,13 @@ export function ListaPessoal({
 
   // Alça na borda ESQUERDA da coluna — arrastar pra direita empurra essa borda pra dentro e
   // ela encolhe, igual o mesmo esquema já usado em Meus Documentos/Lista de Documentos.
+  // Enquanto a coluna nunca foi arrastada ela não tem largura própria (`larguras[coluna]`
+  // indefinido) — o primeiro arrasto usa a largura atual renderizada (medida via ref) como
+  // ponto de partida, "congelando" a coluna num valor fixo a partir daí.
   function redimensionar(coluna: ColunaId, deltaX: number) {
     setLarguras((prev) => {
-      const proximo = { ...prev, [coluna]: Math.max(LARGURA_MINIMA, prev[coluna] - deltaX) };
+      const atual = prev[coluna] ?? thRefs.current[coluna]?.getBoundingClientRect().width ?? 120;
+      const proximo = { ...prev, [coluna]: Math.max(LARGURA_MINIMA, atual - deltaX) };
       try {
         localStorage.setItem(chaveLarguras(workspaceId), JSON.stringify(proximo));
       } catch {
@@ -260,13 +260,23 @@ export function ListaPessoal({
           <thead className="sticky top-0 bg-card">
             <tr className="border-b text-xs text-muted-foreground">
               <th className="w-8"></th>
-              <th className="px-2 py-1.5 text-left font-medium">Nome da tarefa</th>
+              <th className="px-2 py-1.5 text-left font-medium" style={{ width: LARGURA_NOME }}>
+                Nome da tarefa
+              </th>
               {/* Sempre na ordem canônica de COLUNAS (não na ordem de `colunas`, que é só o
                   conjunto ativado/desativado) — o corpo da tabela abaixo também renderiza
                   cada coluna nessa mesma ordem fixa, então cabeçalho e célula precisam
-                  concordar ou desalinham. */}
+                  concordar ou desalinham. Sem width explícito, table-fixed divide o que
+                  sobra igualmente entre as colunas ainda não arrastadas. */}
               {COLUNAS.filter((c) => colunas.includes(c.id)).map((c) => (
-                <th key={c.id} className="relative px-2 py-1.5 text-left font-medium" style={{ width: larguras[c.id] }}>
+                <th
+                  key={c.id}
+                  ref={(el) => {
+                    thRefs.current[c.id] = el ?? undefined;
+                  }}
+                  className="relative px-2 py-1.5 text-left font-medium"
+                  style={larguras[c.id] ? { width: larguras[c.id] } : undefined}
+                >
                   {c.label}
                   <ResizeHandle onResize={(d) => redimensionar(c.id, d)} />
                 </th>
