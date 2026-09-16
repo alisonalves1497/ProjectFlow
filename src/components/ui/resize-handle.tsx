@@ -4,7 +4,9 @@
 // do header anterior). Arrastar pra direita alarga a coluna à direita dela, pra esquerda
 // estreita — estado fica só com quem usa isso (normalmente local, não persiste entre
 // recarregamentos). Reaproveitada em qualquer tabela de documentos com colunas ajustáveis.
-export function ResizeHandle({ onResize }: { onResize: (deltaX: number) => void }) {
+// `curto`: risco pequeno centralizado em vez do traço indo até as bordas do cabeçalho —
+// melhor quando o cabeçalho é mais alto (ex: label que pode quebrar linha).
+export function ResizeHandle({ onResize, curto }: { onResize: (deltaX: number) => void; curto?: boolean }) {
   function onMouseDown(e: React.MouseEvent) {
     e.preventDefault();
     let ultimoX = e.clientX;
@@ -27,9 +29,9 @@ export function ResizeHandle({ onResize }: { onResize: (deltaX: number) => void 
       onMouseDown={onMouseDown}
       role="separator"
       aria-orientation="vertical"
-      className="absolute top-0 left-0 z-10 h-full w-2 -translate-x-1/2 cursor-col-resize touch-none select-none"
+      className="absolute top-0 left-0 z-10 flex h-full w-2 -translate-x-1/2 cursor-col-resize touch-none items-center justify-center select-none"
     >
-      <div className="mx-auto h-full w-px bg-border" />
+      <div className={curto ? "h-4 w-px rounded-full bg-border" : "mx-auto h-full w-px bg-border"} />
     </div>
   );
 }

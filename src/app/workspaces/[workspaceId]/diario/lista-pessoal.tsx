@@ -237,7 +237,7 @@ export function ListaPessoal({
                   key={c.id}
                   type="button"
                   onClick={() => alternarColuna(c.id)}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm hover:bg-accent"
                 >
                   <span
                     className={
@@ -260,7 +260,7 @@ export function ListaPessoal({
           <thead className="sticky top-0 bg-card">
             <tr className="border-b text-xs text-muted-foreground">
               <th className="w-8"></th>
-              <th className="px-2 py-1.5 text-left font-medium" style={{ width: LARGURA_NOME }}>
+              <th className="overflow-hidden px-2 py-1 text-left font-medium text-ellipsis whitespace-nowrap" style={{ width: LARGURA_NOME }}>
                 Nome da tarefa
               </th>
               {/* Sempre na ordem canônica de COLUNAS (não na ordem de `colunas`, que é só o
@@ -274,11 +274,11 @@ export function ListaPessoal({
                   ref={(el) => {
                     thRefs.current[c.id] = el ?? undefined;
                   }}
-                  className="relative px-2 py-1.5 text-left font-medium"
+                  className="relative overflow-hidden px-2 py-1 text-left font-medium text-ellipsis whitespace-nowrap"
                   style={larguras[c.id] ? { width: larguras[c.id] } : undefined}
                 >
                   {c.label}
-                  <ResizeHandle onResize={(d) => redimensionar(c.id, d)} />
+                  <ResizeHandle curto onResize={(d) => redimensionar(c.id, d)} />
                 </th>
               ))}
               <th className="w-8"></th>
@@ -289,7 +289,7 @@ export function ListaPessoal({
               const documentosDoProjeto = t.projetoId ? (documentosPorProjeto.get(t.projetoId) ?? []) : [];
               return (
                 <tr key={t.id} className="group/linha border-b last:border-b-0 hover:bg-accent/40">
-                  <td className="px-2 py-1.5">
+                  <td className="px-2 py-1">
                     <button
                       type="button"
                       onClick={() =>
@@ -301,7 +301,7 @@ export function ListaPessoal({
                       {t.status === "feito" ? <CircleCheck className="size-4 text-green-600 dark:text-green-500" /> : <Circle className="size-4" />}
                     </button>
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-2 py-1">
                     <input
                       defaultValue={t.nome}
                       onBlur={(e) => {
@@ -312,7 +312,7 @@ export function ListaPessoal({
                     />
                   </td>
                   {colunas.includes("projeto") && (
-                    <td className="px-2 py-1.5">
+                    <td className="px-2 py-1">
                       <SelectPopoverField
                         value={t.projetoId}
                         onChange={(projetoId) => {
@@ -330,7 +330,7 @@ export function ListaPessoal({
                     </td>
                   )}
                   {colunas.includes("documento") && (
-                    <td className="px-2 py-1.5">
+                    <td className="px-2 py-1">
                       <SelectPopoverField
                         value={t.documentoId}
                         onChange={(documentoId) => {
@@ -350,7 +350,7 @@ export function ListaPessoal({
                     </td>
                   )}
                   {colunas.includes("dataVencimento") && (
-                    <td className="px-2 py-1.5">
+                    <td className="px-2 py-1">
                       <DatePickerField
                         value={t.dataVencimento}
                         onChange={(v) => alterar(t.id, { dataVencimento: v }, { dataVencimento: v })}
@@ -358,12 +358,12 @@ export function ListaPessoal({
                     </td>
                   )}
                   {colunas.includes("prioridade") && (
-                    <td className="px-2 py-1.5">
+                    <td className="px-2 py-1">
                       <PrioridadeCampo valor={t.prioridade} onChange={(v) => alterar(t.id, { prioridade: v }, { prioridade: v })} />
                     </td>
                   )}
                   {colunas.includes("dataConclusao") && (
-                    <td className="px-2 py-1.5">
+                    <td className="px-2 py-1">
                       <DatePickerField
                         value={paraDataISO(t.concluidaEm)}
                         onChange={(v) =>
@@ -373,12 +373,12 @@ export function ListaPessoal({
                     </td>
                   )}
                   {colunas.includes("dataInicial") && (
-                    <td className="px-2 py-1.5">
+                    <td className="px-2 py-1">
                       <DatePickerField value={t.dataInicial} onChange={(v) => alterar(t.id, { dataInicial: v }, { dataInicial: v })} />
                     </td>
                   )}
                   {colunas.includes("estimativa") && (
-                    <td className="px-2 py-1.5">
+                    <td className="px-2 py-1">
                       <input
                         type="number"
                         step="0.5"
@@ -394,7 +394,7 @@ export function ListaPessoal({
                     </td>
                   )}
                   {colunas.includes("tempoRastreado") && (
-                    <td className="px-2 py-1.5">
+                    <td className="px-2 py-1">
                       <input
                         type="number"
                         step="0.5"
@@ -409,7 +409,7 @@ export function ListaPessoal({
                       />
                     </td>
                   )}
-                  <td className="px-2 py-1.5">
+                  <td className="px-2 py-1">
                     <button
                       type="button"
                       onClick={() => excluir(t.id)}
@@ -423,10 +423,10 @@ export function ListaPessoal({
               );
             })}
             <tr>
-              <td className="px-2 py-1.5 text-muted-foreground">
+              <td className="px-2 py-1 text-muted-foreground">
                 <Plus className="size-3.5" />
               </td>
-              <td className="px-2 py-1.5" colSpan={colunas.length + 2}>
+              <td className="px-2 py-1" colSpan={colunas.length + 2}>
                 <input
                   value={novaTarefa}
                   onChange={(e) => setNovaTarefa(e.target.value)}

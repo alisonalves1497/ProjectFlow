@@ -77,7 +77,7 @@ export function DatePickerField({ value, onChange }: { value: string | null; onC
         render={
           <button
             type="button"
-            className="flex h-7 items-center gap-1.5 rounded-md border border-transparent px-1.5 text-xs text-muted-foreground transition-colors hover:border-input hover:bg-accent focus-visible:border-input focus-visible:outline-none"
+            className="flex h-6 items-center gap-1.5 rounded-md border border-transparent px-1.5 text-xs text-muted-foreground transition-colors hover:border-input hover:bg-accent focus-visible:border-input focus-visible:outline-none"
           />
         }
       >
