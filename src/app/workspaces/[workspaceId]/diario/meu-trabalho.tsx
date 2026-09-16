@@ -131,14 +131,14 @@ export function MeuTrabalho({ workspaceId, dados }: { workspaceId: string; dados
             <TabsTrigger value="feito">Feito</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="pendente" style={{ height: altura }} className="overflow-y-auto pb-2">
+          <TabsContent value="pendente" style={{ height: altura, flex: "none" }} className="overflow-y-auto pb-2">
             <Grupo titulo="Hoje" itens={dados.pendente.hoje} tom="hoje" defaultAberto={dados.pendente.hoje.length > 0} />
             <Grupo titulo="Em atraso" itens={dados.pendente.emAtraso} tom="atraso" defaultAberto={dados.pendente.emAtraso.length > 0} />
             <Grupo titulo="Próximo" itens={dados.pendente.proximo} tom="proximo" defaultAberto={dados.pendente.proximo.length > 0} />
             <Grupo titulo="Não programado" itens={dados.pendente.naoProgramado} tom="neutro" defaultAberto={false} />
           </TabsContent>
 
-          <TabsContent value="feito" style={{ height: altura }} className="overflow-y-auto pb-2">
+          <TabsContent value="feito" style={{ height: altura, flex: "none" }} className="overflow-y-auto pb-2">
             {dados.feito.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
                 <CircleCheck className="size-6 text-primary/30" />

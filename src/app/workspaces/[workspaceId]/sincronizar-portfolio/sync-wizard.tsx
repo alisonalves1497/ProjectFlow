@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { STATUS_LABELS, type StatusDocumento } from "@/lib/statusGraph";
 import {
@@ -229,13 +230,16 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
   }
 
   const resumoPorObra = useMemo(() => {
-    const mapa = new Map<string, { contrato: string; sistema: string; atualizar: number; criar: number }>();
+    const mapa = new Map<string, { contrato: string; sistema: string; atualizar: number; criar: number; codigosCriar: string[] }>();
     for (const l of linhas) {
       const chave = chaveGrupo(l.contrato, l.sistema);
-      if (!mapa.has(chave)) mapa.set(chave, { contrato: l.contrato, sistema: l.sistema, atualizar: 0, criar: 0 });
+      if (!mapa.has(chave)) mapa.set(chave, { contrato: l.contrato, sistema: l.sistema, atualizar: 0, criar: 0, codigosCriar: [] });
       const item = mapa.get(chave)!;
       if (l.documentoIdExistente) item.atualizar++;
-      else item.criar++;
+      else {
+        item.criar++;
+        item.codigosCriar.push(l.codigo);
+      }
     }
     return [...mapa.values()];
   }, [linhas]);
@@ -362,15 +366,18 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
                     <TableCell className="text-right text-sm">{o.atualizar}</TableCell>
                     <TableCell>
                       {o.criar > 0 ? (
-                        <label className="flex items-center gap-1.5 text-xs">
-                          <input
-                            type="checkbox"
-                            className="checkbox-custom"
-                            checked={obraCriarFlags[chave] ?? false}
-                            onChange={(e) => setObraCriarFlags((prev) => ({ ...prev, [chave]: e.target.checked }))}
-                          />
-                          Criar {o.criar} documento{o.criar !== 1 ? "s" : ""} novo{o.criar !== 1 ? "s" : ""}
-                        </label>
+                        <Tooltip>
+                          <TooltipTrigger render={<label className="flex w-fit items-center gap-1.5 text-xs" />}>
+                            <input
+                              type="checkbox"
+                              className="checkbox-custom"
+                              checked={obraCriarFlags[chave] ?? false}
+                              onChange={(e) => setObraCriarFlags((prev) => ({ ...prev, [chave]: e.target.checked }))}
+                            />
+                            Criar {o.criar} documento{o.criar !== 1 ? "s" : ""} novo{o.criar !== 1 ? "s" : ""}
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-80 font-mono">{o.codigosCriar.join(", ")}</TooltipContent>
+                        </Tooltip>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
