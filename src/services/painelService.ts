@@ -176,6 +176,7 @@ export type MeusDocumentosLinha = {
   temRevisao: boolean;
   gedOrigem: string | null;
   emAtraso: boolean;
+  fechado: boolean;
 };
 
 // Todos os documentos atribuídos ao usuário, qualquer status (inclusive fechado/cancelado) —
@@ -238,6 +239,7 @@ export async function getMeusDocumentos(workspaceId: string, userId: string): Pr
         temRevisao: d.currentRevisionId !== null,
         gedOrigem: d.gedOrigem,
         emAtraso: !fechado && efetiva.data !== null && efetiva.data < hoje,
+        fechado,
       };
     })
     .sort((a, b) => a.codigoCompleto.localeCompare(b.codigoCompleto));

@@ -1,24 +1,28 @@
-import { pgTable, text, integer, timestamp, date, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, date, pgEnum } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 import { users } from "./auth";
+import { projetos } from "./hierarquia";
 
-// Grade de horas do "Meu Espaço" — uma célula por dia da semana (data concreta, não só
-// "segunda/terça") x hora (8 a 17, representando o intervalo horaInicio–horaInicio+1).
-// Preenchimento livre (texto), não vinculado a um Projeto/Obra formal do sistema — é comum
-// a pessoa descrever "disciplina + obra" junto (ex: "Estrutural do Cafundó do Judas"), o que
-// não mapeia 1:1 pra nenhuma entidade existente. Estritamente privado, igual ao antigo
-// diário: toda query filtra por userId, sem exceção pra administrador.
-export const diarioHoras = pgTable(
-  "diario_horas",
-  {
-    id: text("id").primaryKey(),
-    workspaceId: text("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    data: date("data").notNull(),
-    horaInicio: integer("hora_inicio").notNull(),
-    projeto: text("projeto").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [unique().on(table.userId, table.data, table.horaInicio)]
-);
+export const prioridadeTarefaPessoalEnum = pgEnum("prioridade_tarefa_pessoal", ["urgente", "alta", "normal", "baixa"]);
+export const statusTarefaPessoalEnum = pgEnum("status_tarefa_pessoal", ["pendente", "feito"]);
+
+// "Lista pessoal" do Meu Espaço — tarefas avulsas, sem vínculo obrigatório com nada do
+// sistema (inspirado na "Minhas tarefas" do ClickUp). Estritamente privada: toda query
+// filtra por userId, sem exceção pra administrador. Vínculo com Projeto é opcional, só serve
+// pra somar tempo trabalhado naquele projeto (tempoRastreadoMinutos).
+export const tarefasPessoais = pgTable("tarefas_pessoais", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  nome: text("nome").notNull(),
+  status: statusTarefaPessoalEnum("status").notNull().default("pendente"),
+  dataVencimento: date("data_vencimento"),
+  dataInicial: date("data_inicial"),
+  prioridade: prioridadeTarefaPessoalEnum("prioridade"),
+  projetoId: text("projeto_id").references(() => projetos.id, { onDelete: "set null" }),
+  estimativaMinutos: integer("estimativa_minutos"),
+  tempoRastreadoMinutos: integer("tempo_rastreado_minutos"),
+  concluidaEm: timestamp("concluida_em", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
