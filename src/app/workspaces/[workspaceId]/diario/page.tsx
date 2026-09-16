@@ -37,13 +37,11 @@ export default async function DiarioPage({ params }: Params) {
         {saudacao()}, {primeiroNome}
       </h1>
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        <div className="space-y-6 xl:col-span-2">
-          <MeuTrabalho workspaceId={workspaceId} dados={meuTrabalho} />
-          <ListaPessoal workspaceId={workspaceId} tarefasIniciais={tarefas} projetos={projetos.map((p) => ({ id: p.id, name: p.name }))} />
-        </div>
+      <div className="space-y-6">
+        <MeuTrabalho workspaceId={workspaceId} dados={meuTrabalho} />
+        <ListaPessoal workspaceId={workspaceId} tarefasIniciais={tarefas} projetos={projetos.map((p) => ({ id: p.id, name: p.name }))} />
 
-        <Card className="self-start">
+        <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
               <Clock className="size-4 text-primary" />
@@ -54,7 +52,7 @@ export default async function DiarioPage({ params }: Params) {
             {horasAcumuladas.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhuma hora registrada ainda.</p>
             ) : (
-              <ul className="space-y-2">
+              <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {horasAcumuladas.map((h) => (
                   <li key={h.projeto} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
                     <span className="min-w-0 truncate">{h.projeto}</span>
