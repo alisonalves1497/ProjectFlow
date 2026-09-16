@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { Clock } from "lucide-react";
 import { getMeuTrabalho, listTarefasPessoais, getHorasAcumuladasPorProjeto } from "@/services/diarioService";
+import { getMeusDocumentos } from "@/services/painelService";
 import { listProjetos } from "@/services/projetoService";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { MeuTrabalho } from "./meu-trabalho";
@@ -22,11 +23,12 @@ export default async function DiarioPage({ params }: Params) {
 
   const { workspaceId } = await params;
 
-  const [meuTrabalho, tarefas, horasAcumuladas, projetos] = await Promise.all([
+  const [meuTrabalho, tarefas, horasAcumuladas, projetos, meusDocumentos] = await Promise.all([
     getMeuTrabalho(workspaceId, session.user.id),
     listTarefasPessoais(workspaceId, session.user.id),
     getHorasAcumuladasPorProjeto(workspaceId, session.user.id),
     listProjetos(workspaceId),
+    getMeusDocumentos(workspaceId, session.user.id),
   ]);
 
   const primeiroNome = (session.user.name ?? session.user.email ?? "").split(" ")[0];
@@ -39,7 +41,12 @@ export default async function DiarioPage({ params }: Params) {
 
       <div className="space-y-6">
         <MeuTrabalho workspaceId={workspaceId} dados={meuTrabalho} />
-        <ListaPessoal workspaceId={workspaceId} tarefasIniciais={tarefas} projetos={projetos.map((p) => ({ id: p.id, name: p.name }))} />
+        <ListaPessoal
+          workspaceId={workspaceId}
+          tarefasIniciais={tarefas}
+          projetos={projetos.map((p) => ({ id: p.id, name: p.name }))}
+          documentosAtribuidos={meusDocumentos.map((d) => ({ id: d.id, codigo: d.codigoCompleto, projetoId: d.projetoId }))}
+        />
 
         <Card>
           <CardHeader>

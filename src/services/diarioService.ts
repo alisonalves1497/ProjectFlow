@@ -1,6 +1,6 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { tarefasPessoais, projetos } from "@/db/schema";
+import { tarefasPessoais, projetos, documentos } from "@/db/schema";
 import { badRequest, forbidden } from "@/lib/errors";
 import { newId } from "@/lib/id";
 import { getMeusDocumentos } from "./painelService";
@@ -14,6 +14,8 @@ export type TarefaPessoal = {
   prioridade: "urgente" | "alta" | "normal" | "baixa" | null;
   projetoId: string | null;
   projetoNome: string | null;
+  documentoId: string | null;
+  documentoCodigo: string | null;
   estimativaMinutos: number | null;
   tempoRastreadoMinutos: number | null;
   createdAt: Date;
@@ -33,6 +35,8 @@ export async function listTarefasPessoais(workspaceId: string, userId: string): 
       prioridade: tarefasPessoais.prioridade,
       projetoId: tarefasPessoais.projetoId,
       projetoNome: projetos.name,
+      documentoId: tarefasPessoais.documentoId,
+      documentoCodigo: documentos.codigoCompleto,
       estimativaMinutos: tarefasPessoais.estimativaMinutos,
       tempoRastreadoMinutos: tarefasPessoais.tempoRastreadoMinutos,
       createdAt: tarefasPessoais.createdAt,
@@ -40,6 +44,7 @@ export async function listTarefasPessoais(workspaceId: string, userId: string): 
     })
     .from(tarefasPessoais)
     .leftJoin(projetos, eq(projetos.id, tarefasPessoais.projetoId))
+    .leftJoin(documentos, eq(documentos.id, tarefasPessoais.documentoId))
     .where(and(eq(tarefasPessoais.workspaceId, workspaceId), eq(tarefasPessoais.userId, userId)))
     .orderBy(desc(tarefasPessoais.createdAt));
 }
@@ -60,8 +65,12 @@ export type PatchTarefaPessoal = {
   status?: "pendente" | "feito";
   dataVencimento?: string | null;
   dataInicial?: string | null;
+  // Data (não hora) de conclusão — definir uma data marca a tarefa como feita; limpar
+  // devolve pra pendente. Fica em sincronia com `status` (ver updateTarefaPessoal).
+  concluidaEm?: string | null;
   prioridade?: "urgente" | "alta" | "normal" | "baixa" | null;
   projetoId?: string | null;
+  documentoId?: string | null;
   estimativaMinutos?: number | null;
   tempoRastreadoMinutos?: number | null;
 };
@@ -80,10 +89,15 @@ export async function updateTarefaPessoal(workspaceId: string, userId: string, t
     set.status = patch.status;
     set.concluidaEm = patch.status === "feito" ? new Date() : null;
   }
+  if (patch.concluidaEm !== undefined) {
+    set.concluidaEm = patch.concluidaEm ? new Date(`${patch.concluidaEm}T12:00:00`) : null;
+    set.status = patch.concluidaEm ? "feito" : "pendente";
+  }
   if (patch.dataVencimento !== undefined) set.dataVencimento = patch.dataVencimento;
   if (patch.dataInicial !== undefined) set.dataInicial = patch.dataInicial;
   if (patch.prioridade !== undefined) set.prioridade = patch.prioridade;
   if (patch.projetoId !== undefined) set.projetoId = patch.projetoId;
+  if (patch.documentoId !== undefined) set.documentoId = patch.documentoId;
   if (patch.estimativaMinutos !== undefined) set.estimativaMinutos = patch.estimativaMinutos;
   if (patch.tempoRastreadoMinutos !== undefined) set.tempoRastreadoMinutos = patch.tempoRastreadoMinutos;
 

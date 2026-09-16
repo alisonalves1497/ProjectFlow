@@ -1,47 +1,55 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Check, Circle, CircleCheck, Trash2, Settings2, ClipboardList, Plus } from "lucide-react";
+import { Check, Circle, CircleCheck, Trash2, Settings2, ClipboardList, Plus, Flag, FileText } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardAction, CardContent } from "@/components/ui/card";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { ResizeHandleVertical } from "@/components/ui/resize-handle-vertical";
+import { ResizeHandle } from "@/components/ui/resize-handle";
+import { DatePickerField } from "@/components/ui/date-picker-field";
+import { SelectPopoverField } from "@/components/ui/select-popover-field";
 import { criarTarefaAction, atualizarTarefaAction, excluirTarefaAction } from "./actions";
 import type { TarefaPessoal, PatchTarefaPessoal } from "@/services/diarioService";
 
 const ALTURA_PADRAO = 260;
 const ALTURA_MINIMA = 100;
+const LARGURA_MINIMA = 60;
 
-type ColunaId = "projeto" | "dataVencimento" | "prioridade" | "dataCriada" | "dataConclusao" | "dataInicial" | "estimativa" | "tempoRastreado";
+type ColunaId = "projeto" | "documento" | "dataVencimento" | "prioridade" | "dataConclusao" | "dataInicial" | "estimativa" | "tempoRastreado";
 
 const COLUNAS: { id: ColunaId; label: string }[] = [
   { id: "projeto", label: "Projeto" },
+  { id: "documento", label: "Documento" },
   { id: "dataVencimento", label: "Data de vencimento" },
   { id: "prioridade", label: "Prioridade" },
-  { id: "dataCriada", label: "Data criada" },
   { id: "dataConclusao", label: "Data de conclusão" },
   { id: "dataInicial", label: "Data inicial" },
   { id: "estimativa", label: "Estimativa de tempo" },
   { id: "tempoRastreado", label: "Tempo rastreado" },
 ];
 
-const COLUNAS_PADRAO: ColunaId[] = ["dataVencimento", "prioridade", "dataCriada"];
+const COLUNAS_PADRAO: ColunaId[] = ["projeto", "documento", "dataVencimento", "prioridade"];
 
-const PRIORIDADES = [
-  { value: "", label: "Sem prioridade" },
-  { value: "urgente", label: "Urgente" },
-  { value: "alta", label: "Alta" },
-  { value: "normal", label: "Normal" },
-  { value: "baixa", label: "Baixa" },
-] as const;
-
-const COR_PRIORIDADE: Record<string, string> = {
-  urgente: "bg-destructive/10 text-destructive",
-  alta: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400",
-  normal: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-400",
-  baixa: "bg-muted text-muted-foreground",
-  "": "text-muted-foreground",
+const LARGURAS_PADRAO: Record<ColunaId, number> = {
+  projeto: 160,
+  documento: 160,
+  dataVencimento: 120,
+  prioridade: 110,
+  dataConclusao: 120,
+  dataInicial: 120,
+  estimativa: 110,
+  tempoRastreado: 110,
 };
+
+type PrioridadeValor = "urgente" | "alta" | "normal" | "baixa";
+
+const PRIORIDADES: { value: PrioridadeValor; label: string; cor: string }[] = [
+  { value: "urgente", label: "Urgente", cor: "text-red-500" },
+  { value: "alta", label: "Alta", cor: "text-amber-500" },
+  { value: "normal", label: "Normal", cor: "text-blue-500" },
+  { value: "baixa", label: "Baixa", cor: "text-muted-foreground" },
+];
 
 function chaveColunas(workspaceId: string): string {
   return `lista-pessoal-colunas-${workspaceId}`;
@@ -49,11 +57,8 @@ function chaveColunas(workspaceId: string): string {
 function chaveAltura(workspaceId: string): string {
   return `lista-pessoal-altura-${workspaceId}`;
 }
-
-function formatarDataCurta(valor: string | Date | null): string {
-  if (!valor) return "";
-  const iso = typeof valor === "string" ? valor : valor.toISOString().slice(0, 10);
-  return new Date(`${iso.slice(0, 10)}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+function chaveLarguras(workspaceId: string): string {
+  return `lista-pessoal-larguras-${workspaceId}`;
 }
 
 function minutosParaHoras(minutos: number | null): string {
@@ -61,18 +66,45 @@ function minutosParaHoras(minutos: number | null): string {
   return String(Math.round((minutos / 60) * 10) / 10);
 }
 
+function paraDataISO(valor: Date | string | null): string | null {
+  if (!valor) return null;
+  const iso = typeof valor === "string" ? valor : valor.toISOString();
+  return iso.slice(0, 10);
+}
+
+function PrioridadeCampo({ valor, onChange }: { valor: PrioridadeValor | null; onChange: (v: PrioridadeValor | null) => void }) {
+  const atual = PRIORIDADES.find((p) => p.value === valor);
+  return (
+    <SelectPopoverField
+      value={valor}
+      onChange={(v) => onChange(v as PrioridadeValor | null)}
+      width="w-40"
+      triggerClassName="w-fit px-1.5"
+      triggerContent={<Flag className={`size-3.5 ${atual?.cor ?? ""}`} fill={atual ? "currentColor" : "none"} />}
+      options={PRIORIDADES.map((p) => ({
+        value: p.value,
+        label: p.label,
+        icon: <Flag className={`size-3.5 ${p.cor}`} fill="currentColor" />,
+      }))}
+    />
+  );
+}
+
 export function ListaPessoal({
   workspaceId,
   tarefasIniciais,
   projetos,
+  documentosAtribuidos,
 }: {
   workspaceId: string;
   tarefasIniciais: TarefaPessoal[];
   projetos: { id: string; name: string }[];
+  documentosAtribuidos: { id: string; codigo: string; projetoId: string }[];
 }) {
   const [tarefas, setTarefas] = useState(tarefasIniciais);
   const [colunas, setColunas] = useState<ColunaId[]>(COLUNAS_PADRAO);
   const [altura, setAltura] = useState(ALTURA_PADRAO);
+  const [larguras, setLarguras] = useState<Record<ColunaId, number>>(LARGURAS_PADRAO);
   const [novaTarefa, setNovaTarefa] = useState("");
   const criandoRef = useRef(false);
 
@@ -86,6 +118,10 @@ export function ListaPessoal({
       const brutoAltura = localStorage.getItem(chaveAltura(workspaceId));
       if (brutoAltura) {
         setAltura(Math.max(ALTURA_MINIMA, Number(brutoAltura)));
+      }
+      const brutoLarguras = localStorage.getItem(chaveLarguras(workspaceId));
+      if (brutoLarguras) {
+        setLarguras((prev) => ({ ...prev, ...JSON.parse(brutoLarguras) }));
       }
     } catch {
       // sem persistência local se localStorage falhar
@@ -104,7 +140,21 @@ export function ListaPessoal({
     });
   }
 
-  const onResize = useCallback(
+  // Alça na borda ESQUERDA da coluna — arrastar pra direita empurra essa borda pra dentro e
+  // ela encolhe, igual o mesmo esquema já usado em Meus Documentos/Lista de Documentos.
+  function redimensionar(coluna: ColunaId, deltaX: number) {
+    setLarguras((prev) => {
+      const proximo = { ...prev, [coluna]: Math.max(LARGURA_MINIMA, prev[coluna] - deltaX) };
+      try {
+        localStorage.setItem(chaveLarguras(workspaceId), JSON.stringify(proximo));
+      } catch {
+        // sem persistência local se localStorage falhar
+      }
+      return proximo;
+    });
+  }
+
+  const onResizeAltura = useCallback(
     (deltaY: number) => {
       setAltura((prev) => {
         const proximo = Math.max(ALTURA_MINIMA, prev + deltaY);
@@ -157,6 +207,15 @@ export function ListaPessoal({
     setTarefas((prev) => [res.tarefa, ...prev]);
   }
 
+  const documentosPorProjeto = useMemo(() => {
+    const mapa = new Map<string, { id: string; codigo: string }[]>();
+    for (const d of documentosAtribuidos) {
+      if (!mapa.has(d.projetoId)) mapa.set(d.projetoId, []);
+      mapa.get(d.projetoId)!.push({ id: d.id, codigo: d.codigo });
+    }
+    return mapa;
+  }, [documentosAtribuidos]);
+
   return (
     <Card className="gap-0 pb-0">
       <CardHeader className="border-b pb-3">
@@ -197,156 +256,158 @@ export function ListaPessoal({
       </CardHeader>
 
       <CardContent style={{ height: altura }} className="overflow-auto px-0 pt-2">
-        <table className="w-full text-sm">
+        <table className="w-full table-fixed text-sm">
           <thead className="sticky top-0 bg-card">
             <tr className="border-b text-xs text-muted-foreground">
               <th className="w-8"></th>
               <th className="px-2 py-1.5 text-left font-medium">Nome da tarefa</th>
-              {colunas.includes("projeto") && <th className="px-2 py-1.5 text-left font-medium">Projeto</th>}
-              {colunas.includes("dataVencimento") && <th className="px-2 py-1.5 text-left font-medium">Vencimento</th>}
-              {colunas.includes("prioridade") && <th className="px-2 py-1.5 text-left font-medium">Prioridade</th>}
-              {colunas.includes("dataCriada") && <th className="px-2 py-1.5 text-left font-medium">Criada</th>}
-              {colunas.includes("dataConclusao") && <th className="px-2 py-1.5 text-left font-medium">Conclusão</th>}
-              {colunas.includes("dataInicial") && <th className="px-2 py-1.5 text-left font-medium">Início</th>}
-              {colunas.includes("estimativa") && <th className="px-2 py-1.5 text-left font-medium">Estimativa (h)</th>}
-              {colunas.includes("tempoRastreado") && <th className="px-2 py-1.5 text-left font-medium">Tempo (h)</th>}
+              {colunas.map((c) => (
+                <th key={c} className="relative px-2 py-1.5 text-left font-medium" style={{ width: larguras[c] }}>
+                  {COLUNAS.find((x) => x.id === c)?.label}
+                  <ResizeHandle onResize={(d) => redimensionar(c, d)} />
+                </th>
+              ))}
               <th className="w-8"></th>
             </tr>
           </thead>
           <tbody>
-            {tarefas.map((t) => (
-              <tr key={t.id} className="group/linha border-b last:border-b-0 hover:bg-accent/40">
-                <td className="px-2 py-1.5">
-                  <button
-                    type="button"
-                    onClick={() => alterar(t.id, { status: t.status === "feito" ? "pendente" : "feito" }, { status: t.status === "feito" ? "pendente" : "feito" })}
-                    title={t.status === "feito" ? "Marcar como pendente" : "Marcar como feito"}
-                    className="text-muted-foreground hover:text-primary"
-                  >
-                    {t.status === "feito" ? <CircleCheck className="size-4 text-green-600 dark:text-green-500" /> : <Circle className="size-4" />}
-                  </button>
-                </td>
-                <td className="px-2 py-1.5">
-                  <input
-                    defaultValue={t.nome}
-                    onBlur={(e) => {
-                      if (e.target.value.trim() && e.target.value !== t.nome) alterar(t.id, { nome: e.target.value }, { nome: e.target.value.trim() });
-                    }}
-                    onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-                    className={"w-full bg-transparent outline-none " + (t.status === "feito" ? "text-muted-foreground line-through" : "")}
-                  />
-                </td>
-                {colunas.includes("projeto") && (
+            {tarefas.map((t) => {
+              const documentosDoProjeto = t.projetoId ? (documentosPorProjeto.get(t.projetoId) ?? []) : [];
+              return (
+                <tr key={t.id} className="group/linha border-b last:border-b-0 hover:bg-accent/40">
                   <td className="px-2 py-1.5">
-                    <select
-                      defaultValue={t.projetoId ?? ""}
-                      onChange={(e) => {
-                        const projetoId = e.target.value || null;
-                        const projeto = projetos.find((p) => p.id === projetoId);
-                        alterar(t.id, { projetoId }, { projetoId, projetoNome: projeto?.name ?? null });
-                      }}
-                      className="w-full bg-transparent text-xs outline-none"
-                    >
-                      <option value="">—</option>
-                      {projetos.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                )}
-                {colunas.includes("dataVencimento") && (
-                  <td className="px-2 py-1.5">
-                    <input
-                      type="date"
-                      defaultValue={t.dataVencimento ?? ""}
-                      onChange={(e) => alterar(t.id, { dataVencimento: e.target.value || null }, { dataVencimento: e.target.value || null })}
-                      className={
-                        "bg-transparent text-xs outline-none " +
-                        (t.status === "pendente" && t.dataVencimento && t.dataVencimento < new Date().toISOString().slice(0, 10)
-                          ? "text-destructive font-medium"
-                          : "")
+                    <button
+                      type="button"
+                      onClick={() =>
+                        alterar(t.id, { status: t.status === "feito" ? "pendente" : "feito" }, { status: t.status === "feito" ? "pendente" : "feito" })
                       }
-                    />
-                  </td>
-                )}
-                {colunas.includes("prioridade") && (
-                  <td className="px-2 py-1.5">
-                    <select
-                      defaultValue={t.prioridade ?? ""}
-                      onChange={(e) => {
-                        const prioridade = (e.target.value || null) as PatchTarefaPessoal["prioridade"];
-                        alterar(t.id, { prioridade }, { prioridade });
-                      }}
-                      className={`rounded-md border-none px-1.5 py-0.5 text-xs font-medium outline-none ${COR_PRIORIDADE[t.prioridade ?? ""]}`}
+                      title={t.status === "feito" ? "Marcar como pendente" : "Marcar como feito"}
+                      className="text-muted-foreground hover:text-primary"
                     >
-                      {PRIORIDADES.map((p) => (
-                        <option key={p.value} value={p.value}>
-                          {p.label}
-                        </option>
-                      ))}
-                    </select>
+                      {t.status === "feito" ? <CircleCheck className="size-4 text-green-600 dark:text-green-500" /> : <Circle className="size-4" />}
+                    </button>
                   </td>
-                )}
-                {colunas.includes("dataCriada") && <td className="px-2 py-1.5 text-xs text-muted-foreground">{formatarDataCurta(t.createdAt)}</td>}
-                {colunas.includes("dataConclusao") && (
-                  <td className="px-2 py-1.5 text-xs text-muted-foreground">{t.concluidaEm ? formatarDataCurta(t.concluidaEm) : "—"}</td>
-                )}
-                {colunas.includes("dataInicial") && (
                   <td className="px-2 py-1.5">
                     <input
-                      type="date"
-                      defaultValue={t.dataInicial ?? ""}
-                      onChange={(e) => alterar(t.id, { dataInicial: e.target.value || null }, { dataInicial: e.target.value || null })}
-                      className="bg-transparent text-xs outline-none"
-                    />
-                  </td>
-                )}
-                {colunas.includes("estimativa") && (
-                  <td className="px-2 py-1.5">
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      defaultValue={minutosParaHoras(t.estimativaMinutos)}
+                      defaultValue={t.nome}
                       onBlur={(e) => {
-                        const horas = e.target.value === "" ? null : Number(e.target.value);
-                        const minutos = horas === null ? null : Math.round(horas * 60);
-                        alterar(t.id, { estimativaMinutos: minutos }, { estimativaMinutos: minutos });
+                        if (e.target.value.trim() && e.target.value !== t.nome) alterar(t.id, { nome: e.target.value }, { nome: e.target.value.trim() });
                       }}
-                      className="w-16 bg-transparent text-xs outline-none"
+                      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                      className={"w-full bg-transparent outline-none " + (t.status === "feito" ? "text-muted-foreground line-through" : "")}
                     />
                   </td>
-                )}
-                {colunas.includes("tempoRastreado") && (
+                  {colunas.includes("projeto") && (
+                    <td className="px-2 py-1.5">
+                      <SelectPopoverField
+                        value={t.projetoId}
+                        onChange={(projetoId) => {
+                          const projeto = projetos.find((p) => p.id === projetoId);
+                          // Trocar de projeto invalida o documento vinculado anterior (era de outro projeto).
+                          alterar(
+                            t.id,
+                            { projetoId, documentoId: null },
+                            { projetoId, projetoNome: projeto?.name ?? null, documentoId: null, documentoCodigo: null }
+                          );
+                        }}
+                        triggerContent={<span className="min-w-0 truncate">{t.projetoNome ?? "—"}</span>}
+                        options={projetos.map((p) => ({ value: p.id, label: p.name }))}
+                      />
+                    </td>
+                  )}
+                  {colunas.includes("documento") && (
+                    <td className="px-2 py-1.5">
+                      <SelectPopoverField
+                        value={t.documentoId}
+                        onChange={(documentoId) => {
+                          const doc = documentosDoProjeto.find((d) => d.id === documentoId);
+                          alterar(t.id, { documentoId }, { documentoId, documentoCodigo: doc?.codigo ?? null });
+                        }}
+                        disabled={!t.projetoId}
+                        emptyMessage={t.projetoId ? "Nenhum documento atribuído a você nesse projeto." : "Escolha um projeto primeiro."}
+                        triggerContent={
+                          <span className="flex min-w-0 items-center gap-1">
+                            <FileText className="size-3.5 shrink-0" />
+                            <span className="min-w-0 truncate font-mono">{t.documentoCodigo ?? "—"}</span>
+                          </span>
+                        }
+                        options={documentosDoProjeto.map((d) => ({ value: d.id, label: d.codigo }))}
+                      />
+                    </td>
+                  )}
+                  {colunas.includes("dataVencimento") && (
+                    <td className="px-2 py-1.5">
+                      <DatePickerField
+                        value={t.dataVencimento}
+                        onChange={(v) => alterar(t.id, { dataVencimento: v }, { dataVencimento: v })}
+                      />
+                    </td>
+                  )}
+                  {colunas.includes("prioridade") && (
+                    <td className="px-2 py-1.5">
+                      <PrioridadeCampo valor={t.prioridade} onChange={(v) => alterar(t.id, { prioridade: v }, { prioridade: v })} />
+                    </td>
+                  )}
+                  {colunas.includes("dataConclusao") && (
+                    <td className="px-2 py-1.5">
+                      <DatePickerField
+                        value={paraDataISO(t.concluidaEm)}
+                        onChange={(v) =>
+                          alterar(t.id, { concluidaEm: v }, { concluidaEm: v ? new Date(`${v}T12:00:00`) : null, status: v ? "feito" : "pendente" })
+                        }
+                      />
+                    </td>
+                  )}
+                  {colunas.includes("dataInicial") && (
+                    <td className="px-2 py-1.5">
+                      <DatePickerField value={t.dataInicial} onChange={(v) => alterar(t.id, { dataInicial: v }, { dataInicial: v })} />
+                    </td>
+                  )}
+                  {colunas.includes("estimativa") && (
+                    <td className="px-2 py-1.5">
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        defaultValue={minutosParaHoras(t.estimativaMinutos)}
+                        onBlur={(e) => {
+                          const horas = e.target.value === "" ? null : Number(e.target.value);
+                          const minutos = horas === null ? null : Math.round(horas * 60);
+                          alterar(t.id, { estimativaMinutos: minutos }, { estimativaMinutos: minutos });
+                        }}
+                        className="w-16 bg-transparent text-xs outline-none"
+                      />
+                    </td>
+                  )}
+                  {colunas.includes("tempoRastreado") && (
+                    <td className="px-2 py-1.5">
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        defaultValue={minutosParaHoras(t.tempoRastreadoMinutos)}
+                        onBlur={(e) => {
+                          const horas = e.target.value === "" ? null : Number(e.target.value);
+                          const minutos = horas === null ? null : Math.round(horas * 60);
+                          alterar(t.id, { tempoRastreadoMinutos: minutos }, { tempoRastreadoMinutos: minutos });
+                        }}
+                        className="w-16 bg-transparent text-xs outline-none"
+                      />
+                    </td>
+                  )}
                   <td className="px-2 py-1.5">
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      defaultValue={minutosParaHoras(t.tempoRastreadoMinutos)}
-                      onBlur={(e) => {
-                        const horas = e.target.value === "" ? null : Number(e.target.value);
-                        const minutos = horas === null ? null : Math.round(horas * 60);
-                        alterar(t.id, { tempoRastreadoMinutos: minutos }, { tempoRastreadoMinutos: minutos });
-                      }}
-                      className="w-16 bg-transparent text-xs outline-none"
-                    />
+                    <button
+                      type="button"
+                      onClick={() => excluir(t.id)}
+                      className="text-muted-foreground opacity-0 hover:text-destructive group-hover/linha:opacity-100"
+                      title="Excluir"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
                   </td>
-                )}
-                <td className="px-2 py-1.5">
-                  <button
-                    type="button"
-                    onClick={() => excluir(t.id)}
-                    className="text-muted-foreground opacity-0 hover:text-destructive group-hover/linha:opacity-100"
-                    title="Excluir"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
-                </td>
-              </tr>
-            ))}
+                </tr>
+              );
+            })}
             <tr>
               <td className="px-2 py-1.5 text-muted-foreground">
                 <Plus className="size-3.5" />
@@ -366,7 +427,7 @@ export function ListaPessoal({
         </table>
       </CardContent>
 
-      <ResizeHandleVertical onResize={onResize} />
+      <ResizeHandleVertical onResize={onResizeAltura} />
     </Card>
   );
 }

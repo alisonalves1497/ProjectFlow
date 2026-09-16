@@ -8,7 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ResizeHandleVertical } from "@/components/ui/resize-handle-vertical";
 import type { MeuTrabalho as MeuTrabalhoData, ItemTrabalho } from "@/services/diarioService";
 
-const ALTURA_PADRAO = 340;
+const ALTURA_PADRAO = 320; // ~10 linhas de item (32px cada) visíveis antes de precisar rolar
 const ALTURA_MINIMA = 120;
 
 type Tom = "atraso" | "hoje" | "proximo" | "neutro";

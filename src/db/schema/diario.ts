@@ -2,6 +2,7 @@ import { pgTable, text, integer, timestamp, date, pgEnum } from "drizzle-orm/pg-
 import { workspaces } from "./workspaces";
 import { users } from "./auth";
 import { projetos } from "./hierarquia";
+import { documentos } from "./documentos";
 
 export const prioridadeTarefaPessoalEnum = pgEnum("prioridade_tarefa_pessoal", ["urgente", "alta", "normal", "baixa"]);
 export const statusTarefaPessoalEnum = pgEnum("status_tarefa_pessoal", ["pendente", "feito"]);
@@ -20,6 +21,7 @@ export const tarefasPessoais = pgTable("tarefas_pessoais", {
   dataInicial: date("data_inicial"),
   prioridade: prioridadeTarefaPessoalEnum("prioridade"),
   projetoId: text("projeto_id").references(() => projetos.id, { onDelete: "set null" }),
+  documentoId: text("documento_id").references(() => documentos.id, { onDelete: "set null" }),
   estimativaMinutos: integer("estimativa_minutos"),
   tempoRastreadoMinutos: integer("tempo_rastreado_minutos"),
   concluidaEm: timestamp("concluida_em", { withTimezone: true }),
