@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Check, Circle, Trash2, Settings2 } from "lucide-react";
+import { Check, Circle, CircleCheck, Trash2, Settings2, ClipboardList, Plus } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardAction, CardContent } from "@/components/ui/card";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { ResizeHandleVertical } from "@/components/ui/resize-handle-vertical";
 import { criarTarefaAction, atualizarTarefaAction, excluirTarefaAction } from "./actions";
@@ -33,6 +34,14 @@ const PRIORIDADES = [
   { value: "normal", label: "Normal" },
   { value: "baixa", label: "Baixa" },
 ] as const;
+
+const COR_PRIORIDADE: Record<string, string> = {
+  urgente: "bg-destructive/10 text-destructive",
+  alta: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400",
+  normal: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-400",
+  baixa: "bg-muted text-muted-foreground",
+  "": "text-muted-foreground",
+};
 
 function chaveColunas(workspaceId: string): string {
   return `lista-pessoal-colunas-${workspaceId}`;
@@ -149,40 +158,47 @@ export function ListaPessoal({
   }
 
   return (
-    <div className="rounded-lg border">
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <h2 className="text-sm font-semibold">Lista pessoal</h2>
-        <Popover>
-          <PopoverTrigger render={<button type="button" className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs hover:bg-accent" />}>
-            <Settings2 className="size-3.5" />
-            Colunas
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-64 p-1">
-            {COLUNAS.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => alternarColuna(c.id)}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
-              >
-                <span
-                  className={
-                    "flex size-4 shrink-0 items-center justify-center rounded border " +
-                    (colunas.includes(c.id) ? "border-primary bg-primary text-primary-foreground" : "border-input")
-                  }
+    <Card className="gap-0 pb-0">
+      <CardHeader className="border-b pb-3">
+        <div className="flex items-center gap-2">
+          <ClipboardList className="size-4 text-primary" />
+          <CardTitle>Lista pessoal</CardTitle>
+        </div>
+        <CardAction>
+          <Popover>
+            <PopoverTrigger
+              render={<button type="button" className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs hover:bg-accent" />}
+            >
+              <Settings2 className="size-3.5" />
+              Colunas
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-64 p-1">
+              {COLUNAS.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => alternarColuna(c.id)}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
                 >
-                  {colunas.includes(c.id) && <Check className="size-3" />}
-                </span>
-                {c.label}
-              </button>
-            ))}
-          </PopoverContent>
-        </Popover>
-      </div>
+                  <span
+                    className={
+                      "flex size-4 shrink-0 items-center justify-center rounded border " +
+                      (colunas.includes(c.id) ? "border-primary bg-primary text-primary-foreground" : "border-input")
+                    }
+                  >
+                    {colunas.includes(c.id) && <Check className="size-3" />}
+                  </span>
+                  {c.label}
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
+        </CardAction>
+      </CardHeader>
 
-      <div style={{ height: altura }} className="overflow-auto">
+      <CardContent style={{ height: altura }} className="overflow-auto px-0 pt-2">
         <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-background">
+          <thead className="sticky top-0 bg-card">
             <tr className="border-b text-xs text-muted-foreground">
               <th className="w-8"></th>
               <th className="px-2 py-1.5 text-left font-medium">Nome da tarefa</th>
@@ -199,7 +215,7 @@ export function ListaPessoal({
           </thead>
           <tbody>
             {tarefas.map((t) => (
-              <tr key={t.id} className="group/linha border-b last:border-b-0">
+              <tr key={t.id} className="group/linha border-b last:border-b-0 hover:bg-accent/40">
                 <td className="px-2 py-1.5">
                   <button
                     type="button"
@@ -207,7 +223,7 @@ export function ListaPessoal({
                     title={t.status === "feito" ? "Marcar como pendente" : "Marcar como feito"}
                     className="text-muted-foreground hover:text-primary"
                   >
-                    {t.status === "feito" ? <Check className="size-4 text-primary" /> : <Circle className="size-4" />}
+                    {t.status === "feito" ? <CircleCheck className="size-4 text-green-600 dark:text-green-500" /> : <Circle className="size-4" />}
                   </button>
                 </td>
                 <td className="px-2 py-1.5">
@@ -246,7 +262,12 @@ export function ListaPessoal({
                       type="date"
                       defaultValue={t.dataVencimento ?? ""}
                       onChange={(e) => alterar(t.id, { dataVencimento: e.target.value || null }, { dataVencimento: e.target.value || null })}
-                      className="bg-transparent text-xs outline-none"
+                      className={
+                        "bg-transparent text-xs outline-none " +
+                        (t.status === "pendente" && t.dataVencimento && t.dataVencimento < new Date().toISOString().slice(0, 10)
+                          ? "text-destructive font-medium"
+                          : "")
+                      }
                     />
                   </td>
                 )}
@@ -258,7 +279,7 @@ export function ListaPessoal({
                         const prioridade = (e.target.value || null) as PatchTarefaPessoal["prioridade"];
                         alterar(t.id, { prioridade }, { prioridade });
                       }}
-                      className="bg-transparent text-xs outline-none"
+                      className={`rounded-md border-none px-1.5 py-0.5 text-xs font-medium outline-none ${COR_PRIORIDADE[t.prioridade ?? ""]}`}
                     >
                       {PRIORIDADES.map((p) => (
                         <option key={p.value} value={p.value}>
@@ -327,23 +348,25 @@ export function ListaPessoal({
               </tr>
             ))}
             <tr>
-              <td></td>
+              <td className="px-2 py-1.5 text-muted-foreground">
+                <Plus className="size-3.5" />
+              </td>
               <td className="px-2 py-1.5" colSpan={colunas.length + 2}>
                 <input
                   value={novaTarefa}
                   onChange={(e) => setNovaTarefa(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && adicionar()}
                   onBlur={adicionar}
-                  placeholder="+ Adicionar tarefa"
+                  placeholder="Adicionar tarefa"
                   className="w-full bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground"
                 />
               </td>
             </tr>
           </tbody>
         </table>
-      </div>
+      </CardContent>
 
       <ResizeHandleVertical onResize={onResize} />
-    </div>
+    </Card>
   );
 }
