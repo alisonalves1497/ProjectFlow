@@ -261,10 +261,14 @@ export function ListaPessoal({
             <tr className="border-b text-xs text-muted-foreground">
               <th className="w-8"></th>
               <th className="px-2 py-1.5 text-left font-medium">Nome da tarefa</th>
-              {colunas.map((c) => (
-                <th key={c} className="relative px-2 py-1.5 text-left font-medium" style={{ width: larguras[c] }}>
-                  {COLUNAS.find((x) => x.id === c)?.label}
-                  <ResizeHandle onResize={(d) => redimensionar(c, d)} />
+              {/* Sempre na ordem canônica de COLUNAS (não na ordem de `colunas`, que é só o
+                  conjunto ativado/desativado) — o corpo da tabela abaixo também renderiza
+                  cada coluna nessa mesma ordem fixa, então cabeçalho e célula precisam
+                  concordar ou desalinham. */}
+              {COLUNAS.filter((c) => colunas.includes(c.id)).map((c) => (
+                <th key={c.id} className="relative px-2 py-1.5 text-left font-medium" style={{ width: larguras[c.id] }}>
+                  {c.label}
+                  <ResizeHandle onResize={(d) => redimensionar(c.id, d)} />
                 </th>
               ))}
               <th className="w-8"></th>
