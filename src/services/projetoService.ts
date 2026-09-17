@@ -2,7 +2,7 @@ import { and, eq, gt, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { projetos, obras } from "@/db/schema";
 import { newId } from "@/lib/id";
-import { conflict, notFound } from "@/lib/errors";
+import { conflict, notFound, isForeignKeyViolation } from "@/lib/errors";
 import { softDeleteDocumentosPorObra, restoreDocumentosPorObra } from "./documentoService";
 
 const RETENCAO_LIXEIRA_DIAS = 30;
@@ -105,11 +105,21 @@ export async function restoreProjeto(workspaceId: string, projetoId: string) {
 // CASCADE pra `projetos`, e tudo que depende de obra tem cascade pra obra (ver purgeObra) —
 // um único DELETE aqui já limpa projeto + obras + documentos de tudo.
 export async function purgeProjeto(workspaceId: string, projetoId: string) {
-  const [deletado] = await db
-    .delete(projetos)
-    .where(and(eq(projetos.id, projetoId), eq(projetos.workspaceId, workspaceId), isNotNull(projetos.deletedAt)))
-    .returning({ id: projetos.id });
-  if (!deletado) throw notFound("PROJETO_NOT_FOUND", "Projeto excluído não encontrado (ele precisa estar na Lixeira).");
+  try {
+    const [deletado] = await db
+      .delete(projetos)
+      .where(and(eq(projetos.id, projetoId), eq(projetos.workspaceId, workspaceId), isNotNull(projetos.deletedAt)))
+      .returning({ id: projetos.id });
+    if (!deletado) throw notFound("PROJETO_NOT_FOUND", "Projeto excluído não encontrado (ele precisa estar na Lixeira).");
+  } catch (err) {
+    // Rede de segurança: se alguma tabela nova referenciar documentos/revisões sem cascade,
+    // isso vira um erro de FK em vez de travar a cadeia toda — melhor mostrar essa mensagem
+    // do que deixar a exclusão quebrar com um erro cru de banco.
+    if (isForeignKeyViolation(err)) {
+      throw conflict("PROJETO_PURGE_BLOCKED", "Não foi possível excluir: algo ainda está vinculado a esse projeto que impede a exclusão definitiva.");
+    }
+    throw err;
+  }
 }
 
 export async function listProjetosExcluidos(workspaceId: string) {

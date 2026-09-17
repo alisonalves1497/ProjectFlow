@@ -56,7 +56,9 @@ export const itensSuprimentoDocumentos = pgTable(
   {
     id: text("id").primaryKey(),
     itemSuprimentoId: text("item_suprimento_id").notNull().references(() => itensSuprimento.id, { onDelete: "cascade" }),
-    documentoId: text("documento_id").notNull().references(() => documentos.id, { onDelete: "restrict" }),
+    // cascade (não restrict): excluir o documento (via purge de Obra/Projeto) só remove o
+    // VÍNCULO aqui — o item de suprimento em si continua existindo.
+    documentoId: text("documento_id").notNull().references(() => documentos.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique().on(table.itemSuprimentoId, table.documentoId)]

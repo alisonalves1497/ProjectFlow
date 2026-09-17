@@ -211,6 +211,13 @@
       "when": 1789562815570,
       "tag": "0029_wide_the_watchers",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1789663907184,
+      "tag": "0030_deep_devos",
+      "breakpoints": true
     }
   ]
 }

@@ -19,7 +19,9 @@ export const copiasControladas = pgTable(
     documentoId: text("documento_id").notNull().references(() => documentos.id, { onDelete: "cascade" }),
 
     // Trava a revisão impressa — igual ao GRD, não muda se o documento evoluir depois.
-    revisaoId: text("revisao_id").notNull().references(() => revisoes.id, { onDelete: "restrict" }),
+    // cascade (não restrict): a revisão só é apagada de verdade via cascade do documento
+    // (purge de Obra/Projeto) — a cópia controlada cascade junto (já documentoId acima).
+    revisaoId: text("revisao_id").notNull().references(() => revisoes.id, { onDelete: "cascade" }),
 
     detentorId: text("detentor_id").notNull().references(() => users.id),
 

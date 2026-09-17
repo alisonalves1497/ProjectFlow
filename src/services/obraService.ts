@@ -2,7 +2,7 @@ import { and, eq, gt, isNotNull, isNull, or } from "drizzle-orm";
 import { db } from "@/db/client";
 import { obras, obraMembers, users, projetos, workspaceMembers } from "@/db/schema";
 import { newId } from "@/lib/id";
-import { conflict, notFound } from "@/lib/errors";
+import { conflict, notFound, isForeignKeyViolation } from "@/lib/errors";
 import { softDeleteDocumentosPorObra, restoreDocumentosPorObra } from "./documentoService";
 import { normalizar } from "./importDocumentosService";
 
@@ -135,11 +135,21 @@ export async function restoreObra(workspaceId: string, obraId: string) {
 // no banco — sem precisar apagar tabela por tabela aqui. Sem confirmação de novo aqui porque
 // a tela já exige o usuário confirmar explicitamente antes de chamar isso.
 export async function purgeObra(workspaceId: string, obraId: string) {
-  const [deletada] = await db
-    .delete(obras)
-    .where(and(eq(obras.id, obraId), eq(obras.workspaceId, workspaceId), isNotNull(obras.deletedAt)))
-    .returning({ id: obras.id });
-  if (!deletada) throw notFound("OBRA_NOT_FOUND", "Obra excluída não encontrada (ela precisa estar na Lixeira).");
+  try {
+    const [deletada] = await db
+      .delete(obras)
+      .where(and(eq(obras.id, obraId), eq(obras.workspaceId, workspaceId), isNotNull(obras.deletedAt)))
+      .returning({ id: obras.id });
+    if (!deletada) throw notFound("OBRA_NOT_FOUND", "Obra excluída não encontrada (ela precisa estar na Lixeira).");
+  } catch (err) {
+    // Rede de segurança: se alguma tabela nova referenciar documentos/revisões sem cascade,
+    // isso vira um erro de FK em vez de travar a cadeia toda — melhor mostrar essa mensagem
+    // do que deixar a exclusão quebrar com um erro cru de banco.
+    if (isForeignKeyViolation(err)) {
+      throw conflict("OBRA_PURGE_BLOCKED", "Não foi possível excluir: algo ainda está vinculado a essa obra que impede a exclusão definitiva.");
+    }
+    throw err;
+  }
 }
 
 // Obras excluídas nos últimos 30 dias que NÃO fazem parte da exclusão em cascata de um

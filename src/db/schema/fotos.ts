@@ -31,7 +31,9 @@ export const fotoDocumentos = pgTable(
   {
     id: text("id").primaryKey(),
     fotoId: text("foto_id").notNull().references(() => fotos.id, { onDelete: "cascade" }),
-    documentoId: text("documento_id").notNull().references(() => documentos.id, { onDelete: "restrict" }),
+    // cascade (não restrict): excluir o documento (via purge de Obra/Projeto) só remove o
+    // VÍNCULO aqui — a foto em si continua existindo, só perde a referência a esse documento.
+    documentoId: text("documento_id").notNull().references(() => documentos.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique().on(table.fotoId, table.documentoId)]

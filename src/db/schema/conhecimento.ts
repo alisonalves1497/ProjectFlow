@@ -83,7 +83,10 @@ export const itensConhecimentoDocumentos = pgTable(
   {
     id: text("id").primaryKey(),
     itemConhecimentoId: text("item_conhecimento_id").notNull().references(() => itensConhecimento.id, { onDelete: "cascade" }),
-    documentoId: text("documento_id").notNull().references(() => documentos.id, { onDelete: "restrict" }),
+    // cascade (não restrict): excluir o documento (via purge de Obra/Projeto, ver
+    // purgeObra/purgeProjeto) só remove o VÍNCULO aqui — o item de conhecimento em si
+    // continua existindo, só perde a referência a esse documento específico.
+    documentoId: text("documento_id").notNull().references(() => documentos.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique().on(table.itemConhecimentoId, table.documentoId)]

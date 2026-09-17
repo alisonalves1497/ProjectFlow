@@ -66,8 +66,11 @@ export const grdDocumentos = pgTable(
   {
     id: text("id").primaryKey(),
     grdId: text("grd_id").notNull().references(() => grds.id, { onDelete: "cascade" }),
-    documentoId: text("documento_id").notNull().references(() => documentos.id, { onDelete: "restrict" }),
-    revisaoId: text("revisao_id").notNull().references(() => revisoes.id, { onDelete: "restrict" }),
+    // cascade (não restrict) nas duas: excluir o documento — ou a revisão travada aqui, que
+    // cascade junto com o documento — via purge de Obra/Projeto remove essa linha (o GRD em
+    // si continua existindo, só perde esse item específico).
+    documentoId: text("documento_id").notNull().references(() => documentos.id, { onDelete: "cascade" }),
+    revisaoId: text("revisao_id").notNull().references(() => revisoes.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique().on(table.grdId, table.documentoId)]

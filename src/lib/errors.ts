@@ -50,6 +50,10 @@ export function isUniqueViolation(err: unknown): boolean {
   return pgErrorCode(err) === "23505";
 }
 
+export function isForeignKeyViolation(err: unknown): boolean {
+  return pgErrorCode(err) === "23503";
+}
+
 export function toErrorResponse(err: unknown): NextResponse {
   if (err instanceof ApiError) {
     return NextResponse.json({ error: { code: err.code, message: err.message } }, { status: err.status });
