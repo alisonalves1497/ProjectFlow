@@ -1,4 +1,4 @@
-import { and, eq, gt, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { projetos, obras } from "@/db/schema";
 import { newId } from "@/lib/id";
@@ -104,13 +104,18 @@ export async function restoreProjeto(workspaceId: string, projetoId: string) {
 // Exclusão DEFINITIVA — só de projeto que já está na Lixeira. `obras` tem FK com ON DELETE
 // CASCADE pra `projetos`, e tudo que depende de obra tem cascade pra obra (ver purgeObra) —
 // um único DELETE aqui já limpa projeto + obras + documentos de tudo.
+// `linha_do_tempo` é append-only por trigger — a flag de sessão libera só DENTRO desta
+// transação, só pra essa exclusão explícita e irreversível (ver migração 0031 e purgeObra).
 export async function purgeProjeto(workspaceId: string, projetoId: string) {
   try {
-    const [deletado] = await db
-      .delete(projetos)
-      .where(and(eq(projetos.id, projetoId), eq(projetos.workspaceId, workspaceId), isNotNull(projetos.deletedAt)))
-      .returning({ id: projetos.id });
-    if (!deletado) throw notFound("PROJETO_NOT_FOUND", "Projeto excluído não encontrado (ele precisa estar na Lixeira).");
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL app.bypass_append_only = 'on'`);
+      const [deletado] = await tx
+        .delete(projetos)
+        .where(and(eq(projetos.id, projetoId), eq(projetos.workspaceId, workspaceId), isNotNull(projetos.deletedAt)))
+        .returning({ id: projetos.id });
+      if (!deletado) throw notFound("PROJETO_NOT_FOUND", "Projeto excluído não encontrado (ele precisa estar na Lixeira).");
+    });
   } catch (err) {
     // Rede de segurança: se alguma tabela nova referenciar documentos/revisões sem cascade,
     // isso vira um erro de FK em vez de travar a cadeia toda — melhor mostrar essa mensagem

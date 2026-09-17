@@ -1,4 +1,4 @@
-import { and, eq, gt, isNotNull, isNull, or } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { obras, obraMembers, users, projetos, workspaceMembers } from "@/db/schema";
 import { newId } from "@/lib/id";
@@ -134,13 +134,19 @@ export async function restoreObra(workspaceId: string, obraId: string) {
 // tem FK com ON DELETE CASCADE pra `obras`, então um único DELETE já limpa a cadeia inteira
 // no banco — sem precisar apagar tabela por tabela aqui. Sem confirmação de novo aqui porque
 // a tela já exige o usuário confirmar explicitamente antes de chamar isso.
+// `linha_do_tempo` é append-only por trigger (bloqueia DELETE até fora de FK cascade) — a
+// flag de sessão libera só DENTRO desta transação, só pra essa exclusão explícita e
+// irreversível (ver migração 0031); em qualquer outro fluxo do sistema a trava continua valendo.
 export async function purgeObra(workspaceId: string, obraId: string) {
   try {
-    const [deletada] = await db
-      .delete(obras)
-      .where(and(eq(obras.id, obraId), eq(obras.workspaceId, workspaceId), isNotNull(obras.deletedAt)))
-      .returning({ id: obras.id });
-    if (!deletada) throw notFound("OBRA_NOT_FOUND", "Obra excluída não encontrada (ela precisa estar na Lixeira).");
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL app.bypass_append_only = 'on'`);
+      const [deletada] = await tx
+        .delete(obras)
+        .where(and(eq(obras.id, obraId), eq(obras.workspaceId, workspaceId), isNotNull(obras.deletedAt)))
+        .returning({ id: obras.id });
+      if (!deletada) throw notFound("OBRA_NOT_FOUND", "Obra excluída não encontrada (ela precisa estar na Lixeira).");
+    });
   } catch (err) {
     // Rede de segurança: se alguma tabela nova referenciar documentos/revisões sem cascade,
     // isso vira um erro de FK em vez de travar a cadeia toda — melhor mostrar essa mensagem
