@@ -165,6 +165,7 @@ export async function getPainelData(workspaceId: string, userId: string): Promis
 export type MeusDocumentosLinha = {
   id: string;
   codigoCompleto: string;
+  codigoAlternativo: string | null;
   descricao: string;
   status: StatusDocumento;
   obraId: string;
@@ -192,6 +193,7 @@ export async function getMeusDocumentos(workspaceId: string, userId: string): Pr
     .select({
       id: documentos.id,
       codigoCompleto: documentos.codigoCompleto,
+      codigoAlternativo: documentos.codigoAlternativo,
       descricao: documentos.descricao,
       status: documentos.status,
       obraId: documentos.obraId,
@@ -228,6 +230,7 @@ export async function getMeusDocumentos(workspaceId: string, userId: string): Pr
       return {
         id: d.id,
         codigoCompleto: d.codigoCompleto,
+        codigoAlternativo: d.codigoAlternativo,
         descricao: d.descricao,
         status: d.status,
         obraId: d.obraId,

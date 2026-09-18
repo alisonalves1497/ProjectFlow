@@ -232,6 +232,13 @@
       "when": 1789748594999,
       "tag": "0032_chat_mencoes",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1789749349486,
+      "tag": "0033_codigo_alternativo_e_acesso_obras",
+      "breakpoints": true
     }
   ]
 }

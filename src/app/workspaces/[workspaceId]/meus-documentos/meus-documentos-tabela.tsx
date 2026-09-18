@@ -47,7 +47,7 @@ export function MeusDocumentosTabela({
     const termo = busca.trim().toLowerCase();
     return documentos.filter((d) => {
       if (statusFiltro && d.status !== statusFiltro) return false;
-      if (termo && !d.codigoCompleto.toLowerCase().includes(termo) && !d.descricao.toLowerCase().includes(termo)) return false;
+      if (termo && !d.codigoCompleto.toLowerCase().includes(termo) && !(d.codigoAlternativo ?? "").toLowerCase().includes(termo) && !d.descricao.toLowerCase().includes(termo)) return false;
       return true;
     });
   }, [documentos, statusFiltro, busca]);

@@ -190,7 +190,7 @@ export async function buscarDocumentosNoWorkspace(workspaceId: string, obraIdsAc
         eq(documentos.workspaceId, workspaceId),
         isNull(documentos.deletedAt),
         inArray(documentos.obraId, obraIdsAcessiveis),
-        or(ilike(documentos.codigoCompleto, like), ilike(documentos.descricao, like))
+        or(ilike(documentos.codigoCompleto, like), ilike(documentos.codigoAlternativo, like), ilike(documentos.descricao, like))
       )
     )
     .limit(limite);
@@ -466,7 +466,7 @@ export async function listDocumentosAgrupadosPorSecao(
   if (filtros.responsavelId) condicoes.push(eq(documentos.responsavelId, filtros.responsavelId));
   if (filtros.busca) {
     const termo = `%${filtros.busca}%`;
-    condicoes.push(or(ilike(documentos.codigoCompleto, termo), ilike(documentos.descricao, termo))!);
+    condicoes.push(or(ilike(documentos.codigoCompleto, termo), ilike(documentos.codigoAlternativo, termo), ilike(documentos.descricao, termo))!);
   }
 
   const [docs, naoConformeRows, favoritoRows] = await Promise.all([

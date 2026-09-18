@@ -35,6 +35,7 @@ type LinhaAnalisada = {
   contrato: string;
   sistema: string;
   codigo: string;
+  codigoAlternativo: string;
   tipo: string;
   coordenacao: string;
   dataPrevista: string | null;
@@ -264,6 +265,7 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
             contrato: l.contrato,
             sistema: l.sistema,
             codigo: l.codigo,
+            codigoAlternativo: l.codigoAlternativo,
             tipo: l.tipo,
             coordenacao: l.coordenacao,
             dataPrevista: l.dataPrevista,

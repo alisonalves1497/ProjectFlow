@@ -29,6 +29,7 @@ export type LinhaPortifolio = {
   contrato: string;
   sistema: string;
   codigo: string; // já resolvido: Código2 se tiver, senão Código1
+  codigoAlternativo: string; // o outro código da linha (Código1 quando o oficial é o Código2), senão ""
   tipo: string; // descrição do documento (e fonte da Seção)
   coordenacao: string; // disciplina
   dataPrevista: string | null;
@@ -140,7 +141,10 @@ export async function parseLinhasPortifolio(buffer: Buffer, sheetName: string): 
   for (let i = 1; i < linhasCruas.length; i++) {
     const linha = linhasCruas[i];
     if (!linha) continue;
-    const codigo = celulaTexto(linha[codigo2]) || celulaTexto(linha[codigo1]);
+    const c2 = codigo2 >= 0 ? celulaTexto(linha[codigo2]) : "";
+    const c1 = codigo1 >= 0 ? celulaTexto(linha[codigo1]) : "";
+    const codigo = c2 || c1;
+    const codigoAlternativo = c2 && c1 && c1 !== c2 ? c1 : "";
     const tipoTexto = celulaTexto(linha[tipo]);
     // Linha só com Contrato/Sistema preenchidos (sem código nem tipo) é separador visual da
     // planilha, não é um documento — pula.
@@ -150,6 +154,7 @@ export async function parseLinhasPortifolio(buffer: Buffer, sheetName: string): 
       contrato: celulaTexto(linha[contrato]),
       sistema: celulaTexto(linha[sistema]),
       codigo,
+      codigoAlternativo,
       tipo: tipoTexto,
       coordenacao: coordenacao >= 0 ? celulaTexto(linha[coordenacao]) : "",
       dataPrevista: dataPrevista >= 0 ? converterDataExcel(linha[dataPrevista]) : null,
@@ -466,6 +471,7 @@ export type LinhaPortifolioParaAplicar = {
   contrato: string;
   sistema: string;
   codigo: string;
+  codigoAlternativo: string;
   tipo: string;
   coordenacao: string;
   dataPrevista: string | null;
@@ -515,6 +521,7 @@ export async function aplicarSincronizacaoPortifolio(workspaceId: string, userId
           .update(documentos)
           .set({
             descricao: linha.tipo,
+            codigoAlternativo: linha.codigoAlternativo || null,
             status: linha.status,
             statusUpdatedAt: linha.dataAlteracao ? new Date(linha.dataAlteracao) : new Date(),
             revisaoExterna: linha.revisao || null,
@@ -598,6 +605,7 @@ export async function aplicarSincronizacaoPortifolio(workspaceId: string, userId
         tipoDocumentoId: await garantirTipoDocumento(workspaceId, linha.secaoNome),
         sequencial: 0,
         codigoCompleto: linha.codigo,
+        codigoAlternativo: linha.codigoAlternativo || null,
         descricao: linha.tipo,
         dataPrevista: linha.dataPrevista,
         status: linha.status,

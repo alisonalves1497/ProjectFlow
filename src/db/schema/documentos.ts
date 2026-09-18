@@ -50,7 +50,11 @@ export const documentos = pgTable(
     tipoDocumentoId: text("tipo_documento_id").notNull().references(() => tiposDocumento.id, { onDelete: "restrict" }),
 
     sequencial: integer("sequencial").notNull(),
-    codigoCompleto: text("codigo_completo").notNull(), // identidade imutável, calculada na criação
+    codigoCompleto: text("codigo_completo").notNull(),
+    // Segundo código do documento (ex: código antigo/interno da planilha de portfólio, quando a
+    // linha tem Código1 e Código2 — o oficial vira codigoCompleto). Só serve pra achar o
+    // documento na busca; não é único nem chave de nada.
+    codigoAlternativo: text("codigo_alternativo"), // identidade imutável, calculada na criação
 
     descricao: text("descricao").notNull(),
     responsavelId: text("responsavel_id").references(() => users.id),
