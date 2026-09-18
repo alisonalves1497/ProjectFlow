@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Pencil } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
@@ -59,6 +59,7 @@ export function StatusCell({
   documentoId,
   status,
   podeGerenciar,
+  onAlterado,
 }: {
   workspaceId: string;
   projetoId: string;
@@ -66,9 +67,12 @@ export function StatusCell({
   documentoId: string;
   status: StatusDocumento;
   podeGerenciar: boolean;
+  // Quem mantém uma cópia local do status (ex: Lista Pessoal) atualiza por aqui.
+  onAlterado?: (novo: StatusDocumento) => void;
 }) {
   const [editando, setEditando] = useState(false);
   const [statusAnterior, setStatusAnterior] = useState(status);
+  const novoStatusRef = useRef(status);
   const [state, formAction, pending] = useActionState(setStatusDiretoAction, initialActionState);
   // `state` do useActionState não volta sozinho pra "idle" depois de um sucesso — fechar
   // aqui SEM resetar editando via effect fazia o lápis travar pra sempre depois da primeira
@@ -77,12 +81,15 @@ export function StatusCell({
   useEffect(() => {
     if (state.status === "success") {
       setEditando(false);
+      onAlterado?.(novoStatusRef.current);
       const valorAntes = statusAnterior;
       toast("Status alterado.", {
         action: {
           label: "Desfazer",
-          onClick: () =>
-            formAction(formDataDoDesfazer({ workspaceId, projetoId, obraId, documentoId, status: valorAntes })),
+          onClick: () => {
+            novoStatusRef.current = valorAntes;
+            formAction(formDataDoDesfazer({ workspaceId, projetoId, obraId, documentoId, status: valorAntes }));
+          },
         },
       });
     }
@@ -118,7 +125,10 @@ export function StatusCell({
         defaultValue={status}
         disabled={pending}
         autoFocus
-        onChange={(e) => e.currentTarget.form?.requestSubmit()}
+        onChange={(e) => {
+          novoStatusRef.current = e.currentTarget.value as StatusDocumento;
+          e.currentTarget.form?.requestSubmit();
+        }}
         // w-full + min-w-0: sem isso o <select> pega a largura do texto mais comprido das
         // opções ("Aprovação do líder técnico"...) e estoura pra fora da célula, que corta
         // ele (a TableCell tem overflow-hidden) — precisa ficar preso na largura da coluna.

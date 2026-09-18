@@ -319,6 +319,7 @@ export async function setStatusDiretoAction(_prevState: ActionState, formData: F
   revalidatePath(obraDocumentosPath(workspaceId, projetoId, obraId));
   revalidatePath(`/workspaces/${workspaceId}/documentos/${documentoId}`);
   revalidatePath(`/workspaces/${workspaceId}/meus-documentos`);
+  revalidatePath(`/workspaces/${workspaceId}/diario`);
   return { status: "success" };
 }
 

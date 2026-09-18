@@ -9,7 +9,7 @@ import { ResizeHandleVertical } from "@/components/ui/resize-handle-vertical";
 import { ResizeHandle } from "@/components/ui/resize-handle";
 import { DatePickerField } from "@/components/ui/date-picker-field";
 import { SelectPopoverField } from "@/components/ui/select-popover-field";
-import { StatusBadge } from "@/components/status-badge";
+import { StatusCell } from "@/components/documento-inline-cells";
 import { criarTarefaAction, atualizarTarefaAction, excluirTarefaAction } from "./actions";
 import type { TarefaPessoal, PatchTarefaPessoal } from "@/services/diarioService";
 import type { StatusDocumento } from "@/lib/statusGraph";
@@ -17,6 +17,8 @@ import type { StatusDocumento } from "@/lib/statusGraph";
 const ALTURA_PADRAO = 260;
 const ALTURA_MINIMA = 100;
 const LARGURA_MINIMA = 60;
+const LARGURA_NOME_MINIMA = 160;
+const LARGURA_FIXA = 32; // coluna do check e coluna da lixeira
 
 type ColunaId = "projeto" | "documento" | "status" | "dataVencimento" | "prioridade" | "dataConclusao" | "dataInicial" | "estimativa" | "tempoRastreado";
 
@@ -105,16 +107,25 @@ export function ListaPessoal({
   tarefasIniciais,
   projetos,
   documentosAtribuidos,
+  podeGerenciarStatus,
 }: {
   workspaceId: string;
   tarefasIniciais: TarefaPessoal[];
   projetos: { id: string; name: string }[];
-  documentosAtribuidos: { id: string; codigo: string; projetoId: string; status: StatusDocumento }[];
+  documentosAtribuidos: { id: string; codigo: string; projetoId: string; obraId: string; status: StatusDocumento }[];
+  podeGerenciarStatus: boolean;
 }) {
   const [tarefas, setTarefas] = useState(tarefasIniciais);
   const [colunas, setColunas] = useState<ColunaId[]>(COLUNAS_PADRAO);
   const [altura, setAltura] = useState(ALTURA_PADRAO);
   const [larguras, setLarguras] = useState<Record<ColunaId, number>>(LARGURAS_PADRAO);
+  // Largura do Nome: enquanto ninguém mexeu em nenhuma coluna ele "preenche" a tela
+  // (nomeAuto); no primeiro arrasto de QUALQUER coluna ele congela — daí em diante cada coluna
+  // só mexe em si mesma e a tabela cresce/encolhe (com rolagem se passar da tela).
+  const [larguraNome, setLarguraNome] = useState<number | null>(null);
+  const larguraNomeRef = useRef<number | null>(null);
+  const [larguraContainer, setLarguraContainer] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [novaTarefa, setNovaTarefa] = useState("");
   const criandoRef = useRef(false);
 
@@ -131,12 +142,27 @@ export function ListaPessoal({
       }
       const brutoLarguras = localStorage.getItem(chaveLarguras(workspaceId));
       if (brutoLarguras) {
-        setLarguras((prev) => ({ ...prev, ...JSON.parse(brutoLarguras) }));
+        const { nome, ...resto } = JSON.parse(brutoLarguras) as Partial<Record<ColunaId, number>> & { nome?: number };
+        setLarguras((prev) => ({ ...prev, ...resto }));
+        if (typeof nome === "number") {
+          larguraNomeRef.current = nome;
+          setLarguraNome(nome);
+        }
       }
     } catch {
       // sem persistência local se localStorage falhar
     }
   }, [workspaceId]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const medir = () => setLarguraContainer(el.clientWidth);
+    medir();
+    const obs = new ResizeObserver(medir);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   function alternarColuna(id: ColunaId) {
     setColunas((prev) => {
@@ -150,16 +176,29 @@ export function ListaPessoal({
     });
   }
 
-  // Alça na borda ESQUERDA da coluna — arrastar pra direita empurra essa borda pra dentro e
-  // ela encolhe, igual o mesmo esquema já usado em Meus Documentos/Lista de Documentos.
-  function redimensionar(coluna: ColunaId, deltaX: number) {
+  function salvarLarguras(l: Record<ColunaId, number>, nome: number | null) {
+    try {
+      localStorage.setItem(chaveLarguras(workspaceId), JSON.stringify({ ...l, ...(nome !== null ? { nome } : {}) }));
+    } catch {
+      // sem persistência local se localStorage falhar
+    }
+  }
+
+  // Alça na borda DIREITA da coluna: a borda acompanha o mouse, a coluna muda só a si mesma e as
+  // seguintes deslizam — nunca mexe no espaço de outra coluna. Nome não tem "absorvedor": a
+  // tabela em si é que cresce (com rolagem) ou encolhe.
+  function redimensionar(coluna: ColunaId | "nome", deltaX: number) {
+    if (larguraNomeRef.current === null) larguraNomeRef.current = nomeAuto;
+    if (coluna === "nome") {
+      larguraNomeRef.current = Math.max(LARGURA_NOME_MINIMA, larguraNomeRef.current + deltaX);
+      setLarguraNome(larguraNomeRef.current);
+      salvarLarguras(larguras, larguraNomeRef.current);
+      return;
+    }
+    setLarguraNome(larguraNomeRef.current);
     setLarguras((prev) => {
-      const proximo = { ...prev, [coluna]: Math.max(LARGURA_MINIMA, prev[coluna] - deltaX) };
-      try {
-        localStorage.setItem(chaveLarguras(workspaceId), JSON.stringify(proximo));
-      } catch {
-        // sem persistência local se localStorage falhar
-      }
+      const proximo = { ...prev, [coluna]: Math.max(LARGURA_MINIMA, prev[coluna] + deltaX) };
+      salvarLarguras(proximo, larguraNomeRef.current);
       return proximo;
     });
   }
@@ -218,13 +257,19 @@ export function ListaPessoal({
   }
 
   const documentosPorProjeto = useMemo(() => {
-    const mapa = new Map<string, { id: string; codigo: string; status: StatusDocumento }[]>();
+    const mapa = new Map<string, { id: string; codigo: string; obraId: string; status: StatusDocumento }[]>();
     for (const d of documentosAtribuidos) {
       if (!mapa.has(d.projetoId)) mapa.set(d.projetoId, []);
-      mapa.get(d.projetoId)!.push({ id: d.id, codigo: d.codigo, status: d.status });
+      mapa.get(d.projetoId)!.push({ id: d.id, codigo: d.codigo, obraId: d.obraId, status: d.status });
     }
     return mapa;
   }, [documentosAtribuidos]);
+
+  const colunasVisiveis = COLUNAS.filter((c) => colunas.includes(c.id));
+  const somaColunas = colunasVisiveis.reduce((acc, c) => acc + larguras[c.id], 0);
+  const nomeAuto = Math.max(LARGURA_NOME_MINIMA, larguraContainer - LARGURA_FIXA * 2 - somaColunas);
+  const nomeEfetivo = larguraNome ?? nomeAuto;
+  const larguraTabela = LARGURA_FIXA * 2 + nomeEfetivo + somaColunas;
 
   return (
     <Card className="gap-0 pb-0">
@@ -265,32 +310,36 @@ export function ListaPessoal({
         </CardAction>
       </CardHeader>
 
-      <CardContent style={{ height: altura }} className="overflow-auto px-0 pt-2">
-        <table className="w-full table-fixed text-sm">
+      <CardContent ref={containerRef} style={{ height: altura }} className="overflow-auto px-0 pt-2">
+        <table className="table-fixed text-sm" style={{ width: larguraTabela }}>
           <thead className="sticky top-0 bg-card">
             <tr className="border-b text-xs text-muted-foreground">
-              <th className="w-8"></th>
-              <th className="min-w-[160px] overflow-hidden px-2 py-1 text-left font-medium text-ellipsis whitespace-nowrap">Nome da tarefa</th>
+              <th style={{ width: LARGURA_FIXA }}></th>
+              <th className="relative overflow-hidden px-2 py-1 text-left font-medium text-ellipsis whitespace-nowrap" style={{ width: nomeEfetivo }}>
+                Nome da tarefa
+                <ResizeHandle curto lado="direita" onResize={(d) => redimensionar("nome", d)} />
+              </th>
               {/* Sempre na ordem canônica de COLUNAS (não na ordem de `colunas`, que é só o
                   conjunto ativado/desativado) — o corpo da tabela abaixo também renderiza
                   cada coluna nessa mesma ordem fixa, então cabeçalho e célula precisam
                   concordar ou desalinham. */}
-              {COLUNAS.filter((c) => colunas.includes(c.id)).map((c) => (
+              {colunasVisiveis.map((c) => (
                 <th
                   key={c.id}
                   className="relative overflow-hidden px-2 py-1 text-left font-medium text-ellipsis whitespace-nowrap"
                   style={{ width: larguras[c.id] }}
                 >
                   {c.label}
-                  <ResizeHandle curto onResize={(d) => redimensionar(c.id, d)} />
+                  <ResizeHandle curto lado="direita" onResize={(d) => redimensionar(c.id, d)} />
                 </th>
               ))}
-              <th className="w-8"></th>
+              <th style={{ width: LARGURA_FIXA }}></th>
             </tr>
           </thead>
           <tbody>
             {tarefas.map((t) => {
               const documentosDoProjeto = t.projetoId ? (documentosPorProjeto.get(t.projetoId) ?? []) : [];
+              const documentoAtual = documentosDoProjeto.find((d) => d.id === t.documentoId);
               return (
                 <tr key={t.id} className="group/linha border-b last:border-b-0 hover:bg-accent/40">
                   <td className="px-2 py-1">
@@ -359,7 +408,21 @@ export function ListaPessoal({
                   )}
                   {colunas.includes("status") && (
                     <td className="px-2 py-1">
-                      {t.documentoStatus ? <StatusBadge status={t.documentoStatus} /> : <span className="text-xs text-muted-foreground">—</span>}
+                      {t.documentoStatus && t.documentoId && t.projetoId && documentoAtual ? (
+                        <StatusCell
+                          workspaceId={workspaceId}
+                          projetoId={t.projetoId}
+                          obraId={documentoAtual.obraId}
+                          documentoId={t.documentoId}
+                          status={t.documentoStatus}
+                          podeGerenciar={podeGerenciarStatus}
+                          onAlterado={(novo) =>
+                            setTarefas((prev) => prev.map((x) => (x.documentoId === t.documentoId ? { ...x, documentoStatus: novo } : x)))
+                          }
+                        />
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </td>
                   )}
                   {colunas.includes("dataVencimento") && (
