@@ -4,6 +4,7 @@ import { tarefasPessoais, projetos, documentos } from "@/db/schema";
 import { badRequest, forbidden } from "@/lib/errors";
 import { newId } from "@/lib/id";
 import { getMeusDocumentos } from "./painelService";
+import type { StatusDocumento } from "@/lib/statusGraph";
 
 export type TarefaPessoal = {
   id: string;
@@ -16,6 +17,8 @@ export type TarefaPessoal = {
   projetoNome: string | null;
   documentoId: string | null;
   documentoCodigo: string | null;
+  // Status ATUAL do documento vinculado (não da tarefa) — só pra exibir na Lista Pessoal.
+  documentoStatus: StatusDocumento | null;
   estimativaMinutos: number | null;
   tempoRastreadoMinutos: number | null;
   createdAt: Date;
@@ -37,6 +40,7 @@ export async function listTarefasPessoais(workspaceId: string, userId: string): 
       projetoNome: projetos.name,
       documentoId: tarefasPessoais.documentoId,
       documentoCodigo: documentos.codigoCompleto,
+      documentoStatus: documentos.status,
       estimativaMinutos: tarefasPessoais.estimativaMinutos,
       tempoRastreadoMinutos: tarefasPessoais.tempoRastreadoMinutos,
       createdAt: tarefasPessoais.createdAt,

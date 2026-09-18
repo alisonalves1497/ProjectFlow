@@ -45,7 +45,7 @@ export default async function DiarioPage({ params }: Params) {
           workspaceId={workspaceId}
           tarefasIniciais={tarefas}
           projetos={projetos.map((p) => ({ id: p.id, name: p.name }))}
-          documentosAtribuidos={meusDocumentos.map((d) => ({ id: d.id, codigo: d.codigoCompleto, projetoId: d.projetoId }))}
+          documentosAtribuidos={meusDocumentos.map((d) => ({ id: d.id, codigo: d.codigoCompleto, projetoId: d.projetoId, status: d.status }))}
         />
 
         <Card>

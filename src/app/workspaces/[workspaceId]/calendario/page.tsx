@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { auth } from "@/auth";
 import { getCalendarioEventos, type CalendarioEvento } from "@/services/calendarioService";
+import { STATUS_LABELS, STATUS_COR } from "@/lib/statusGraph";
 import { cn } from "@/lib/utils";
 import { MonthPicker } from "./month-picker";
 import { PendenciasMesList } from "./pendencias-mes-list";
@@ -22,10 +23,13 @@ function fmt(d: Date) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+// Cor do evento agora é o status atual do documento (mesma paleta usada no StatusBadge em
+// todo o resto do app) — GRD não tem status de documento, continua neutro. "Minha pendência"
+// já não muda a cor de fundo (que virou status); vira um contorno em cima pra não perder
+// esse sinal.
 function eventoCor(evento: CalendarioEvento) {
-  if (evento.tipo === "grd") return "bg-muted text-muted-foreground";
-  if (evento.minhaPendencia) return "bg-primary/10 text-primary";
-  return "bg-secondary text-secondary-foreground";
+  if (evento.status) return STATUS_COR[evento.status].badge;
+  return "bg-muted text-muted-foreground";
 }
 
 export default async function CalendarioPage({ params, searchParams }: Params) {
@@ -68,6 +72,9 @@ export default async function CalendarioPage({ params, searchParams }: Params) {
   for (let i = 0; i < dias.length; i += 7) semanas.push(dias.slice(i, i + 7));
 
   const eventosDoMes = eventos.filter((e) => e.data >= fmt(primeiroDiaMes) && e.data <= fmt(ultimoDiaMes)).sort((a, b) => (a.data < b.data ? -1 : 1));
+  const statusPresentes = [...new Set(eventosDoMes.map((e) => e.status).filter((s) => s !== null))].sort(
+    (a, b) => STATUS_LABELS[a].localeCompare(STATUS_LABELS[b])
+  );
 
   const mesAnterior = mesNum === 1 ? { ano: ano - 1, mes: 12 } : { ano, mes: mesNum - 1 };
   const mesProximo = mesNum === 12 ? { ano: ano + 1, mes: 1 } : { ano, mes: mesNum + 1 };
@@ -126,11 +133,13 @@ export default async function CalendarioPage({ params, searchParams }: Params) {
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3 text-xs">
+        {statusPresentes.map((s) => (
+          <span key={s} className="flex items-center gap-1.5">
+            <span className={cn("inline-block size-3 rounded-full", STATUS_COR[s].ponto)} /> {STATUS_LABELS[s]}
+          </span>
+        ))}
         <span className="flex items-center gap-1.5">
-          <span className="inline-block size-3 rounded-full bg-secondary" /> Documento previsto
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block size-3 rounded-full bg-primary/40" /> Minha pendência
+          <span className="inline-block size-3 rounded-full bg-primary/40 ring-2 ring-primary ring-offset-1" /> Minha pendência
         </span>
         {escopo === "projeto" && (
           <span className="flex items-center gap-1.5">
@@ -170,7 +179,11 @@ export default async function CalendarioPage({ params, searchParams }: Params) {
                         <Link
                           key={`${e.tipo}-${e.id}`}
                           href={e.href}
-                          className={cn("block truncate rounded px-1 py-0.5 text-[11px] hover:underline", eventoCor(e))}
+                          className={cn(
+                            "block truncate rounded px-1 py-0.5 text-[11px] hover:underline",
+                            eventoCor(e),
+                            e.minhaPendencia && "ring-1 ring-inset ring-primary"
+                          )}
                           title={`${e.codigo} — ${e.descricao}`}
                         >
                           {e.codigo}

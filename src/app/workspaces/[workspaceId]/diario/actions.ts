@@ -29,7 +29,7 @@ export async function criarTarefaAction(workspaceId: string, nome: string): Prom
   try {
     const tarefa = await createTarefaPessoal(workspaceId, session.user.id, nome);
     revalidatePath(`/workspaces/${workspaceId}/diario`);
-    return { ok: true, tarefa: { ...tarefa, projetoNome: null, documentoCodigo: null } };
+    return { ok: true, tarefa: { ...tarefa, projetoNome: null, documentoCodigo: null, documentoStatus: null } };
   } catch (err) {
     if (err instanceof ApiError) return { ok: false, error: err.message };
     throw err;

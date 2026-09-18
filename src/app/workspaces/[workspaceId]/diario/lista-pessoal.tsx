@@ -9,18 +9,21 @@ import { ResizeHandleVertical } from "@/components/ui/resize-handle-vertical";
 import { ResizeHandle } from "@/components/ui/resize-handle";
 import { DatePickerField } from "@/components/ui/date-picker-field";
 import { SelectPopoverField } from "@/components/ui/select-popover-field";
+import { StatusBadge } from "@/components/status-badge";
 import { criarTarefaAction, atualizarTarefaAction, excluirTarefaAction } from "./actions";
 import type { TarefaPessoal, PatchTarefaPessoal } from "@/services/diarioService";
+import type { StatusDocumento } from "@/lib/statusGraph";
 
 const ALTURA_PADRAO = 260;
 const ALTURA_MINIMA = 100;
 const LARGURA_MINIMA = 60;
 
-type ColunaId = "projeto" | "documento" | "dataVencimento" | "prioridade" | "dataConclusao" | "dataInicial" | "estimativa" | "tempoRastreado";
+type ColunaId = "projeto" | "documento" | "status" | "dataVencimento" | "prioridade" | "dataConclusao" | "dataInicial" | "estimativa" | "tempoRastreado";
 
 const COLUNAS: { id: ColunaId; label: string }[] = [
   { id: "projeto", label: "Projeto" },
   { id: "documento", label: "Documento" },
+  { id: "status", label: "Status" },
   { id: "dataVencimento", label: "Data de vencimento" },
   { id: "prioridade", label: "Prioridade" },
   { id: "dataInicial", label: "Data inicial" },
@@ -29,7 +32,7 @@ const COLUNAS: { id: ColunaId; label: string }[] = [
   { id: "tempoRastreado", label: "Tempo rastreado" },
 ];
 
-const COLUNAS_PADRAO: ColunaId[] = ["projeto", "documento", "dataVencimento", "prioridade"];
+const COLUNAS_PADRAO: ColunaId[] = ["projeto", "documento", "status", "dataVencimento", "prioridade"];
 
 // "Nome da tarefa" é a ÚNICA coluna sem largura própria (flexível — absorve o que sobra),
 // igual a "Código/Descrição" em Meus Documentos/Lista de Documentos. Todas as outras colunas
@@ -40,6 +43,7 @@ const COLUNAS_PADRAO: ColunaId[] = ["projeto", "documento", "dataVencimento", "p
 const LARGURAS_PADRAO: Record<ColunaId, number> = {
   projeto: 140,
   documento: 210,
+  status: 170,
   dataVencimento: 120,
   prioridade: 90,
   dataInicial: 110,
@@ -105,7 +109,7 @@ export function ListaPessoal({
   workspaceId: string;
   tarefasIniciais: TarefaPessoal[];
   projetos: { id: string; name: string }[];
-  documentosAtribuidos: { id: string; codigo: string; projetoId: string }[];
+  documentosAtribuidos: { id: string; codigo: string; projetoId: string; status: StatusDocumento }[];
 }) {
   const [tarefas, setTarefas] = useState(tarefasIniciais);
   const [colunas, setColunas] = useState<ColunaId[]>(COLUNAS_PADRAO);
@@ -214,10 +218,10 @@ export function ListaPessoal({
   }
 
   const documentosPorProjeto = useMemo(() => {
-    const mapa = new Map<string, { id: string; codigo: string }[]>();
+    const mapa = new Map<string, { id: string; codigo: string; status: StatusDocumento }[]>();
     for (const d of documentosAtribuidos) {
       if (!mapa.has(d.projetoId)) mapa.set(d.projetoId, []);
-      mapa.get(d.projetoId)!.push({ id: d.id, codigo: d.codigo });
+      mapa.get(d.projetoId)!.push({ id: d.id, codigo: d.codigo, status: d.status });
     }
     return mapa;
   }, [documentosAtribuidos]);
@@ -321,7 +325,7 @@ export function ListaPessoal({
                           alterar(
                             t.id,
                             { projetoId, documentoId: null },
-                            { projetoId, projetoNome: projeto?.name ?? null, documentoId: null, documentoCodigo: null }
+                            { projetoId, projetoNome: projeto?.name ?? null, documentoId: null, documentoCodigo: null, documentoStatus: null }
                           );
                         }}
                         triggerContent={<span className="min-w-0 truncate">{t.projetoNome ?? "—"}</span>}
@@ -335,7 +339,11 @@ export function ListaPessoal({
                         value={t.documentoId}
                         onChange={(documentoId) => {
                           const doc = documentosDoProjeto.find((d) => d.id === documentoId);
-                          alterar(t.id, { documentoId }, { documentoId, documentoCodigo: doc?.codigo ?? null });
+                          alterar(
+                            t.id,
+                            { documentoId },
+                            { documentoId, documentoCodigo: doc?.codigo ?? null, documentoStatus: doc?.status ?? null }
+                          );
                         }}
                         disabled={!t.projetoId}
                         emptyMessage={t.projetoId ? "Nenhum documento atribuído a você nesse projeto." : "Escolha um projeto primeiro."}
@@ -347,6 +355,11 @@ export function ListaPessoal({
                         }
                         options={documentosDoProjeto.map((d) => ({ value: d.id, label: d.codigo }))}
                       />
+                    </td>
+                  )}
+                  {colunas.includes("status") && (
+                    <td className="px-2 py-1">
+                      {t.documentoStatus ? <StatusBadge status={t.documentoStatus} /> : <span className="text-xs text-muted-foreground">—</span>}
                     </td>
                   )}
                   {colunas.includes("dataVencimento") && (

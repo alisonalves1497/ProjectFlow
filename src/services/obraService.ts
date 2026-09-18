@@ -53,7 +53,15 @@ export async function createObra(
       .insert(obras)
       .values({ id: newId("obra"), workspaceId, projetoId, code: input.code, name: input.name })
       .returning();
-    await tx.insert(obraMembers).values({ id: newId("obm"), obraId: obra.id, userId: criadoPorUserId });
+
+    // Obra nova nasce liberada pra todo mundo do workspace (não só quem criou) — combina
+    // com o pedido de não ter que dar acesso manual pessoa por pessoa toda vez; quem
+    // administra tira o acesso de quem não deveria ver depois, pela tela de Membros da Obra.
+    const membros = await tx.select({ userId: workspaceMembers.userId }).from(workspaceMembers).where(eq(workspaceMembers.workspaceId, workspaceId));
+    const userIds = new Set(membros.map((m) => m.userId));
+    userIds.add(criadoPorUserId);
+    await tx.insert(obraMembers).values([...userIds].map((userId) => ({ id: newId("obm"), obraId: obra.id, userId })));
+
     return obra;
   });
 }

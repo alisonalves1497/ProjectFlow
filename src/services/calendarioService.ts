@@ -3,6 +3,7 @@ import { db } from "@/db/client";
 import { documentos, grds } from "@/db/schema";
 import { listAccessibleObraIdsInWorkspace } from "./permissions";
 import { dataEfetivaPrevista } from "@/lib/documentoStatus";
+import type { StatusDocumento } from "@/lib/statusGraph";
 
 export type CalendarioEvento = {
   id: string;
@@ -12,6 +13,9 @@ export type CalendarioEvento = {
   descricao: string;
   href: string;
   minhaPendencia: boolean;
+  // Status do documento pra colorir o evento no calendário (ver eventoCor em page.tsx) —
+  // null pra GRD, que não tem status de documento.
+  status: StatusDocumento | null;
 };
 
 export async function getCalendarioEventos(
@@ -27,6 +31,7 @@ export async function getCalendarioEventos(
       id: documentos.id,
       codigoCompleto: documentos.codigoCompleto,
       descricao: documentos.descricao,
+      status: documentos.status,
       dataPrevista: documentos.dataPrevista,
       dataReprogramada: documentos.dataReprogramada,
       responsavelId: documentos.responsavelId,
@@ -52,6 +57,7 @@ export async function getCalendarioEventos(
       descricao: d.descricao,
       href: `/workspaces/${workspaceId}/documentos/${d.id}`,
       minhaPendencia: d.responsavelId === userId,
+      status: d.status,
     }));
 
   let eventosGrd: CalendarioEvento[] = [];
@@ -75,6 +81,7 @@ export async function getCalendarioEventos(
       descricao: g.codigoCompleto,
       href: `/workspaces/${workspaceId}/grds/${g.id}`,
       minhaPendencia: false,
+      status: null,
     }));
   }
 
