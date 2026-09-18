@@ -13,6 +13,120 @@ import {
 
 const initialActionState: ActionState = { status: "idle" };
 
+export type MembroMencionavel = { userId: string; name: string };
+
+// Destaca "@Nome" das pessoas citadas (casando os nomes conhecidos, mais compridos
+// primeiro) — o resto do texto fica como veio.
+function CorpoComMencoes({ corpo, membros }: { corpo: string; membros: MembroMencionavel[] }) {
+  const nomes = membros.map((m) => m.name).filter(Boolean).sort((a, b) => b.length - a.length);
+  if (nomes.length === 0 || !corpo.includes("@")) return <>{corpo}</>;
+  const escapar = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`(@(?:${nomes.map(escapar).join("|")}))(?![\\p{L}\\p{N}_])`, "giu");
+  return (
+    <>
+      {corpo.split(re).map((parte, i) =>
+        i % 2 === 1 ? (
+          <span key={i} className="rounded bg-primary/10 px-0.5 font-medium text-primary">
+            {parte}
+          </span>
+        ) : (
+          parte
+        )
+      )}
+    </>
+  );
+}
+
+// Textarea que abre a lista de pessoas ao digitar "@" e insere "@Nome Completo " ao
+// escolher — o servidor reconhece a menção pelo nome exato (ver registrarMencoes).
+function TextareaComMencao({
+  name,
+  membros,
+  value,
+  onChange,
+  placeholder,
+  required,
+  defaultValue,
+}: {
+  name: string;
+  membros: MembroMencionavel[];
+  value?: string;
+  onChange?: (v: string) => void;
+  placeholder?: string;
+  required?: boolean;
+  defaultValue?: string;
+}) {
+  const [texto, setTexto] = useState(value ?? defaultValue ?? "");
+  const [sugestoes, setSugestoes] = useState<MembroMencionavel[]>([]);
+  const [gatilho, setGatilho] = useState<{ inicio: number; fim: number } | null>(null);
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  function atualizar(novo: string, cursor: number) {
+    setTexto(novo);
+    onChange?.(novo);
+    const m = /(^|\s)@([^\s@]*)$/.exec(novo.slice(0, cursor));
+    if (!m) {
+      setGatilho(null);
+      setSugestoes([]);
+      return;
+    }
+    const termo = m[2].toLowerCase();
+    setGatilho({ inicio: cursor - m[2].length - 1, fim: cursor });
+    setSugestoes(membros.filter((x) => x.name.toLowerCase().includes(termo)).slice(0, 6));
+  }
+
+  function escolher(m: MembroMencionavel) {
+    if (!gatilho) return;
+    const novo = `${texto.slice(0, gatilho.inicio)}@${m.name} ${texto.slice(gatilho.fim)}`;
+    const cursor = gatilho.inicio + m.name.length + 2;
+    setTexto(novo);
+    onChange?.(novo);
+    setGatilho(null);
+    setSugestoes([]);
+    requestAnimationFrame(() => {
+      ref.current?.focus();
+      ref.current?.setSelectionRange(cursor, cursor);
+    });
+  }
+
+  return (
+    <div className="relative">
+      <Textarea
+        ref={ref}
+        name={name}
+        value={texto}
+        placeholder={placeholder}
+        required={required}
+        onChange={(e) => atualizar(e.target.value, e.target.selectionStart)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            setGatilho(null);
+            setSugestoes([]);
+          }
+        }}
+      />
+      {sugestoes.length > 0 && (
+        <ul className="absolute right-0 left-0 z-20 mt-1 max-h-48 overflow-auto rounded-md border bg-popover p-1 shadow-md">
+          {sugestoes.map((m) => (
+            <li key={m.userId}>
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  escolher(m);
+                }}
+                className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-accent"
+              >
+                {m.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 type Mensagem = {
   id: string;
   corpo: string;
@@ -28,12 +142,14 @@ function MensagemItem({
   mensagem,
   podeEditar,
   podeExcluir,
+  membros,
 }: {
   workspaceId: string;
   documentoId: string;
   mensagem: Mensagem;
   podeEditar: boolean;
   podeExcluir: boolean;
+  membros: MembroMencionavel[];
 }) {
   const [editando, setEditando] = useState(false);
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
@@ -64,7 +180,7 @@ function MensagemItem({
           <input type="hidden" name="workspaceId" value={workspaceId} />
           <input type="hidden" name="documentoId" value={documentoId} />
           <input type="hidden" name="mensagemId" value={mensagem.id} />
-          <Textarea name="corpo" defaultValue={mensagem.corpo} required />
+          <TextareaComMencao name="corpo" membros={membros} defaultValue={mensagem.corpo} required />
           <div className="flex justify-end gap-2">
             <Button type="button" size="sm" variant="ghost" onClick={() => setEditando(false)} disabled={editPending}>
               Cancelar
@@ -76,7 +192,9 @@ function MensagemItem({
         </form>
       ) : (
         <>
-          <p className="whitespace-pre-wrap">{mensagem.corpo}</p>
+          <p className="whitespace-pre-wrap">
+            <CorpoComMencoes corpo={mensagem.corpo} membros={membros} />
+          </p>
           {(podeEditar || podeExcluir) && (
             <div className="mt-1.5 flex items-center gap-3 text-xs">
               {podeEditar && (
@@ -129,12 +247,14 @@ export function ChatTab({
   mensagens,
   usuarioId,
   podeExcluir,
+  membros,
 }: {
   workspaceId: string;
   documentoId: string;
   mensagens: Mensagem[];
   usuarioId: string;
   podeExcluir: boolean;
+  membros: MembroMencionavel[];
 }) {
   const [state, formAction, pending] = useActionState(addChatMensagemAction, initialActionState);
   const formRef = useRef<HTMLFormElement>(null);
@@ -158,6 +278,7 @@ export function ChatTab({
               mensagem={m}
               podeEditar={m.autorId === usuarioId}
               podeExcluir={podeExcluir}
+              membros={membros}
             />
           ))}
         </ul>
@@ -166,7 +287,7 @@ export function ChatTab({
       <form ref={formRef} action={formAction} className="space-y-2">
         <input type="hidden" name="workspaceId" value={workspaceId} />
         <input type="hidden" name="documentoId" value={documentoId} />
-        <Textarea name="corpo" placeholder="Escreva uma observação ou anotação..." required />
+        <TextareaComMencao key={mensagens.length} name="corpo" membros={membros} placeholder="Escreva uma observação ou anotação... (use @ para citar alguém)" required />
         <div className="flex justify-end">
           <Button type="submit" size="sm" disabled={pending}>
             {pending ? "Enviando..." : "Enviar"}

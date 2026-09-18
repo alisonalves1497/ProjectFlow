@@ -225,6 +225,13 @@
       "when": 1789664000000,
       "tag": "0031_bypass_append_only_purge",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1789748594999,
+      "tag": "0032_chat_mencoes",
+      "breakpoints": true
     }
   ]
 }

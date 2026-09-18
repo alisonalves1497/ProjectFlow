@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getPainelData } from "@/services/painelService";
+import { listMencoesPendentes } from "@/services/documentoChatService";
+import { MencoesCard } from "./mencoes-card";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { StatusBadge } from "@/components/status-badge";
@@ -56,7 +58,10 @@ export default async function PainelPage({ params }: Params) {
   if (!session?.user?.id) redirect("/login");
 
   const { workspaceId } = await params;
-  const painel = await getPainelData(workspaceId, session.user.id);
+  const [painel, mencoes] = await Promise.all([
+    getPainelData(workspaceId, session.user.id),
+    listMencoesPendentes(workspaceId, session.user.id),
+  ]);
   const primeiroNome = (session.user.name ?? session.user.email ?? "").split(" ")[0];
   const totalPendencias = painel.minhasPendencias.documentos.length + painel.minhasPendencias.copiasControladas.length;
 
@@ -75,6 +80,8 @@ export default async function PainelPage({ params }: Params) {
           <p className="text-sm text-muted-foreground">{fraseDoDia()}</p>
         </div>
       </div>
+
+      <MencoesCard workspaceId={workspaceId} mencoes={mencoes} />
 
       <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Card size="sm">

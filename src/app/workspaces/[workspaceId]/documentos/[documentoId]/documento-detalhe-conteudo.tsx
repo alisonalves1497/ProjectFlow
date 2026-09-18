@@ -113,6 +113,7 @@ export async function DocumentoDetalheConteudo({ workspaceId, documentoId }: { w
             mensagens={mensagensChat}
             usuarioId={usuarioId}
             podeExcluir={ehAdministrador}
+            membros={obraUsers.filter((u) => u.name).map((u) => ({ userId: u.userId, name: u.name! }))}
           />
         </TabsContent>
 
