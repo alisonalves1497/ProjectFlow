@@ -17,6 +17,12 @@ export const tarefasPessoais = pgTable("tarefas_pessoais", {
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   nome: text("nome").notNull(),
   status: statusTarefaPessoalEnum("status").notNull().default("pendente"),
+  // Texto livre, só de controle individual — não vincula com nada (nem documento, nem
+  // projeto), só aparece pra quem é dono da tarefa. Diferente de `status` acima (que é o
+  // pendente/feito do checkbox).
+  statusLivre: text("status_livre"),
+  // Observações livres — texto qualquer, sem vínculo com nada, só anotação pessoal.
+  obs: text("obs"),
   dataVencimento: date("data_vencimento"),
   dataInicial: date("data_inicial"),
   prioridade: prioridadeTarefaPessoalEnum("prioridade"),

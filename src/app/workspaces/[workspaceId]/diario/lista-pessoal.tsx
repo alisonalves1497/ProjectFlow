@@ -1,18 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Check, Circle, CircleCheck, Trash2, Settings2, ClipboardList, Plus, Flag, FileText } from "lucide-react";
+import { Check, Circle, CircleCheck, Trash2, Settings2, ClipboardList, Plus, Flag } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardAction, CardContent } from "@/components/ui/card";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { ResizeHandleVertical } from "@/components/ui/resize-handle-vertical";
 import { ResizeHandle } from "@/components/ui/resize-handle";
 import { DatePickerField } from "@/components/ui/date-picker-field";
 import { SelectPopoverField } from "@/components/ui/select-popover-field";
-import { StatusCell } from "@/components/documento-inline-cells";
 import { criarTarefaAction, atualizarTarefaAction, excluirTarefaAction } from "./actions";
 import type { TarefaPessoal, PatchTarefaPessoal } from "@/services/diarioService";
-import type { StatusDocumento } from "@/lib/statusGraph";
 
 const ALTURA_PADRAO = 260;
 const ALTURA_MINIMA = 100;
@@ -20,12 +18,11 @@ const LARGURA_MINIMA = 60;
 const LARGURA_NOME_MINIMA = 160;
 const LARGURA_FIXA = 32; // coluna do check e coluna da lixeira
 
-type ColunaId = "projeto" | "documento" | "status" | "dataVencimento" | "prioridade" | "dataConclusao" | "dataInicial" | "estimativa" | "tempoRastreado";
+type ColunaId = "status" | "obs" | "dataVencimento" | "prioridade" | "dataInicial" | "dataConclusao" | "estimativa" | "tempoRastreado";
 
 const COLUNAS: { id: ColunaId; label: string }[] = [
-  { id: "projeto", label: "Projeto" },
-  { id: "documento", label: "Documento" },
   { id: "status", label: "Status" },
+  { id: "obs", label: "Obs" },
   { id: "dataVencimento", label: "Data de vencimento" },
   { id: "prioridade", label: "Prioridade" },
   { id: "dataInicial", label: "Data inicial" },
@@ -34,7 +31,7 @@ const COLUNAS: { id: ColunaId; label: string }[] = [
   { id: "tempoRastreado", label: "Tempo rastreado" },
 ];
 
-const COLUNAS_PADRAO: ColunaId[] = ["projeto", "documento", "status", "dataVencimento", "prioridade"];
+const COLUNAS_PADRAO: ColunaId[] = ["status", "obs", "dataVencimento", "prioridade"];
 
 // "Nome da tarefa" é a ÚNICA coluna sem largura própria (flexível — absorve o que sobra),
 // igual a "Código/Descrição" em Meus Documentos/Lista de Documentos. Todas as outras colunas
@@ -43,9 +40,8 @@ const COLUNAS_PADRAO: ColunaId[] = ["projeto", "documento", "status", "dataVenci
 // faria váááARIAS outras mudarem de tamanho ao mesmo tempo, e a direção do arrasto parece
 // errada/imprevisível. Com uma só, o efeito é sempre 1:1 com o mouse.
 const LARGURAS_PADRAO: Record<ColunaId, number> = {
-  projeto: 140,
-  documento: 210,
-  status: 170,
+  status: 150,
+  obs: 220,
   dataVencimento: 120,
   prioridade: 90,
   dataInicial: 110,
@@ -102,19 +98,23 @@ function PrioridadeCampo({ valor, onChange }: { valor: PrioridadeValor | null; o
   );
 }
 
-export function ListaPessoal({
-  workspaceId,
-  tarefasIniciais,
-  projetos,
-  documentosAtribuidos,
-  podeGerenciarStatus,
-}: {
-  workspaceId: string;
-  tarefasIniciais: TarefaPessoal[];
-  projetos: { id: string; name: string }[];
-  documentosAtribuidos: { id: string; codigo: string; projetoId: string; obraId: string; status: StatusDocumento }[];
-  podeGerenciarStatus: boolean;
-}) {
+// Célula de texto livre (Status/Obs) — sem vínculo com nada, mesmo padrão inline do "Nome
+// da tarefa": digita, sai do campo e salva.
+function TextoLivreCampo({ valor, onSalvar, placeholder }: { valor: string | null; onSalvar: (v: string) => void; placeholder?: string }) {
+  return (
+    <input
+      defaultValue={valor ?? ""}
+      placeholder={placeholder}
+      onBlur={(e) => {
+        if (e.target.value !== (valor ?? "")) onSalvar(e.target.value);
+      }}
+      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+      className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+    />
+  );
+}
+
+export function ListaPessoal({ workspaceId, tarefasIniciais }: { workspaceId: string; tarefasIniciais: TarefaPessoal[] }) {
   const [tarefas, setTarefas] = useState(tarefasIniciais);
   const [colunas, setColunas] = useState<ColunaId[]>(COLUNAS_PADRAO);
   const [altura, setAltura] = useState(ALTURA_PADRAO);
@@ -256,15 +256,6 @@ export function ListaPessoal({
     setTarefas((prev) => [res.tarefa, ...prev]);
   }
 
-  const documentosPorProjeto = useMemo(() => {
-    const mapa = new Map<string, { id: string; codigo: string; obraId: string; status: StatusDocumento }[]>();
-    for (const d of documentosAtribuidos) {
-      if (!mapa.has(d.projetoId)) mapa.set(d.projetoId, []);
-      mapa.get(d.projetoId)!.push({ id: d.id, codigo: d.codigo, obraId: d.obraId, status: d.status });
-    }
-    return mapa;
-  }, [documentosAtribuidos]);
-
   const colunasVisiveis = COLUNAS.filter((c) => colunas.includes(c.id));
   const somaColunas = colunasVisiveis.reduce((acc, c) => acc + larguras[c.id], 0);
   const nomeAuto = Math.max(LARGURA_NOME_MINIMA, larguraContainer - LARGURA_FIXA * 2 - somaColunas);
@@ -337,167 +328,116 @@ export function ListaPessoal({
             </tr>
           </thead>
           <tbody>
-            {tarefas.map((t) => {
-              const documentosDoProjeto = t.projetoId ? (documentosPorProjeto.get(t.projetoId) ?? []) : [];
-              const documentoAtual = documentosDoProjeto.find((d) => d.id === t.documentoId);
-              return (
-                <tr key={t.id} className="group/linha border-b last:border-b-0 hover:bg-accent/40">
+            {tarefas.map((t) => (
+              <tr key={t.id} className="group/linha border-b last:border-b-0 hover:bg-accent/40">
+                <td className="px-2 py-1">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      alterar(t.id, { status: t.status === "feito" ? "pendente" : "feito" }, { status: t.status === "feito" ? "pendente" : "feito" })
+                    }
+                    title={t.status === "feito" ? "Marcar como pendente" : "Marcar como feito"}
+                    className="text-muted-foreground hover:text-primary"
+                  >
+                    {t.status === "feito" ? <CircleCheck className="size-4 text-green-600 dark:text-green-500" /> : <Circle className="size-4" />}
+                  </button>
+                </td>
+                <td className="px-2 py-1">
+                  <input
+                    defaultValue={t.nome}
+                    onBlur={(e) => {
+                      if (e.target.value.trim() && e.target.value !== t.nome) alterar(t.id, { nome: e.target.value }, { nome: e.target.value.trim() });
+                    }}
+                    onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                    className={"w-full bg-transparent outline-none " + (t.status === "feito" ? "text-muted-foreground line-through" : "")}
+                  />
+                </td>
+                {colunas.includes("status") && (
                   <td className="px-2 py-1">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        alterar(t.id, { status: t.status === "feito" ? "pendente" : "feito" }, { status: t.status === "feito" ? "pendente" : "feito" })
-                      }
-                      title={t.status === "feito" ? "Marcar como pendente" : "Marcar como feito"}
-                      className="text-muted-foreground hover:text-primary"
-                    >
-                      {t.status === "feito" ? <CircleCheck className="size-4 text-green-600 dark:text-green-500" /> : <Circle className="size-4" />}
-                    </button>
-                  </td>
-                  <td className="px-2 py-1">
-                    <input
-                      defaultValue={t.nome}
-                      onBlur={(e) => {
-                        if (e.target.value.trim() && e.target.value !== t.nome) alterar(t.id, { nome: e.target.value }, { nome: e.target.value.trim() });
-                      }}
-                      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-                      className={"w-full bg-transparent outline-none " + (t.status === "feito" ? "text-muted-foreground line-through" : "")}
+                    <TextoLivreCampo
+                      valor={t.statusLivre}
+                      placeholder="—"
+                      onSalvar={(v) => alterar(t.id, { statusLivre: v }, { statusLivre: v.trim() || null })}
                     />
                   </td>
-                  {colunas.includes("projeto") && (
-                    <td className="px-2 py-1">
-                      <SelectPopoverField
-                        value={t.projetoId}
-                        onChange={(projetoId) => {
-                          const projeto = projetos.find((p) => p.id === projetoId);
-                          // Trocar de projeto invalida o documento vinculado anterior (era de outro projeto).
-                          alterar(
-                            t.id,
-                            { projetoId, documentoId: null },
-                            { projetoId, projetoNome: projeto?.name ?? null, documentoId: null, documentoCodigo: null, documentoStatus: null }
-                          );
-                        }}
-                        triggerContent={<span className="min-w-0 truncate">{t.projetoNome ?? "—"}</span>}
-                        options={projetos.map((p) => ({ value: p.id, label: p.name }))}
-                      />
-                    </td>
-                  )}
-                  {colunas.includes("documento") && (
-                    <td className="px-2 py-1">
-                      <SelectPopoverField
-                        value={t.documentoId}
-                        onChange={(documentoId) => {
-                          const doc = documentosDoProjeto.find((d) => d.id === documentoId);
-                          alterar(
-                            t.id,
-                            { documentoId },
-                            { documentoId, documentoCodigo: doc?.codigo ?? null, documentoStatus: doc?.status ?? null }
-                          );
-                        }}
-                        disabled={!t.projetoId}
-                        emptyMessage={t.projetoId ? "Nenhum documento atribuído a você nesse projeto." : "Escolha um projeto primeiro."}
-                        triggerContent={
-                          <span className="flex min-w-0 items-center gap-1">
-                            <FileText className="size-3.5 shrink-0" />
-                            <span className="min-w-0 truncate font-mono">{t.documentoCodigo ?? "—"}</span>
-                          </span>
-                        }
-                        options={documentosDoProjeto.map((d) => ({ value: d.id, label: d.codigo }))}
-                      />
-                    </td>
-                  )}
-                  {colunas.includes("status") && (
-                    <td className="px-2 py-1">
-                      {t.documentoStatus && t.documentoId && t.projetoId && documentoAtual ? (
-                        <StatusCell
-                          workspaceId={workspaceId}
-                          projetoId={t.projetoId}
-                          obraId={documentoAtual.obraId}
-                          documentoId={t.documentoId}
-                          status={t.documentoStatus}
-                          podeGerenciar={podeGerenciarStatus}
-                          onAlterado={(novo) =>
-                            setTarefas((prev) => prev.map((x) => (x.documentoId === t.documentoId ? { ...x, documentoStatus: novo } : x)))
-                          }
-                        />
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </td>
-                  )}
-                  {colunas.includes("dataVencimento") && (
-                    <td className="px-2 py-1">
-                      <DatePickerField
-                        value={t.dataVencimento}
-                        onChange={(v) => alterar(t.id, { dataVencimento: v }, { dataVencimento: v })}
-                      />
-                    </td>
-                  )}
-                  {colunas.includes("prioridade") && (
-                    <td className="px-2 py-1">
-                      <PrioridadeCampo valor={t.prioridade} onChange={(v) => alterar(t.id, { prioridade: v }, { prioridade: v })} />
-                    </td>
-                  )}
-                  {colunas.includes("dataInicial") && (
-                    <td className="px-2 py-1">
-                      <DatePickerField value={t.dataInicial} onChange={(v) => alterar(t.id, { dataInicial: v }, { dataInicial: v })} />
-                    </td>
-                  )}
-                  {colunas.includes("dataConclusao") && (
-                    <td className="px-2 py-1">
-                      <DatePickerField
-                        value={paraDataISO(t.concluidaEm)}
-                        onChange={(v) =>
-                          alterar(t.id, { concluidaEm: v }, { concluidaEm: v ? new Date(`${v}T12:00:00`) : null, status: v ? "feito" : "pendente" })
-                        }
-                      />
-                    </td>
-                  )}
-                  {colunas.includes("estimativa") && (
-                    <td className="px-2 py-1">
-                      <input
-                        type="number"
-                        step="0.5"
-                        min="0"
-                        defaultValue={minutosParaHoras(t.estimativaMinutos)}
-                        onBlur={(e) => {
-                          const horas = e.target.value === "" ? null : Number(e.target.value);
-                          const minutos = horas === null ? null : Math.round(horas * 60);
-                          alterar(t.id, { estimativaMinutos: minutos }, { estimativaMinutos: minutos });
-                        }}
-                        className="w-16 bg-transparent text-xs outline-none"
-                      />
-                    </td>
-                  )}
-                  {colunas.includes("tempoRastreado") && (
-                    <td className="px-2 py-1">
-                      <input
-                        type="number"
-                        step="0.5"
-                        min="0"
-                        defaultValue={minutosParaHoras(t.tempoRastreadoMinutos)}
-                        onBlur={(e) => {
-                          const horas = e.target.value === "" ? null : Number(e.target.value);
-                          const minutos = horas === null ? null : Math.round(horas * 60);
-                          alterar(t.id, { tempoRastreadoMinutos: minutos }, { tempoRastreadoMinutos: minutos });
-                        }}
-                        className="w-16 bg-transparent text-xs outline-none"
-                      />
-                    </td>
-                  )}
+                )}
+                {colunas.includes("obs") && (
                   <td className="px-2 py-1">
-                    <button
-                      type="button"
-                      onClick={() => excluir(t.id)}
-                      className="text-muted-foreground opacity-0 hover:text-destructive group-hover/linha:opacity-100"
-                      title="Excluir"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
+                    <TextoLivreCampo valor={t.obs} placeholder="—" onSalvar={(v) => alterar(t.id, { obs: v }, { obs: v.trim() || null })} />
                   </td>
-                </tr>
-              );
-            })}
+                )}
+                {colunas.includes("dataVencimento") && (
+                  <td className="px-2 py-1">
+                    <DatePickerField
+                      value={t.dataVencimento}
+                      onChange={(v) => alterar(t.id, { dataVencimento: v }, { dataVencimento: v })}
+                    />
+                  </td>
+                )}
+                {colunas.includes("prioridade") && (
+                  <td className="px-2 py-1">
+                    <PrioridadeCampo valor={t.prioridade} onChange={(v) => alterar(t.id, { prioridade: v }, { prioridade: v })} />
+                  </td>
+                )}
+                {colunas.includes("dataInicial") && (
+                  <td className="px-2 py-1">
+                    <DatePickerField value={t.dataInicial} onChange={(v) => alterar(t.id, { dataInicial: v }, { dataInicial: v })} />
+                  </td>
+                )}
+                {colunas.includes("dataConclusao") && (
+                  <td className="px-2 py-1">
+                    <DatePickerField
+                      value={paraDataISO(t.concluidaEm)}
+                      onChange={(v) =>
+                        alterar(t.id, { concluidaEm: v }, { concluidaEm: v ? new Date(`${v}T12:00:00`) : null, status: v ? "feito" : "pendente" })
+                      }
+                    />
+                  </td>
+                )}
+                {colunas.includes("estimativa") && (
+                  <td className="px-2 py-1">
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      defaultValue={minutosParaHoras(t.estimativaMinutos)}
+                      onBlur={(e) => {
+                        const horas = e.target.value === "" ? null : Number(e.target.value);
+                        const minutos = horas === null ? null : Math.round(horas * 60);
+                        alterar(t.id, { estimativaMinutos: minutos }, { estimativaMinutos: minutos });
+                      }}
+                      className="w-16 bg-transparent text-xs outline-none"
+                    />
+                  </td>
+                )}
+                {colunas.includes("tempoRastreado") && (
+                  <td className="px-2 py-1">
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      defaultValue={minutosParaHoras(t.tempoRastreadoMinutos)}
+                      onBlur={(e) => {
+                        const horas = e.target.value === "" ? null : Number(e.target.value);
+                        const minutos = horas === null ? null : Math.round(horas * 60);
+                        alterar(t.id, { tempoRastreadoMinutos: minutos }, { tempoRastreadoMinutos: minutos });
+                      }}
+                      className="w-16 bg-transparent text-xs outline-none"
+                    />
+                  </td>
+                )}
+                <td className="px-2 py-1">
+                  <button
+                    type="button"
+                    onClick={() => excluir(t.id)}
+                    className="text-muted-foreground opacity-0 hover:text-destructive group-hover/linha:opacity-100"
+                    title="Excluir"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </td>
+              </tr>
+            ))}
             <tr>
               <td className="px-2 py-1 text-muted-foreground">
                 <Plus className="size-3.5" />

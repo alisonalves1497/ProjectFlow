@@ -239,6 +239,13 @@
       "when": 1789749349486,
       "tag": "0033_codigo_alternativo_e_acesso_obras",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1790077035771,
+      "tag": "0034_status_livre_tarefa_pessoal",
+      "breakpoints": true
     }
   ]
 }

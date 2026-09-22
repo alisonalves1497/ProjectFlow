@@ -4,12 +4,14 @@ import { tarefasPessoais, projetos, documentos } from "@/db/schema";
 import { badRequest, forbidden } from "@/lib/errors";
 import { newId } from "@/lib/id";
 import { getMeusDocumentos } from "./painelService";
-import type { StatusDocumento } from "@/lib/statusGraph";
 
 export type TarefaPessoal = {
   id: string;
   nome: string;
   status: "pendente" | "feito";
+  // Texto livre digitado pela pessoa (ex: "Aguardando retorno", "Em campo") — não vincula
+  // com documento/projeto, é só controle individual de quem é dono da tarefa.
+  statusLivre: string | null;
   dataVencimento: string | null;
   dataInicial: string | null;
   prioridade: "urgente" | "alta" | "normal" | "baixa" | null;
@@ -17,8 +19,8 @@ export type TarefaPessoal = {
   projetoNome: string | null;
   documentoId: string | null;
   documentoCodigo: string | null;
-  // Status ATUAL do documento vinculado (não da tarefa) — só pra exibir na Lista Pessoal.
-  documentoStatus: StatusDocumento | null;
+  // Observações livres — mesma ideia do statusLivre, texto qualquer, sem vínculo.
+  obs: string | null;
   estimativaMinutos: number | null;
   tempoRastreadoMinutos: number | null;
   createdAt: Date;
@@ -33,6 +35,7 @@ export async function listTarefasPessoais(workspaceId: string, userId: string): 
       id: tarefasPessoais.id,
       nome: tarefasPessoais.nome,
       status: tarefasPessoais.status,
+      statusLivre: tarefasPessoais.statusLivre,
       dataVencimento: tarefasPessoais.dataVencimento,
       dataInicial: tarefasPessoais.dataInicial,
       prioridade: tarefasPessoais.prioridade,
@@ -40,7 +43,7 @@ export async function listTarefasPessoais(workspaceId: string, userId: string): 
       projetoNome: projetos.name,
       documentoId: tarefasPessoais.documentoId,
       documentoCodigo: documentos.codigoCompleto,
-      documentoStatus: documentos.status,
+      obs: tarefasPessoais.obs,
       estimativaMinutos: tarefasPessoais.estimativaMinutos,
       tempoRastreadoMinutos: tarefasPessoais.tempoRastreadoMinutos,
       createdAt: tarefasPessoais.createdAt,
@@ -67,6 +70,8 @@ export async function createTarefaPessoal(workspaceId: string, userId: string, n
 export type PatchTarefaPessoal = {
   nome?: string;
   status?: "pendente" | "feito";
+  statusLivre?: string | null;
+  obs?: string | null;
   dataVencimento?: string | null;
   dataInicial?: string | null;
   // Data (não hora) de conclusão — definir uma data marca a tarefa como feita; limpar
@@ -97,6 +102,8 @@ export async function updateTarefaPessoal(workspaceId: string, userId: string, t
     set.concluidaEm = patch.concluidaEm ? new Date(`${patch.concluidaEm}T12:00:00`) : null;
     set.status = patch.concluidaEm ? "feito" : "pendente";
   }
+  if (patch.statusLivre !== undefined) set.statusLivre = patch.statusLivre?.trim() || null;
+  if (patch.obs !== undefined) set.obs = patch.obs?.trim() || null;
   if (patch.dataVencimento !== undefined) set.dataVencimento = patch.dataVencimento;
   if (patch.dataInicial !== undefined) set.dataInicial = patch.dataInicial;
   if (patch.prioridade !== undefined) set.prioridade = patch.prioridade;
