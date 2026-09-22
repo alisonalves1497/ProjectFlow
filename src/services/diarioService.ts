@@ -12,6 +12,9 @@ export type TarefaPessoal = {
   // Texto livre digitado pela pessoa (ex: "Aguardando retorno", "Em campo") — não vincula
   // com documento/projeto, é só controle individual de quem é dono da tarefa.
   statusLivre: string | null;
+  statusLivreNegrito: boolean;
+  statusLivreCor: string | null;
+  statusLivreFundo: string | null;
   dataVencimento: string | null;
   dataInicial: string | null;
   prioridade: "urgente" | "alta" | "normal" | "baixa" | null;
@@ -21,6 +24,9 @@ export type TarefaPessoal = {
   documentoCodigo: string | null;
   // Observações livres — mesma ideia do statusLivre, texto qualquer, sem vínculo.
   obs: string | null;
+  obsNegrito: boolean;
+  obsCor: string | null;
+  obsFundo: string | null;
   estimativaMinutos: number | null;
   tempoRastreadoMinutos: number | null;
   createdAt: Date;
@@ -36,6 +42,9 @@ export async function listTarefasPessoais(workspaceId: string, userId: string): 
       nome: tarefasPessoais.nome,
       status: tarefasPessoais.status,
       statusLivre: tarefasPessoais.statusLivre,
+      statusLivreNegrito: tarefasPessoais.statusLivreNegrito,
+      statusLivreCor: tarefasPessoais.statusLivreCor,
+      statusLivreFundo: tarefasPessoais.statusLivreFundo,
       dataVencimento: tarefasPessoais.dataVencimento,
       dataInicial: tarefasPessoais.dataInicial,
       prioridade: tarefasPessoais.prioridade,
@@ -44,6 +53,9 @@ export async function listTarefasPessoais(workspaceId: string, userId: string): 
       documentoId: tarefasPessoais.documentoId,
       documentoCodigo: documentos.codigoCompleto,
       obs: tarefasPessoais.obs,
+      obsNegrito: tarefasPessoais.obsNegrito,
+      obsCor: tarefasPessoais.obsCor,
+      obsFundo: tarefasPessoais.obsFundo,
       estimativaMinutos: tarefasPessoais.estimativaMinutos,
       tempoRastreadoMinutos: tarefasPessoais.tempoRastreadoMinutos,
       createdAt: tarefasPessoais.createdAt,
@@ -71,7 +83,13 @@ export type PatchTarefaPessoal = {
   nome?: string;
   status?: "pendente" | "feito";
   statusLivre?: string | null;
+  statusLivreNegrito?: boolean;
+  statusLivreCor?: string | null;
+  statusLivreFundo?: string | null;
   obs?: string | null;
+  obsNegrito?: boolean;
+  obsCor?: string | null;
+  obsFundo?: string | null;
   dataVencimento?: string | null;
   dataInicial?: string | null;
   // Data (não hora) de conclusão — definir uma data marca a tarefa como feita; limpar
@@ -103,7 +121,13 @@ export async function updateTarefaPessoal(workspaceId: string, userId: string, t
     set.status = patch.concluidaEm ? "feito" : "pendente";
   }
   if (patch.statusLivre !== undefined) set.statusLivre = patch.statusLivre?.trim() || null;
+  if (patch.statusLivreNegrito !== undefined) set.statusLivreNegrito = patch.statusLivreNegrito;
+  if (patch.statusLivreCor !== undefined) set.statusLivreCor = patch.statusLivreCor;
+  if (patch.statusLivreFundo !== undefined) set.statusLivreFundo = patch.statusLivreFundo;
   if (patch.obs !== undefined) set.obs = patch.obs?.trim() || null;
+  if (patch.obsNegrito !== undefined) set.obsNegrito = patch.obsNegrito;
+  if (patch.obsCor !== undefined) set.obsCor = patch.obsCor;
+  if (patch.obsFundo !== undefined) set.obsFundo = patch.obsFundo;
   if (patch.dataVencimento !== undefined) set.dataVencimento = patch.dataVencimento;
   if (patch.dataInicial !== undefined) set.dataInicial = patch.dataInicial;
   if (patch.prioridade !== undefined) set.prioridade = patch.prioridade;

@@ -246,6 +246,13 @@
       "when": 1790077035771,
       "tag": "0034_status_livre_tarefa_pessoal",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1790078937775,
+      "tag": "0035_abnormal_baron_strucker",
+      "breakpoints": true
     }
   ]
 }

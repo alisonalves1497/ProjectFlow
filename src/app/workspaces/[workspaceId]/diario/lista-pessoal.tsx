@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Check, Circle, CircleCheck, Trash2, Settings2, ClipboardList, Plus, Flag } from "lucide-react";
+import { Check, Circle, CircleCheck, Trash2, Settings2, ClipboardList, Plus, Flag, Pencil, Ban, Bold } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardAction, CardContent } from "@/components/ui/card";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { ResizeHandleVertical } from "@/components/ui/resize-handle-vertical";
 import { ResizeHandle } from "@/components/ui/resize-handle";
 import { DatePickerField } from "@/components/ui/date-picker-field";
@@ -98,19 +99,130 @@ function PrioridadeCampo({ valor, onChange }: { valor: PrioridadeValor | null; o
   );
 }
 
-// Célula de texto livre (Status/Obs) — sem vínculo com nada, mesmo padrão inline do "Nome
-// da tarefa": digita, sai do campo e salva.
-function TextoLivreCampo({ valor, onSalvar, placeholder }: { valor: string | null; onSalvar: (v: string) => void; placeholder?: string }) {
+// Paleta fixa pra cor da letra/fundo — mesmo espírito do seletor de cores do Excel/Google
+// Sheets, só que reduzido a um punhado de opções (mais que isso vira ruído numa tabela).
+const PALETA_CORES = [
+  "#ef4444",
+  "#f97316",
+  "#eab308",
+  "#22c55e",
+  "#0ea5e9",
+  "#6366f1",
+  "#a855f7",
+  "#ec4899",
+  "#64748b",
+  "#0f172a",
+];
+
+function SeletorCor({ valor, onChange }: { valor: string | null; onChange: (cor: string | null) => void }) {
   return (
-    <input
-      defaultValue={valor ?? ""}
-      placeholder={placeholder}
-      onBlur={(e) => {
-        if (e.target.value !== (valor ?? "")) onSalvar(e.target.value);
-      }}
-      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-      className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground"
-    />
+    <div className="grid grid-cols-5 gap-1 p-1">
+      {PALETA_CORES.map((cor) => (
+        <button
+          key={cor}
+          type="button"
+          onClick={() => onChange(cor)}
+          title={cor}
+          className={cn("size-5 rounded-full border", valor === cor && "ring-2 ring-primary ring-offset-1 ring-offset-popover")}
+          style={{ backgroundColor: cor }}
+        />
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange(null)}
+        title="Sem cor"
+        className="flex size-5 items-center justify-center rounded-full border text-muted-foreground"
+      >
+        <Ban className="size-3" />
+      </button>
+    </div>
+  );
+}
+
+export type FormatacaoTexto = { negrito: boolean; cor: string | null; fundo: string | null };
+
+// Mini barra de formatação tipo Excel (N / cor da letra / cor de fundo) — aparece num lápis
+// que só fica visível no hover da célula, pra não poluir a tabela quando não tá em uso.
+function FormatacaoPopover({ formatacao, onChange }: { formatacao: FormatacaoTexto; onChange: (f: FormatacaoTexto) => void }) {
+  const [open, setOpen] = useState(false);
+  const temFormatacao = formatacao.negrito || formatacao.cor !== null || formatacao.fundo !== null;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <button
+            type="button"
+            title="Formatar texto"
+            className={cn(
+              "shrink-0 text-muted-foreground hover:text-foreground",
+              temFormatacao ? "opacity-100" : "opacity-0 group-hover/linha:opacity-100"
+            )}
+          />
+        }
+      >
+        <Pencil className="size-3" />
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto p-2">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => onChange({ ...formatacao, negrito: !formatacao.negrito })}
+            title="Negrito"
+            className={cn(
+              "flex size-6 items-center justify-center rounded-md border hover:bg-accent",
+              formatacao.negrito && "border-primary bg-primary/10 text-primary"
+            )}
+          >
+            <Bold className="size-3.5" />
+          </button>
+          <div>
+            <p className="mb-1 text-[10px] text-muted-foreground">Cor da letra</p>
+            <SeletorCor valor={formatacao.cor} onChange={(cor) => onChange({ ...formatacao, cor })} />
+          </div>
+          <div>
+            <p className="mb-1 text-[10px] text-muted-foreground">Cor de fundo</p>
+            <SeletorCor valor={formatacao.fundo} onChange={(fundo) => onChange({ ...formatacao, fundo })} />
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// Célula de texto livre (Status/Obs) — sem vínculo com nada, mesmo padrão inline do "Nome
+// da tarefa": digita, sai do campo e salva. Além do texto, tem formatação tipo Excel
+// (negrito/cor da letra/cor de fundo) via FormatacaoPopover.
+function TextoLivreCampo({
+  valor,
+  formatacao,
+  onSalvar,
+  onFormatar,
+  placeholder,
+}: {
+  valor: string | null;
+  formatacao: FormatacaoTexto;
+  onSalvar: (v: string) => void;
+  onFormatar: (f: FormatacaoTexto) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div
+      className="flex min-h-6 items-center gap-1 rounded px-1"
+      style={formatacao.fundo ? { backgroundColor: formatacao.fundo + "33" } : undefined}
+    >
+      <input
+        defaultValue={valor ?? ""}
+        placeholder={placeholder}
+        onBlur={(e) => {
+          if (e.target.value !== (valor ?? "")) onSalvar(e.target.value);
+        }}
+        onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+        style={{ color: formatacao.cor ?? undefined }}
+        className={cn("w-full min-w-0 bg-transparent text-xs outline-none placeholder:text-muted-foreground", formatacao.negrito && "font-bold")}
+      />
+      <FormatacaoPopover formatacao={formatacao} onChange={onFormatar} />
+    </div>
   );
 }
 
@@ -356,14 +468,30 @@ export function ListaPessoal({ workspaceId, tarefasIniciais }: { workspaceId: st
                   <td className="px-2 py-1">
                     <TextoLivreCampo
                       valor={t.statusLivre}
+                      formatacao={{ negrito: t.statusLivreNegrito, cor: t.statusLivreCor, fundo: t.statusLivreFundo }}
                       placeholder="—"
                       onSalvar={(v) => alterar(t.id, { statusLivre: v }, { statusLivre: v.trim() || null })}
+                      onFormatar={(f) =>
+                        alterar(
+                          t.id,
+                          { statusLivreNegrito: f.negrito, statusLivreCor: f.cor, statusLivreFundo: f.fundo },
+                          { statusLivreNegrito: f.negrito, statusLivreCor: f.cor, statusLivreFundo: f.fundo }
+                        )
+                      }
                     />
                   </td>
                 )}
                 {colunas.includes("obs") && (
                   <td className="px-2 py-1">
-                    <TextoLivreCampo valor={t.obs} placeholder="—" onSalvar={(v) => alterar(t.id, { obs: v }, { obs: v.trim() || null })} />
+                    <TextoLivreCampo
+                      valor={t.obs}
+                      formatacao={{ negrito: t.obsNegrito, cor: t.obsCor, fundo: t.obsFundo }}
+                      placeholder="—"
+                      onSalvar={(v) => alterar(t.id, { obs: v }, { obs: v.trim() || null })}
+                      onFormatar={(f) =>
+                        alterar(t.id, { obsNegrito: f.negrito, obsCor: f.cor, obsFundo: f.fundo }, { obsNegrito: f.negrito, obsCor: f.cor, obsFundo: f.fundo })
+                      }
+                    />
                   </td>
                 )}
                 {colunas.includes("dataVencimento") && (

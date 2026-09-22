@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, date, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, timestamp, date, pgEnum } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 import { users } from "./auth";
 import { projetos } from "./hierarquia";
@@ -21,8 +21,17 @@ export const tarefasPessoais = pgTable("tarefas_pessoais", {
   // projeto), só aparece pra quem é dono da tarefa. Diferente de `status` acima (que é o
   // pendente/feito do checkbox).
   statusLivre: text("status_livre"),
+  // Formatação tipo Excel do statusLivre — negrito, cor da letra e cor de fundo da célula,
+  // tudo opcional (null = padrão do tema).
+  statusLivreNegrito: boolean("status_livre_negrito").notNull().default(false),
+  statusLivreCor: text("status_livre_cor"),
+  statusLivreFundo: text("status_livre_fundo"),
   // Observações livres — texto qualquer, sem vínculo com nada, só anotação pessoal.
   obs: text("obs"),
+  // Mesma formatação do statusLivre acima, aplicada ao obs.
+  obsNegrito: boolean("obs_negrito").notNull().default(false),
+  obsCor: text("obs_cor"),
+  obsFundo: text("obs_fundo"),
   dataVencimento: date("data_vencimento"),
   dataInicial: date("data_inicial"),
   prioridade: prioridadeTarefaPessoalEnum("prioridade"),
