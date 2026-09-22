@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, ListTodo, FileText, ClipboardCheck, CircleCheck } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { ChevronDown, ChevronRight, ChevronUp, ListTodo, FileText, ClipboardCheck, CircleCheck } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardAction, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ResizeHandleVertical } from "@/components/ui/resize-handle-vertical";
 import type { MeuTrabalho as MeuTrabalhoData, ItemTrabalho } from "@/services/diarioService";
@@ -29,6 +29,9 @@ const TOM_TITULO: Record<Tom, string> = {
 
 function chaveAltura(workspaceId: string): string {
   return `meu-trabalho-altura-${workspaceId}`;
+}
+function chaveRecolhido(workspaceId: string): string {
+  return `meu-trabalho-recolhido-${workspaceId}`;
 }
 
 function formatarData(iso: string): string {
@@ -87,6 +90,7 @@ function Grupo({ titulo, itens, tom, defaultAberto }: { titulo: string; itens: I
 
 export function MeuTrabalho({ workspaceId, dados }: { workspaceId: string; dados: MeuTrabalhoData }) {
   const [altura, setAltura] = useState(ALTURA_PADRAO);
+  const [recolhido, setRecolhido] = useState(false);
 
   useEffect(() => {
     try {
@@ -95,10 +99,27 @@ export function MeuTrabalho({ workspaceId, dados }: { workspaceId: string; dados
         // eslint-disable-next-line react-hooks/set-state-in-effect -- leitura de localStorage só no cliente, roda 1x
         setAltura(Math.max(ALTURA_MINIMA, Number(bruto)));
       }
+      const brutoRecolhido = localStorage.getItem(chaveRecolhido(workspaceId));
+      if (brutoRecolhido) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- leitura de localStorage só no cliente, roda 1x
+        setRecolhido(brutoRecolhido === "1");
+      }
     } catch {
       // sem persistência local se localStorage falhar
     }
   }, [workspaceId]);
+
+  function alternarRecolhido() {
+    setRecolhido((prev) => {
+      const proximo = !prev;
+      try {
+        localStorage.setItem(chaveRecolhido(workspaceId), proximo ? "1" : "0");
+      } catch {
+        // sem persistência local se localStorage falhar
+      }
+      return proximo;
+    });
+  }
 
   const onResize = useCallback(
     (deltaY: number) => {
@@ -117,45 +138,59 @@ export function MeuTrabalho({ workspaceId, dados }: { workspaceId: string; dados
 
   return (
     <Card className="gap-0 pb-0">
-      <CardHeader className="border-b pb-3">
+      <CardHeader className={recolhido ? "" : "border-b pb-3"}>
         <div className="flex items-center gap-2">
           <ListTodo className="size-4 text-primary" />
           <CardTitle>Meu trabalho</CardTitle>
         </div>
+        <CardAction>
+          <button
+            type="button"
+            onClick={alternarRecolhido}
+            title={recolhido ? "Expandir" : "Recolher"}
+            className="flex items-center rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            {recolhido ? <ChevronDown className="size-4" /> : <ChevronUp className="size-4" />}
+          </button>
+        </CardAction>
       </CardHeader>
 
-      <CardContent className="pt-2">
-        <Tabs defaultValue="pendente">
-          <TabsList variant="line">
-            <TabsTrigger value="pendente">Pendente</TabsTrigger>
-            <TabsTrigger value="feito">Feito</TabsTrigger>
-          </TabsList>
+      {!recolhido && (
+        <>
+          <CardContent className="pt-2">
+            <Tabs defaultValue="pendente">
+              <TabsList variant="line">
+                <TabsTrigger value="pendente">Pendente</TabsTrigger>
+                <TabsTrigger value="feito">Feito</TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="pendente" style={{ height: altura, flex: "none" }} className="overflow-y-auto pb-2">
-            <Grupo titulo="Hoje" itens={dados.pendente.hoje} tom="hoje" defaultAberto={dados.pendente.hoje.length > 0} />
-            <Grupo titulo="Em atraso" itens={dados.pendente.emAtraso} tom="atraso" defaultAberto={dados.pendente.emAtraso.length > 0} />
-            <Grupo titulo="Próximo" itens={dados.pendente.proximo} tom="proximo" defaultAberto={dados.pendente.proximo.length > 0} />
-            <Grupo titulo="Não programado" itens={dados.pendente.naoProgramado} tom="neutro" defaultAberto={false} />
-          </TabsContent>
+              <TabsContent value="pendente" style={{ height: altura, flex: "none" }} className="overflow-y-auto pb-2">
+                <Grupo titulo="Hoje" itens={dados.pendente.hoje} tom="hoje" defaultAberto={dados.pendente.hoje.length > 0} />
+                <Grupo titulo="Em atraso" itens={dados.pendente.emAtraso} tom="atraso" defaultAberto={dados.pendente.emAtraso.length > 0} />
+                <Grupo titulo="Próximo" itens={dados.pendente.proximo} tom="proximo" defaultAberto={dados.pendente.proximo.length > 0} />
+                <Grupo titulo="Não programado" itens={dados.pendente.naoProgramado} tom="neutro" defaultAberto={false} />
+              </TabsContent>
 
-          <TabsContent value="feito" style={{ height: altura, flex: "none" }} className="overflow-y-auto pb-2">
-            {dados.feito.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
-                <CircleCheck className="size-6 text-primary/30" />
-                Nada concluído ainda.
-              </div>
-            ) : (
-              <ul>
-                {dados.feito.map((item) => (
-                  <ItemLinha key={`${item.tipo}-${item.id}`} item={item} tom="neutro" />
-                ))}
-              </ul>
-            )}
-          </TabsContent>
-        </Tabs>
-      </CardContent>
+              <TabsContent value="feito" style={{ height: altura, flex: "none" }} className="overflow-y-auto pb-2">
+                {dados.feito.length === 0 ? (
+                  <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
+                    <CircleCheck className="size-6 text-primary/30" />
+                    Nada concluído ainda.
+                  </div>
+                ) : (
+                  <ul>
+                    {dados.feito.map((item) => (
+                      <ItemLinha key={`${item.tipo}-${item.id}`} item={item} tom="neutro" />
+                    ))}
+                  </ul>
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
 
-      <ResizeHandleVertical onResize={onResize} />
+          <ResizeHandleVertical onResize={onResize} />
+        </>
+      )}
     </Card>
   );
 }
