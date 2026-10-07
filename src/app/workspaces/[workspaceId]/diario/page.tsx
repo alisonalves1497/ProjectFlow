@@ -32,6 +32,7 @@ export default async function DiarioPage({ params }: Params) {
     getWorkspaceRole(session.user.id, workspaceId),
   ]);
   const souAdmin = role === "administrador";
+  const souCoordenador = role === "coordenador";
   // Lista pessoal mostra minhas tarefas + as que eu atribuí pra outras pessoas (mesma linha
   // que elas veem) — "Meu trabalho"/horas acumuladas acima continuam só com tarefasProprias,
   // porque tarefa atribuída a outra pessoa não é pendência MINHA.
@@ -47,7 +48,14 @@ export default async function DiarioPage({ params }: Params) {
 
       <div className="space-y-6">
         <MeuTrabalho workspaceId={workspaceId} dados={meuTrabalho} />
-        <ListaPessoal workspaceId={workspaceId} tarefasIniciais={tarefas} userId={session.user.id} membros={membros} souAdmin={souAdmin} />
+        <ListaPessoal
+          workspaceId={workspaceId}
+          tarefasIniciais={tarefas}
+          userId={session.user.id}
+          membros={membros}
+          souAdmin={souAdmin}
+          souCoordenador={souCoordenador}
+        />
 
         <Card>
           <CardHeader>

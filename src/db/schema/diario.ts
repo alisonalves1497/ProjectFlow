@@ -45,6 +45,11 @@ export const tarefasPessoais = pgTable("tarefas_pessoais", {
   obsNegrito: boolean("obs_negrito").notNull().default(false),
   obsCor: text("obs_cor"),
   obsFundo: text("obs_fundo"),
+  // Anotação do coordenador — visível pra qualquer um que já vê essa tarefa (mesma regra do
+  // obs), mas também editável por quem tem o role "coordenador" (ou administrador) mesmo sem
+  // ser dono/criador da tarefa, via o seletor "ver lista de" (nesse modo só esse campo é
+  // editável — ver updateObsCoordTarefaPessoal/comoCoordenador em actions.ts).
+  obsCoord: text("obs_coord"),
   dataVencimento: date("data_vencimento"),
   dataInicial: date("data_inicial"),
   prioridade: prioridadeTarefaPessoalEnum("prioridade"),

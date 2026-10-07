@@ -34,6 +34,8 @@ export type TarefaPessoal = {
   obsNegrito: boolean;
   obsCor: string | null;
   obsFundo: string | null;
+  // Anotação do coordenador — ver comentário da coluna no schema (diario.ts).
+  obsCoord: string | null;
   // Quem criou a tarefa, quando diferente do dono (atribuição) — null se foi o próprio dono
   // que criou, ou se quem criou saiu do workspace depois.
   criadoPorId: string | null;
@@ -78,6 +80,7 @@ export async function listTarefasPessoais(workspaceId: string, userId: string): 
       obsNegrito: tarefasPessoais.obsNegrito,
       obsCor: tarefasPessoais.obsCor,
       obsFundo: tarefasPessoais.obsFundo,
+      obsCoord: tarefasPessoais.obsCoord,
       criadoPorId: tarefasPessoais.criadoPorId,
       criadoPorNome: criadorPessoal.name,
       estimativaMinutos: tarefasPessoais.estimativaMinutos,
@@ -123,6 +126,7 @@ export async function listTarefasAtribuidasPorMim(workspaceId: string, criadorId
       obsNegrito: tarefasPessoais.obsNegrito,
       obsCor: tarefasPessoais.obsCor,
       obsFundo: tarefasPessoais.obsFundo,
+      obsCoord: tarefasPessoais.obsCoord,
       criadoPorId: tarefasPessoais.criadoPorId,
       donoId: tarefasPessoais.userId,
       donoNome: donoPessoal.name,
@@ -171,6 +175,7 @@ export type PatchTarefaPessoal = {
   obsNegrito?: boolean;
   obsCor?: string | null;
   obsFundo?: string | null;
+  obsCoord?: string | null;
   dataVencimento?: string | null;
   dataInicial?: string | null;
   // Data (não hora) de conclusão — definir uma data marca a tarefa como feita; limpar
@@ -211,6 +216,7 @@ function construirSetTarefaPessoal(patch: PatchTarefaPessoal): Partial<typeof ta
   if (patch.obsNegrito !== undefined) set.obsNegrito = patch.obsNegrito;
   if (patch.obsCor !== undefined) set.obsCor = patch.obsCor;
   if (patch.obsFundo !== undefined) set.obsFundo = patch.obsFundo;
+  if (patch.obsCoord !== undefined) set.obsCoord = patch.obsCoord?.trim() || null;
   if (patch.dataVencimento !== undefined) set.dataVencimento = patch.dataVencimento;
   if (patch.dataInicial !== undefined) set.dataInicial = patch.dataInicial;
   if (patch.prioridade !== undefined) set.prioridade = patch.prioridade;
@@ -252,6 +258,19 @@ export async function updateTarefaPessoalAdmin(workspaceId: string, tarefaId: st
   const [tarefa] = await db
     .update(tarefasPessoais)
     .set(set)
+    .where(and(eq(tarefasPessoais.id, tarefaId), eq(tarefasPessoais.workspaceId, workspaceId)))
+    .returning();
+  if (!tarefa) throw notFound("TAREFA_NOT_FOUND", "Tarefa não encontrada.");
+  return tarefa;
+}
+
+// Caminho de coordenador — mais restrito que o de administrador: só mexe em `obsCoord`, nunca
+// no resto da tarefa, mesmo que quem chamou não seja dono nem criador. A autorização (role
+// "coordenador" ou "administrador") já foi checada pelo caller (actions.ts).
+export async function updateObsCoordTarefaPessoal(workspaceId: string, tarefaId: string, obsCoord: string | null) {
+  const [tarefa] = await db
+    .update(tarefasPessoais)
+    .set({ obsCoord: obsCoord?.trim() || null, updatedAt: new Date() })
     .where(and(eq(tarefasPessoais.id, tarefaId), eq(tarefasPessoais.workspaceId, workspaceId)))
     .returning();
   if (!tarefa) throw notFound("TAREFA_NOT_FOUND", "Tarefa não encontrada.");

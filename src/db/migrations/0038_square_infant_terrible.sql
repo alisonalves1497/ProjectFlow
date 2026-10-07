@@ -1,0 +1,1 @@
+ALTER TABLE "tarefas_pessoais" ADD COLUMN "obs_coord" text;

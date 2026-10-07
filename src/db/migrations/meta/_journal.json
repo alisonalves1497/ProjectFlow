@@ -267,6 +267,13 @@
       "when": 1791399781047,
       "tag": "0037_flimsy_junta",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1791403629171,
+      "tag": "0038_square_infant_terrible",
+      "breakpoints": true
     }
   ]
 }

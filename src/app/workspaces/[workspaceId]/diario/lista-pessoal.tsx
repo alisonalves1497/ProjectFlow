@@ -19,12 +19,23 @@ const LARGURA_MINIMA = 60;
 const LARGURA_NOME_MINIMA = 160;
 const LARGURA_FIXA = 32; // coluna do check e coluna da lixeira
 
-type ColunaId = "atribuido" | "status" | "obs" | "dataVencimento" | "prioridade" | "dataInicial" | "dataConclusao" | "estimativa" | "tempoRastreado";
+type ColunaId =
+  | "atribuido"
+  | "status"
+  | "obs"
+  | "obsCoord"
+  | "dataVencimento"
+  | "prioridade"
+  | "dataInicial"
+  | "dataConclusao"
+  | "estimativa"
+  | "tempoRastreado";
 
 const COLUNAS: { id: ColunaId; label: string }[] = [
   { id: "atribuido", label: "Atribuído" },
   { id: "status", label: "Status" },
   { id: "obs", label: "Obs" },
+  { id: "obsCoord", label: "Obs Coord" },
   { id: "dataVencimento", label: "Data de vencimento" },
   { id: "prioridade", label: "Prioridade" },
   { id: "dataInicial", label: "Data inicial" },
@@ -33,7 +44,7 @@ const COLUNAS: { id: ColunaId; label: string }[] = [
   { id: "tempoRastreado", label: "Tempo rastreado" },
 ];
 
-const COLUNAS_PADRAO: ColunaId[] = ["atribuido", "status", "obs", "dataVencimento", "prioridade"];
+const COLUNAS_PADRAO: ColunaId[] = ["atribuido", "status", "obs", "obsCoord", "dataVencimento", "prioridade"];
 
 // "Nome da tarefa" é a ÚNICA coluna sem largura própria (flexível — absorve o que sobra),
 // igual a "Código/Descrição" em Meus Documentos/Lista de Documentos. Todas as outras colunas
@@ -45,6 +56,7 @@ const LARGURAS_PADRAO: Record<ColunaId, number> = {
   atribuido: 110,
   status: 150,
   obs: 220,
+  obsCoord: 220,
   dataVencimento: 120,
   prioridade: 90,
   dataInicial: 110,
@@ -355,12 +367,14 @@ export function ListaPessoal({
   userId,
   membros,
   souAdmin,
+  souCoordenador,
 }: {
   workspaceId: string;
   tarefasIniciais: TarefaPessoal[];
   userId: string;
   membros: Membro[];
   souAdmin: boolean;
+  souCoordenador: boolean;
 }) {
   // `tarefas` é sempre o que está na tela; `minhaLista` guarda minha própria lista separada
   // pra não perder edições feitas nela quando eu troco pra ver a lista de outra pessoa e volto
@@ -369,7 +383,13 @@ export function ListaPessoal({
   const [minhaLista, setMinhaLista] = useState(tarefasIniciais);
   const [visualizando, setVisualizando] = useState(userId);
   const [carregandoVisualizacao, setCarregandoVisualizacao] = useState(false);
-  const comoAdmin = visualizando !== userId;
+  const visualizandoOutro = visualizando !== userId;
+  // Administrador tem acesso total na lista de qualquer um; coordenador só pode mexer no
+  // campo Obs Coord (o resto da linha vira somente-leitura — ver `somenteObsCoord` abaixo e o
+  // `pointer-events-none` no <tr>). Nunca os dois ao mesmo tempo: admin sempre tem prioridade.
+  const comoAdmin = visualizandoOutro && souAdmin;
+  const comoCoordenador = visualizandoOutro && !souAdmin && souCoordenador;
+  const somenteObsCoord = comoCoordenador;
   const [responsavelId, setResponsavelId] = useState(userId);
 
   useEffect(() => {
@@ -501,7 +521,7 @@ export function ListaPessoal({
     setTarefas(aplicar);
     if (visualizando === userId) setMinhaLista(aplicar);
 
-    const res = await atualizarTarefaAction(workspaceId, id, patch, comoAdmin);
+    const res = await atualizarTarefaAction(workspaceId, id, patch, comoAdmin, comoCoordenador);
     if (!res.ok) {
       toast.error(res.error);
       const reverter = (prev: TarefaPessoal[]) => prev.map((t) => (t.id === id && original ? original : t));
@@ -592,15 +612,16 @@ export function ListaPessoal({
           <ClipboardList className="size-4 text-primary" />
           <CardTitle>
             Lista pessoal
-            {comoAdmin && (
+            {visualizandoOutro && (
               <span className="ml-1 font-normal text-muted-foreground">
                 — {membros.find((m) => m.userId === visualizando)?.name ?? "—"}
+                {comoCoordenador && " (somente Obs Coord)"}
               </span>
             )}
           </CardTitle>
         </div>
         <CardAction className="flex items-center gap-2">
-          {souAdmin && membros.length > 1 && (
+          {(souAdmin || souCoordenador) && membros.length > 1 && (
             <VisualizarComoAdmin
               userId={userId}
               membros={membros}
@@ -667,26 +688,28 @@ export function ListaPessoal({
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b">
-              <td className="px-2 py-1 text-muted-foreground">
-                <Plus className="size-3.5" />
-              </td>
-              <td className="px-2 py-1" colSpan={colunas.length + 2}>
-                <div className="flex items-center gap-2">
-                  <input
-                    value={novaTarefa}
-                    onChange={(e) => setNovaTarefa(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && adicionar()}
-                    onBlur={adicionar}
-                    placeholder="Adicionar tarefa"
-                    className="w-full min-w-0 bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground"
-                  />
-                  {membros.length > 1 && <ResponsavelPicker userId={userId} membros={membros} valor={responsavelId} onChange={setResponsavelId} />}
-                </div>
-              </td>
-            </tr>
+            {!somenteObsCoord && (
+              <tr className="border-b">
+                <td className="px-2 py-1 text-muted-foreground">
+                  <Plus className="size-3.5" />
+                </td>
+                <td className="px-2 py-1" colSpan={colunas.length + 2}>
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={novaTarefa}
+                      onChange={(e) => setNovaTarefa(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && adicionar()}
+                      onBlur={adicionar}
+                      placeholder="Adicionar tarefa"
+                      className="w-full min-w-0 bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground"
+                    />
+                    {membros.length > 1 && <ResponsavelPicker userId={userId} membros={membros} valor={responsavelId} onChange={setResponsavelId} />}
+                  </div>
+                </td>
+              </tr>
+            )}
             {tarefas.map((t) => (
-              <tr key={t.id} className="group/linha border-b last:border-b-0 hover:bg-accent/40">
+              <tr key={t.id} className={cn("group/linha border-b last:border-b-0 hover:bg-accent/40", somenteObsCoord && "pointer-events-none opacity-80")}>
                 <td className="px-2 py-1">
                   <button
                     type="button"
@@ -762,6 +785,19 @@ export function ListaPessoal({
                       onFormatar={(f) =>
                         alterar(t.id, { obsNegrito: f.negrito, obsCor: f.cor, obsFundo: f.fundo }, { obsNegrito: f.negrito, obsCor: f.cor, obsFundo: f.fundo })
                       }
+                    />
+                  </td>
+                )}
+                {colunas.includes("obsCoord") && (
+                  <td className="pointer-events-auto px-2 py-1">
+                    <input
+                      defaultValue={t.obsCoord ?? ""}
+                      placeholder="—"
+                      onBlur={(e) => {
+                        if (e.target.value !== (t.obsCoord ?? "")) alterar(t.id, { obsCoord: e.target.value }, { obsCoord: e.target.value.trim() || null });
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                      className="w-full min-w-0 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
                     />
                   </td>
                 )}
