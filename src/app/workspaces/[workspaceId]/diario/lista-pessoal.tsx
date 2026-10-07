@@ -667,6 +667,24 @@ export function ListaPessoal({
             </tr>
           </thead>
           <tbody>
+            <tr className="border-b">
+              <td className="px-2 py-1 text-muted-foreground">
+                <Plus className="size-3.5" />
+              </td>
+              <td className="px-2 py-1" colSpan={colunas.length + 2}>
+                <div className="flex items-center gap-2">
+                  <input
+                    value={novaTarefa}
+                    onChange={(e) => setNovaTarefa(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && adicionar()}
+                    onBlur={adicionar}
+                    placeholder="Adicionar tarefa"
+                    className="w-full min-w-0 bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground"
+                  />
+                  {membros.length > 1 && <ResponsavelPicker userId={userId} membros={membros} valor={responsavelId} onChange={setResponsavelId} />}
+                </div>
+              </td>
+            </tr>
             {tarefas.map((t) => (
               <tr key={t.id} className="group/linha border-b last:border-b-0 hover:bg-accent/40">
                 <td className="px-2 py-1">
@@ -819,24 +837,6 @@ export function ListaPessoal({
                 </td>
               </tr>
             ))}
-            <tr>
-              <td className="px-2 py-1 text-muted-foreground">
-                <Plus className="size-3.5" />
-              </td>
-              <td className="px-2 py-1" colSpan={colunas.length + 2}>
-                <div className="flex items-center gap-2">
-                  <input
-                    value={novaTarefa}
-                    onChange={(e) => setNovaTarefa(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && adicionar()}
-                    onBlur={adicionar}
-                    placeholder="Adicionar tarefa"
-                    className="w-full min-w-0 bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground"
-                  />
-                  {membros.length > 1 && <ResponsavelPicker userId={userId} membros={membros} valor={responsavelId} onChange={setResponsavelId} />}
-                </div>
-              </td>
-            </tr>
           </tbody>
         </table>
       </CardContent>
