@@ -1,9 +1,12 @@
 import { and, desc, eq, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db/client";
-import { tarefasPessoais, projetos, documentos } from "@/db/schema";
+import { tarefasPessoais, projetos, documentos, users } from "@/db/schema";
 import { badRequest, forbidden } from "@/lib/errors";
 import { newId } from "@/lib/id";
 import { getMeusDocumentos } from "./painelService";
+
+const criadorPessoal = alias(users, "criador_tarefa_pessoal");
 
 export type TarefaPessoal = {
   id: string;
@@ -30,6 +33,10 @@ export type TarefaPessoal = {
   obsNegrito: boolean;
   obsCor: string | null;
   obsFundo: string | null;
+  // Quem criou a tarefa, quando diferente do dono (atribuição) — null se foi o próprio dono
+  // que criou, ou se quem criou saiu do workspace depois.
+  criadoPorId: string | null;
+  criadoPorNome: string | null;
   estimativaMinutos: number | null;
   tempoRastreadoMinutos: number | null;
   createdAt: Date;
@@ -62,6 +69,8 @@ export async function listTarefasPessoais(workspaceId: string, userId: string): 
       obsNegrito: tarefasPessoais.obsNegrito,
       obsCor: tarefasPessoais.obsCor,
       obsFundo: tarefasPessoais.obsFundo,
+      criadoPorId: tarefasPessoais.criadoPorId,
+      criadoPorNome: criadorPessoal.name,
       estimativaMinutos: tarefasPessoais.estimativaMinutos,
       tempoRastreadoMinutos: tarefasPessoais.tempoRastreadoMinutos,
       createdAt: tarefasPessoais.createdAt,
@@ -70,17 +79,20 @@ export async function listTarefasPessoais(workspaceId: string, userId: string): 
     .from(tarefasPessoais)
     .leftJoin(projetos, eq(projetos.id, tarefasPessoais.projetoId))
     .leftJoin(documentos, eq(documentos.id, tarefasPessoais.documentoId))
+    .leftJoin(criadorPessoal, eq(criadorPessoal.id, tarefasPessoais.criadoPorId))
     .where(and(eq(tarefasPessoais.workspaceId, workspaceId), eq(tarefasPessoais.userId, userId)))
     .orderBy(desc(tarefasPessoais.createdAt));
 }
 
-export async function createTarefaPessoal(workspaceId: string, userId: string, nome: string) {
+// `responsavelId` permite criar a tarefa já na lista de outra pessoa (atribuição) — criadoPorId
+// fica registrado pra mostrar "atribuído por" pra quem recebeu. Sem isso, dono = criador.
+export async function createTarefaPessoal(workspaceId: string, criadorId: string, nome: string, responsavelId?: string) {
   const texto = nome.trim();
   if (!texto) throw badRequest("TAREFA_NOME_VAZIO", "Dê um nome pra tarefa antes de salvar.");
 
   const [tarefa] = await db
     .insert(tarefasPessoais)
-    .values({ id: newId("tarefa"), workspaceId, userId, nome: texto })
+    .values({ id: newId("tarefa"), workspaceId, userId: responsavelId ?? criadorId, criadoPorId: criadorId, nome: texto })
     .returning();
   return tarefa;
 }

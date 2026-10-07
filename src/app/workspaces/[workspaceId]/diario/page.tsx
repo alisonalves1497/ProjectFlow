@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { Clock } from "lucide-react";
 import { getMeuTrabalho, listTarefasPessoais, getHorasAcumuladasPorProjeto } from "@/services/diarioService";
+import { listarMembrosWorkspace } from "@/services/sincronizarPortifolioService";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { MeuTrabalho } from "./meu-trabalho";
 import { ListaPessoal } from "./lista-pessoal";
@@ -21,10 +22,11 @@ export default async function DiarioPage({ params }: Params) {
 
   const { workspaceId } = await params;
 
-  const [meuTrabalho, tarefas, horasAcumuladas] = await Promise.all([
+  const [meuTrabalho, tarefas, horasAcumuladas, membros] = await Promise.all([
     getMeuTrabalho(workspaceId, session.user.id),
     listTarefasPessoais(workspaceId, session.user.id),
     getHorasAcumuladasPorProjeto(workspaceId, session.user.id),
+    listarMembrosWorkspace(workspaceId),
   ]);
 
   const primeiroNome = (session.user.name ?? session.user.email ?? "").split(" ")[0];
@@ -37,7 +39,7 @@ export default async function DiarioPage({ params }: Params) {
 
       <div className="space-y-6">
         <MeuTrabalho workspaceId={workspaceId} dados={meuTrabalho} />
-        <ListaPessoal workspaceId={workspaceId} tarefasIniciais={tarefas} />
+        <ListaPessoal workspaceId={workspaceId} tarefasIniciais={tarefas} userId={session.user.id} membros={membros} />
 
         <Card>
           <CardHeader>

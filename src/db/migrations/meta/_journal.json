@@ -260,6 +260,13 @@
       "when": 1791399269850,
       "tag": "0036_rapid_karma",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1791399781047,
+      "tag": "0037_flimsy_junta",
+      "breakpoints": true
     }
   ]
 }

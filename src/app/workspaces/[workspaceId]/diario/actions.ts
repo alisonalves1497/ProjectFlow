@@ -22,14 +22,26 @@ async function comSessao(workspaceId: string, fn: (userId: string) => Promise<vo
   return { ok: true };
 }
 
-export async function criarTarefaAction(workspaceId: string, nome: string): Promise<{ ok: true; tarefa: TarefaPessoal } | { ok: false; error: string }> {
+export async function criarTarefaAction(
+  workspaceId: string,
+  nome: string,
+  responsavelId?: string
+): Promise<{ ok: true; tarefa: TarefaPessoal } | { ok: false; error: string }> {
   const session = await auth();
   if (!session?.user?.id) return { ok: false, error: "Não autenticado." };
 
   try {
-    const tarefa = await createTarefaPessoal(workspaceId, session.user.id, nome);
+    const tarefa = await createTarefaPessoal(workspaceId, session.user.id, nome, responsavelId);
     revalidatePath(`/workspaces/${workspaceId}/diario`);
-    return { ok: true, tarefa: { ...tarefa, projetoNome: null, documentoCodigo: null } };
+    return {
+      ok: true,
+      tarefa: {
+        ...tarefa,
+        projetoNome: null,
+        documentoCodigo: null,
+        criadoPorNome: tarefa.criadoPorId === session.user.id ? (session.user.name ?? null) : null,
+      },
+    };
   } catch (err) {
     if (err instanceof ApiError) return { ok: false, error: err.message };
     throw err;

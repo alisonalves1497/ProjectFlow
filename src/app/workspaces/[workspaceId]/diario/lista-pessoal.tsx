@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Check, Circle, CircleCheck, Trash2, Settings2, ClipboardList, Plus, Flag, Pencil, Ban, Bold } from "lucide-react";
+import { Check, Circle, CircleCheck, Trash2, Settings2, ClipboardList, Plus, Flag, Pencil, Ban, Bold, User } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardAction, CardContent } from "@/components/ui/card";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -226,8 +226,73 @@ function TextoLivreCampo({
   );
 }
 
-export function ListaPessoal({ workspaceId, tarefasIniciais }: { workspaceId: string; tarefasIniciais: TarefaPessoal[] }) {
+type Membro = { userId: string; name: string | null };
+
+// Quem vai criar a tarefa escolhe o responsável aqui — não é "ver a lista de outra pessoa",
+// é só criar uma tarefa já atribuída (ela some da visão de quem criou e aparece na lista
+// pessoal de quem recebeu, marcada com um ícone "atribuído por").
+function ResponsavelPicker({ userId, membros, valor, onChange }: { userId: string; membros: Membro[]; valor: string; onChange: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const outros = membros.filter((m) => m.userId !== userId).sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
+  const nomeAtual = valor === userId ? "Eu" : (membros.find((m) => m.userId === valor)?.name ?? "Eu");
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <button
+            type="button"
+            title="Responsável pela tarefa"
+            className="flex h-6 shrink-0 items-center gap-1 rounded-md border border-transparent px-1.5 text-xs text-muted-foreground hover:border-input hover:bg-accent"
+          />
+        }
+      >
+        <User className="size-3" />
+        {nomeAtual}
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-48 p-1">
+        <button
+          type="button"
+          onClick={() => {
+            onChange(userId);
+            setOpen(false);
+          }}
+          className={cn("flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent", valor === userId && "bg-accent")}
+        >
+          Eu
+        </button>
+        {outros.length > 0 && <div className="my-1 border-t" />}
+        {outros.map((m) => (
+          <button
+            key={m.userId}
+            type="button"
+            onClick={() => {
+              onChange(m.userId);
+              setOpen(false);
+            }}
+            className={cn("flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent", valor === m.userId && "bg-accent")}
+          >
+            <span className="min-w-0 truncate">{m.name ?? "—"}</span>
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+export function ListaPessoal({
+  workspaceId,
+  tarefasIniciais,
+  userId,
+  membros,
+}: {
+  workspaceId: string;
+  tarefasIniciais: TarefaPessoal[];
+  userId: string;
+  membros: Membro[];
+}) {
   const [tarefas, setTarefas] = useState(tarefasIniciais);
+  const [responsavelId, setResponsavelId] = useState(userId);
   const [colunas, setColunas] = useState<ColunaId[]>(COLUNAS_PADRAO);
   const [altura, setAltura] = useState(ALTURA_PADRAO);
   const [larguras, setLarguras] = useState<Record<ColunaId, number>>(LARGURAS_PADRAO);
@@ -357,15 +422,21 @@ export function ListaPessoal({ workspaceId, tarefasIniciais }: { workspaceId: st
     if (!nome || criandoRef.current) return;
     criandoRef.current = true;
     setNovaTarefa("");
+    const paraOutraPessoa = responsavelId !== userId;
 
-    const res = await criarTarefaAction(workspaceId, nome);
+    const res = await criarTarefaAction(workspaceId, nome, paraOutraPessoa ? responsavelId : undefined);
     criandoRef.current = false;
     if (!res.ok) {
       toast.error(res.error);
       setNovaTarefa(nome);
       return;
     }
-    setTarefas((prev) => [res.tarefa, ...prev]);
+    if (paraOutraPessoa) {
+      const nomeDestino = membros.find((m) => m.userId === responsavelId)?.name ?? "essa pessoa";
+      toast.success(`Tarefa atribuída a ${nomeDestino}.`);
+    } else {
+      setTarefas((prev) => [res.tarefa, ...prev]);
+    }
   }
 
   const colunasVisiveis = COLUNAS.filter((c) => colunas.includes(c.id));
@@ -472,6 +543,11 @@ export function ListaPessoal({ workspaceId, tarefasIniciais }: { workspaceId: st
                         t.status === "feito" && "text-muted-foreground line-through"
                       )}
                     />
+                    {t.criadoPorId && t.criadoPorId !== userId && (
+                      <span title={`Atribuído por ${t.criadoPorNome ?? "alguém"}`} className="shrink-0 text-muted-foreground">
+                        <User className="size-3" />
+                      </span>
+                    )}
                     <FormatacaoPopover
                       formatacao={{ negrito: t.nomeNegrito, cor: t.nomeCor, fundo: t.nomeFundo }}
                       onChange={(f) =>
@@ -587,14 +663,17 @@ export function ListaPessoal({ workspaceId, tarefasIniciais }: { workspaceId: st
                 <Plus className="size-3.5" />
               </td>
               <td className="px-2 py-1" colSpan={colunas.length + 2}>
-                <input
-                  value={novaTarefa}
-                  onChange={(e) => setNovaTarefa(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && adicionar()}
-                  onBlur={adicionar}
-                  placeholder="Adicionar tarefa"
-                  className="w-full bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground"
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    value={novaTarefa}
+                    onChange={(e) => setNovaTarefa(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && adicionar()}
+                    onBlur={adicionar}
+                    placeholder="Adicionar tarefa"
+                    className="w-full min-w-0 bg-transparent text-sm text-muted-foreground outline-none placeholder:text-muted-foreground"
+                  />
+                  {membros.length > 1 && <ResponsavelPicker userId={userId} membros={membros} valor={responsavelId} onChange={setResponsavelId} />}
+                </div>
               </td>
             </tr>
           </tbody>

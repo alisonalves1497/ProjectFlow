@@ -9,12 +9,21 @@ export const statusTarefaPessoalEnum = pgEnum("status_tarefa_pessoal", ["pendent
 
 // "Lista pessoal" do Meu Espaço — tarefas avulsas, sem vínculo obrigatório com nada do
 // sistema (inspirado na "Minhas tarefas" do ClickUp). Estritamente privada: toda query
-// filtra por userId, sem exceção pra administrador. Vínculo com Projeto é opcional, só serve
-// pra somar tempo trabalhado naquele projeto (tempoRastreadoMinutos).
+// filtra por userId (o "responsável"/dono da tarefa), sem exceção pra administrador — não dá
+// pra ABRIR a lista de outra pessoa. O que existe é um jeito indireto de colocar uma tarefa
+// na lista de alguém: ao criar, dá pra escolher um responsável diferente de quem está criando
+// (criadoPorId fica registrado pra mostrar "atribuído por" pra quem recebeu). Vínculo com
+// Projeto é opcional, só serve pra somar tempo trabalhado naquele projeto (tempoRastreadoMinutos).
 export const tarefasPessoais = pgTable("tarefas_pessoais", {
   id: text("id").primaryKey(),
   workspaceId: text("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  // Dono da tarefa — em quem a lista pessoal filtra (quem "vê" essa tarefa). Normalmente é
+  // quem criou, mas pode ser outra pessoa quando alguém cria e atribui (ver criadoPorId).
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // Quem de fato criou a tarefa — igual a userId na maioria dos casos (tarefa própria).
+  // Só diverge quando alguém cria uma tarefa e atribui pra outra pessoa (aí aparece "atribuído
+  // por" pro dono). Null se o criador for removido do workspace depois.
+  criadoPorId: text("criado_por_id").references(() => users.id, { onDelete: "set null" }),
   nome: text("nome").notNull(),
   // Mesma formatação tipo Excel do statusLivre/obs, aplicada ao nome da tarefa.
   nomeNegrito: boolean("nome_negrito").notNull().default(false),
