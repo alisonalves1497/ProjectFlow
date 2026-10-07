@@ -3,7 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { ApiError } from "@/lib/errors";
-import { createTarefaPessoal, updateTarefaPessoal, deleteTarefaPessoal, type PatchTarefaPessoal, type TarefaPessoal } from "@/services/diarioService";
+import { requireWorkspaceRole } from "@/services/permissions";
+import {
+  createTarefaPessoal,
+  updateTarefaPessoal,
+  updateTarefaPessoalAdmin,
+  deleteTarefaPessoal,
+  deleteTarefaPessoalAdmin,
+  listTarefasPessoais,
+  listTarefasAtribuidasPorMim,
+  type PatchTarefaPessoal,
+  type TarefaPessoal,
+} from "@/services/diarioService";
 
 type Resultado = { ok: true } | { ok: false; error: string };
 
@@ -54,14 +65,49 @@ export async function criarTarefaAction(
   }
 }
 
-export async function atualizarTarefaAction(workspaceId: string, tarefaId: string, patch: PatchTarefaPessoal): Promise<Resultado> {
+// `comoAdmin` só é honrado depois de confirmar o role no servidor — nunca confia no que o
+// cliente manda sozinho (poderia forjar o flag). Sem isso, cai no caminho normal (dono/criador).
+export async function atualizarTarefaAction(workspaceId: string, tarefaId: string, patch: PatchTarefaPessoal, comoAdmin?: boolean): Promise<Resultado> {
   return comSessao(workspaceId, async (userId) => {
+    if (comoAdmin) {
+      await requireWorkspaceRole(userId, workspaceId, ["administrador"]);
+      await updateTarefaPessoalAdmin(workspaceId, tarefaId, patch);
+      return;
+    }
     await updateTarefaPessoal(workspaceId, userId, tarefaId, patch);
   });
 }
 
-export async function excluirTarefaAction(workspaceId: string, tarefaId: string): Promise<Resultado> {
+export async function excluirTarefaAction(workspaceId: string, tarefaId: string, comoAdmin?: boolean): Promise<Resultado> {
   return comSessao(workspaceId, async (userId) => {
+    if (comoAdmin) {
+      await requireWorkspaceRole(userId, workspaceId, ["administrador"]);
+      await deleteTarefaPessoalAdmin(workspaceId, tarefaId);
+      return;
+    }
     await deleteTarefaPessoal(workspaceId, userId, tarefaId);
   });
+}
+
+// Busca a Lista pessoal completa de outro membro — só pra administrador (checado aqui, não no
+// cliente). Usada pelo seletor "ver lista de" no cabeçalho da Lista pessoal.
+export async function listarListaPessoalDeAction(
+  workspaceId: string,
+  membroId: string
+): Promise<{ ok: true; tarefas: TarefaPessoal[] } | { ok: false; error: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "Não autenticado." };
+
+  try {
+    await requireWorkspaceRole(session.user.id, workspaceId, ["administrador"]);
+    const [proprias, atribuidas] = await Promise.all([
+      listTarefasPessoais(workspaceId, membroId),
+      listTarefasAtribuidasPorMim(workspaceId, membroId),
+    ]);
+    const tarefas = [...proprias, ...atribuidas].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return { ok: true, tarefas };
+  } catch (err) {
+    if (err instanceof ApiError) return { ok: false, error: err.message };
+    throw err;
+  }
 }

@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { Clock } from "lucide-react";
 import { getMeuTrabalho, listTarefasPessoais, listTarefasAtribuidasPorMim, getHorasAcumuladasPorProjeto } from "@/services/diarioService";
 import { listarMembrosWorkspace } from "@/services/sincronizarPortifolioService";
+import { getWorkspaceRole } from "@/services/permissions";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { MeuTrabalho } from "./meu-trabalho";
 import { ListaPessoal } from "./lista-pessoal";
@@ -22,13 +23,15 @@ export default async function DiarioPage({ params }: Params) {
 
   const { workspaceId } = await params;
 
-  const [meuTrabalho, tarefasProprias, tarefasAtribuidas, horasAcumuladas, membros] = await Promise.all([
+  const [meuTrabalho, tarefasProprias, tarefasAtribuidas, horasAcumuladas, membros, role] = await Promise.all([
     getMeuTrabalho(workspaceId, session.user.id),
     listTarefasPessoais(workspaceId, session.user.id),
     listTarefasAtribuidasPorMim(workspaceId, session.user.id),
     getHorasAcumuladasPorProjeto(workspaceId, session.user.id),
     listarMembrosWorkspace(workspaceId),
+    getWorkspaceRole(session.user.id, workspaceId),
   ]);
+  const souAdmin = role === "administrador";
   // Lista pessoal mostra minhas tarefas + as que eu atribuí pra outras pessoas (mesma linha
   // que elas veem) — "Meu trabalho"/horas acumuladas acima continuam só com tarefasProprias,
   // porque tarefa atribuída a outra pessoa não é pendência MINHA.
@@ -44,7 +47,7 @@ export default async function DiarioPage({ params }: Params) {
 
       <div className="space-y-6">
         <MeuTrabalho workspaceId={workspaceId} dados={meuTrabalho} />
-        <ListaPessoal workspaceId={workspaceId} tarefasIniciais={tarefas} userId={session.user.id} membros={membros} />
+        <ListaPessoal workspaceId={workspaceId} tarefasIniciais={tarefas} userId={session.user.id} membros={membros} souAdmin={souAdmin} />
 
         <Card>
           <CardHeader>

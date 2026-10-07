@@ -2,7 +2,7 @@ import { and, desc, eq, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db/client";
 import { tarefasPessoais, projetos, documentos, users } from "@/db/schema";
-import { badRequest, forbidden } from "@/lib/errors";
+import { badRequest, forbidden, notFound } from "@/lib/errors";
 import { newId } from "@/lib/id";
 import { getMeusDocumentos } from "./painelService";
 
@@ -183,10 +183,7 @@ export type PatchTarefaPessoal = {
   tempoRastreadoMinutos?: number | null;
 };
 
-// O WHERE aceita o dono OU quem criou/atribuiu a tarefa — garante que ninguém edita tarefa
-// alheia mesmo forjando o id no formulário, mas deixa quem atribuiu corrigir/acompanhar o que
-// atribuiu (mesma linha que o dono vê, não uma cópia).
-export async function updateTarefaPessoal(workspaceId: string, userId: string, tarefaId: string, patch: PatchTarefaPessoal) {
+function construirSetTarefaPessoal(patch: PatchTarefaPessoal): Partial<typeof tarefasPessoais.$inferInsert> {
   const set: Partial<typeof tarefasPessoais.$inferInsert> = { updatedAt: new Date() };
 
   if (patch.donoId !== undefined) set.userId = patch.donoId;
@@ -222,6 +219,15 @@ export async function updateTarefaPessoal(workspaceId: string, userId: string, t
   if (patch.estimativaMinutos !== undefined) set.estimativaMinutos = patch.estimativaMinutos;
   if (patch.tempoRastreadoMinutos !== undefined) set.tempoRastreadoMinutos = patch.tempoRastreadoMinutos;
 
+  return set;
+}
+
+// O WHERE aceita o dono OU quem criou/atribuiu a tarefa — garante que ninguém edita tarefa
+// alheia mesmo forjando o id no formulário, mas deixa quem atribuiu corrigir/acompanhar o que
+// atribuiu (mesma linha que o dono vê, não uma cópia).
+export async function updateTarefaPessoal(workspaceId: string, userId: string, tarefaId: string, patch: PatchTarefaPessoal) {
+  const set = construirSetTarefaPessoal(patch);
+
   const [tarefa] = await db
     .update(tarefasPessoais)
     .set(set)
@@ -237,6 +243,21 @@ export async function updateTarefaPessoal(workspaceId: string, userId: string, t
   return tarefa;
 }
 
+// Caminho de administrador — ignora o filtro de dono/criador porque a autorização (role
+// "administrador" no workspace) já foi checada pelo caller (ver requireWorkspaceRole em
+// actions.ts). Só confirma que a tarefa pertence mesmo a esse workspace.
+export async function updateTarefaPessoalAdmin(workspaceId: string, tarefaId: string, patch: PatchTarefaPessoal) {
+  const set = construirSetTarefaPessoal(patch);
+
+  const [tarefa] = await db
+    .update(tarefasPessoais)
+    .set(set)
+    .where(and(eq(tarefasPessoais.id, tarefaId), eq(tarefasPessoais.workspaceId, workspaceId)))
+    .returning();
+  if (!tarefa) throw notFound("TAREFA_NOT_FOUND", "Tarefa não encontrada.");
+  return tarefa;
+}
+
 export async function deleteTarefaPessoal(workspaceId: string, userId: string, tarefaId: string) {
   const res = await db
     .delete(tarefasPessoais)
@@ -249,6 +270,15 @@ export async function deleteTarefaPessoal(workspaceId: string, userId: string, t
     )
     .returning({ id: tarefasPessoais.id });
   if (res.length === 0) throw forbidden("TAREFA_DELETE_DENIED", "Você só pode excluir tarefas suas ou que você atribuiu.");
+}
+
+// Mesmo caminho de administrador do updateTarefaPessoalAdmin — ver comentário lá.
+export async function deleteTarefaPessoalAdmin(workspaceId: string, tarefaId: string) {
+  const res = await db
+    .delete(tarefasPessoais)
+    .where(and(eq(tarefasPessoais.id, tarefaId), eq(tarefasPessoais.workspaceId, workspaceId)))
+    .returning({ id: tarefasPessoais.id });
+  if (res.length === 0) throw notFound("TAREFA_NOT_FOUND", "Tarefa não encontrada.");
 }
 
 export type HorasPorProjeto = { projeto: string; horas: number };

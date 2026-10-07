@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Check, Circle, CircleCheck, Trash2, Settings2, ClipboardList, Plus, Flag, Pencil, Ban, Bold, User } from "lucide-react";
+import { Check, Circle, CircleCheck, Trash2, Settings2, ClipboardList, Plus, Flag, Pencil, Ban, Bold, User, Users } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardAction, CardContent } from "@/components/ui/card";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -10,7 +10,7 @@ import { ResizeHandleVertical } from "@/components/ui/resize-handle-vertical";
 import { ResizeHandle } from "@/components/ui/resize-handle";
 import { DatePickerField } from "@/components/ui/date-picker-field";
 import { SelectPopoverField } from "@/components/ui/select-popover-field";
-import { criarTarefaAction, atualizarTarefaAction, excluirTarefaAction } from "./actions";
+import { criarTarefaAction, atualizarTarefaAction, excluirTarefaAction, listarListaPessoalDeAction } from "./actions";
 import type { TarefaPessoal, PatchTarefaPessoal } from "@/services/diarioService";
 
 const ALTURA_PADRAO = 260;
@@ -282,19 +282,117 @@ function ResponsavelPicker({ userId, membros, valor, onChange }: { userId: strin
   );
 }
 
+// Só pra administrador — troca de QUAL lista está sendo mostrada (a minha ou a de outro
+// membro). Não é uma formatação de célula, é a entrada principal do modo admin, então fica
+// no cabeçalho do card, ao lado de "Colunas".
+function VisualizarComoAdmin({
+  userId,
+  membros,
+  visualizando,
+  carregando,
+  onEscolher,
+}: {
+  userId: string;
+  membros: Membro[];
+  visualizando: string;
+  carregando: boolean;
+  onEscolher: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const outros = membros.filter((m) => m.userId !== userId).sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
+  const rotulo = visualizando === userId ? "Minha lista" : (membros.find((m) => m.userId === visualizando)?.name ?? "Minha lista");
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        disabled={carregando}
+        render={
+          <button
+            type="button"
+            className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs hover:bg-accent disabled:cursor-wait disabled:opacity-50"
+          />
+        }
+      >
+        <Users className="size-3.5" />
+        {carregando ? "Carregando…" : rotulo}
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-56 p-1">
+        <button
+          type="button"
+          onClick={() => {
+            onEscolher(userId);
+            setOpen(false);
+          }}
+          className={cn("flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent", visualizando === userId && "bg-accent")}
+        >
+          Minha lista
+        </button>
+        {outros.length > 0 && <div className="my-1 border-t" />}
+        {outros.map((m) => (
+          <button
+            key={m.userId}
+            type="button"
+            onClick={() => {
+              onEscolher(m.userId);
+              setOpen(false);
+            }}
+            className={cn(
+              "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent",
+              visualizando === m.userId && "bg-accent"
+            )}
+          >
+            <span className="min-w-0 truncate">{m.name ?? "—"}</span>
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function ListaPessoal({
   workspaceId,
   tarefasIniciais,
   userId,
   membros,
+  souAdmin,
 }: {
   workspaceId: string;
   tarefasIniciais: TarefaPessoal[];
   userId: string;
   membros: Membro[];
+  souAdmin: boolean;
 }) {
+  // `tarefas` é sempre o que está na tela; `minhaLista` guarda minha própria lista separada
+  // pra não perder edições feitas nela quando eu troco pra ver a lista de outra pessoa e volto
+  // (ver mudarVisualizacao). As duas ficam sincronizadas enquanto `visualizando === userId`.
   const [tarefas, setTarefas] = useState(tarefasIniciais);
+  const [minhaLista, setMinhaLista] = useState(tarefasIniciais);
+  const [visualizando, setVisualizando] = useState(userId);
+  const [carregandoVisualizacao, setCarregandoVisualizacao] = useState(false);
+  const comoAdmin = visualizando !== userId;
   const [responsavelId, setResponsavelId] = useState(userId);
+
+  useEffect(() => {
+    setResponsavelId(visualizando);
+  }, [visualizando]);
+
+  async function mudarVisualizacao(novoId: string) {
+    if (novoId === visualizando) return;
+    if (novoId === userId) {
+      setVisualizando(userId);
+      setTarefas(minhaLista);
+      return;
+    }
+    setCarregandoVisualizacao(true);
+    const res = await listarListaPessoalDeAction(workspaceId, novoId);
+    setCarregandoVisualizacao(false);
+    if (!res.ok) {
+      toast.error(res.error);
+      return;
+    }
+    setVisualizando(novoId);
+    setTarefas(res.tarefas);
+  }
   const [colunas, setColunas] = useState<ColunaId[]>(COLUNAS_PADRAO);
   const [altura, setAltura] = useState(ALTURA_PADRAO);
   const [larguras, setLarguras] = useState<Record<ColunaId, number>>(LARGURAS_PADRAO);
@@ -399,47 +497,58 @@ export function ListaPessoal({
 
   async function alterar(id: string, patch: PatchTarefaPessoal, tarefaOtimista: Partial<TarefaPessoal>) {
     const original = tarefas.find((t) => t.id === id);
-    setTarefas((prev) => prev.map((t) => (t.id === id ? { ...t, ...tarefaOtimista } : t)));
+    const aplicar = (prev: TarefaPessoal[]) => prev.map((t) => (t.id === id ? { ...t, ...tarefaOtimista } : t));
+    setTarefas(aplicar);
+    if (visualizando === userId) setMinhaLista(aplicar);
 
-    const res = await atualizarTarefaAction(workspaceId, id, patch);
+    const res = await atualizarTarefaAction(workspaceId, id, patch, comoAdmin);
     if (!res.ok) {
       toast.error(res.error);
-      if (original) setTarefas((prev) => prev.map((t) => (t.id === id ? original : t)));
+      const reverter = (prev: TarefaPessoal[]) => prev.map((t) => (t.id === id && original ? original : t));
+      setTarefas(reverter);
+      if (visualizando === userId) setMinhaLista(reverter);
     }
   }
 
-  // Reatribuir é um `alterar` especial: se a tarefa deixar de ser minha (nem dono, nem quem
-  // criou), ela some da minha tela — é exatamente o que já acontecia na criação, só que agora
-  // pode rolar a qualquer momento via a coluna "Atribuído".
+  // Reatribuir é um `alterar` especial: se a tarefa deixar de pertencer à visualização atual
+  // (nem dono, nem quem criou, em relação a quem eu estou vendo agora), ela some da tela — é
+  // exatamente o que já acontecia na criação, só que agora pode rolar a qualquer momento via
+  // a coluna "Atribuído", inclusive vendo a lista de outra pessoa como admin.
   async function mudarResponsavel(t: TarefaPessoal, novoDonoId: string) {
     if (novoDonoId === t.donoId) return;
-    const aindaApareceParaMim = novoDonoId === userId || t.criadoPorId === userId;
+    const aindaAparece = novoDonoId === visualizando || t.criadoPorId === visualizando;
     const novoDonoNome = novoDonoId === userId ? null : (membros.find((m) => m.userId === novoDonoId)?.name ?? null);
     const original = tarefas;
+    const originalMinha = minhaLista;
 
-    setTarefas((prev) =>
-      aindaApareceParaMim
+    const aplicar = (prev: TarefaPessoal[]) =>
+      aindaAparece
         ? prev.map((x) => (x.id === t.id ? { ...x, donoId: novoDonoId, donoNome: novoDonoNome } : x))
-        : prev.filter((x) => x.id !== t.id)
-    );
+        : prev.filter((x) => x.id !== t.id);
+    setTarefas(aplicar);
+    if (visualizando === userId) setMinhaLista(aplicar);
 
-    const res = await atualizarTarefaAction(workspaceId, t.id, { donoId: novoDonoId });
+    const res = await atualizarTarefaAction(workspaceId, t.id, { donoId: novoDonoId }, comoAdmin);
     if (!res.ok) {
       toast.error(res.error);
       setTarefas(original);
-    } else if (novoDonoId !== userId) {
+      if (visualizando === userId) setMinhaLista(originalMinha);
+    } else if (novoDonoId !== visualizando) {
       toast.success(`Tarefa atribuída a ${novoDonoNome ?? "essa pessoa"}.`);
     }
   }
 
   async function excluir(id: string) {
     const original = tarefas;
+    const originalMinha = minhaLista;
     setTarefas((prev) => prev.filter((t) => t.id !== id));
+    if (visualizando === userId) setMinhaLista((prev) => prev.filter((t) => t.id !== id));
 
-    const res = await excluirTarefaAction(workspaceId, id);
+    const res = await excluirTarefaAction(workspaceId, id, comoAdmin);
     if (!res.ok) {
       toast.error(res.error);
       setTarefas(original);
+      if (visualizando === userId) setMinhaLista(originalMinha);
     }
   }
 
@@ -448,20 +557,26 @@ export function ListaPessoal({
     if (!nome || criandoRef.current) return;
     criandoRef.current = true;
     setNovaTarefa("");
-    const paraOutraPessoa = responsavelId !== userId;
+    const destinoId = responsavelId;
+    const paraMim = destinoId === userId;
 
-    const res = await criarTarefaAction(workspaceId, nome, paraOutraPessoa ? responsavelId : undefined);
+    const res = await criarTarefaAction(workspaceId, nome, paraMim ? undefined : destinoId);
     criandoRef.current = false;
     if (!res.ok) {
       toast.error(res.error);
       setNovaTarefa(nome);
       return;
     }
-    // A tarefa sempre entra na lista (mesmo atribuída a outra pessoa) — é a mesma linha que
-    // vai aparecer na lista dela, só que marcada na coluna "Atribuído" em vez de "Eu".
-    const nomeDestino = paraOutraPessoa ? (membros.find((m) => m.userId === responsavelId)?.name ?? null) : null;
-    setTarefas((prev) => [{ ...res.tarefa, donoNome: nomeDestino }, ...prev]);
-    if (paraOutraPessoa) toast.success(`Tarefa atribuída a ${nomeDestino ?? "essa pessoa"}.`);
+    const nomeDestino = paraMim ? null : (membros.find((m) => m.userId === destinoId)?.name ?? null);
+    const nova = { ...res.tarefa, donoNome: nomeDestino };
+    // Só entra na tela se pertencer à visualização atual — "minha lista" sempre mostra o que
+    // eu criei (mesmo atribuído a outro), já vendo a lista de alguém como admin só mostra se
+    // o destino for essa mesma pessoa.
+    if (destinoId === visualizando || visualizando === userId) {
+      setTarefas((prev) => [nova, ...prev]);
+      if (visualizando === userId) setMinhaLista((prev) => [nova, ...prev]);
+    }
+    if (destinoId !== visualizando) toast.success(`Tarefa atribuída a ${nomeDestino ?? "essa pessoa"}.`);
   }
 
   const colunasVisiveis = COLUNAS.filter((c) => colunas.includes(c.id));
@@ -475,9 +590,25 @@ export function ListaPessoal({
       <CardHeader className="border-b pb-3">
         <div className="flex items-center gap-2">
           <ClipboardList className="size-4 text-primary" />
-          <CardTitle>Lista pessoal</CardTitle>
+          <CardTitle>
+            Lista pessoal
+            {comoAdmin && (
+              <span className="ml-1 font-normal text-muted-foreground">
+                — {membros.find((m) => m.userId === visualizando)?.name ?? "—"}
+              </span>
+            )}
+          </CardTitle>
         </div>
-        <CardAction>
+        <CardAction className="flex items-center gap-2">
+          {souAdmin && membros.length > 1 && (
+            <VisualizarComoAdmin
+              userId={userId}
+              membros={membros}
+              visualizando={visualizando}
+              carregando={carregandoVisualizacao}
+              onEscolher={mudarVisualizacao}
+            />
+          )}
           <Popover>
             <PopoverTrigger
               render={<button type="button" className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs hover:bg-accent" />}
