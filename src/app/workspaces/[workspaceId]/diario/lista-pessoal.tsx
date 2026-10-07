@@ -19,9 +19,10 @@ const LARGURA_MINIMA = 60;
 const LARGURA_NOME_MINIMA = 160;
 const LARGURA_FIXA = 32; // coluna do check e coluna da lixeira
 
-type ColunaId = "status" | "obs" | "dataVencimento" | "prioridade" | "dataInicial" | "dataConclusao" | "estimativa" | "tempoRastreado";
+type ColunaId = "atribuido" | "status" | "obs" | "dataVencimento" | "prioridade" | "dataInicial" | "dataConclusao" | "estimativa" | "tempoRastreado";
 
 const COLUNAS: { id: ColunaId; label: string }[] = [
+  { id: "atribuido", label: "Atribuído" },
   { id: "status", label: "Status" },
   { id: "obs", label: "Obs" },
   { id: "dataVencimento", label: "Data de vencimento" },
@@ -32,7 +33,7 @@ const COLUNAS: { id: ColunaId; label: string }[] = [
   { id: "tempoRastreado", label: "Tempo rastreado" },
 ];
 
-const COLUNAS_PADRAO: ColunaId[] = ["status", "obs", "dataVencimento", "prioridade"];
+const COLUNAS_PADRAO: ColunaId[] = ["atribuido", "status", "obs", "dataVencimento", "prioridade"];
 
 // "Nome da tarefa" é a ÚNICA coluna sem largura própria (flexível — absorve o que sobra),
 // igual a "Código/Descrição" em Meus Documentos/Lista de Documentos. Todas as outras colunas
@@ -41,6 +42,7 @@ const COLUNAS_PADRAO: ColunaId[] = ["status", "obs", "dataVencimento", "priorida
 // faria váááARIAS outras mudarem de tamanho ao mesmo tempo, e a direção do arrasto parece
 // errada/imprevisível. Com uma só, o efeito é sempre 1:1 com o mouse.
 const LARGURAS_PADRAO: Record<ColunaId, number> = {
+  atribuido: 110,
   status: 150,
   obs: 220,
   dataVencimento: 120,
@@ -431,12 +433,11 @@ export function ListaPessoal({
       setNovaTarefa(nome);
       return;
     }
-    if (paraOutraPessoa) {
-      const nomeDestino = membros.find((m) => m.userId === responsavelId)?.name ?? "essa pessoa";
-      toast.success(`Tarefa atribuída a ${nomeDestino}.`);
-    } else {
-      setTarefas((prev) => [res.tarefa, ...prev]);
-    }
+    // A tarefa sempre entra na lista (mesmo atribuída a outra pessoa) — é a mesma linha que
+    // vai aparecer na lista dela, só que marcada na coluna "Atribuído" em vez de "Eu".
+    const nomeDestino = paraOutraPessoa ? (membros.find((m) => m.userId === responsavelId)?.name ?? null) : null;
+    setTarefas((prev) => [{ ...res.tarefa, donoNome: nomeDestino }, ...prev]);
+    if (paraOutraPessoa) toast.success(`Tarefa atribuída a ${nomeDestino ?? "essa pessoa"}.`);
   }
 
   const colunasVisiveis = COLUNAS.filter((c) => colunas.includes(c.id));
@@ -556,6 +557,13 @@ export function ListaPessoal({
                     />
                   </div>
                 </td>
+                {colunas.includes("atribuido") && (
+                  <td className="px-2 py-1">
+                    <span className={cn("text-xs", t.donoId !== userId && "font-medium text-primary")}>
+                      {t.donoId === userId ? "Eu" : (t.donoNome ?? "—")}
+                    </span>
+                  </td>
+                )}
                 {colunas.includes("status") && (
                   <td className="px-2 py-1">
                     <TextoLivreCampo

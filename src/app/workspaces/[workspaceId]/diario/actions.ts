@@ -39,7 +39,13 @@ export async function criarTarefaAction(
         ...tarefa,
         projetoNome: null,
         documentoCodigo: null,
-        criadoPorNome: tarefa.criadoPorId === session.user.id ? (session.user.name ?? null) : null,
+        // Quem acabou de criar É o criador, então essa marcação nunca aparece pra ele mesmo
+        // (só faz sentido quando QUEM VÊ a tarefa não foi quem criou — ver listTarefasPessoais).
+        criadoPorNome: null,
+        donoId: tarefa.userId,
+        // Preenchido no cliente (lista-pessoal.tsx) quando a tarefa é atribuída a outra
+        // pessoa — aqui no servidor não vale a pena buscar o nome só pra isso.
+        donoNome: null,
       },
     };
   } catch (err) {

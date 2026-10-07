@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { Clock } from "lucide-react";
-import { getMeuTrabalho, listTarefasPessoais, getHorasAcumuladasPorProjeto } from "@/services/diarioService";
+import { getMeuTrabalho, listTarefasPessoais, listTarefasAtribuidasPorMim, getHorasAcumuladasPorProjeto } from "@/services/diarioService";
 import { listarMembrosWorkspace } from "@/services/sincronizarPortifolioService";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { MeuTrabalho } from "./meu-trabalho";
@@ -22,12 +22,17 @@ export default async function DiarioPage({ params }: Params) {
 
   const { workspaceId } = await params;
 
-  const [meuTrabalho, tarefas, horasAcumuladas, membros] = await Promise.all([
+  const [meuTrabalho, tarefasProprias, tarefasAtribuidas, horasAcumuladas, membros] = await Promise.all([
     getMeuTrabalho(workspaceId, session.user.id),
     listTarefasPessoais(workspaceId, session.user.id),
+    listTarefasAtribuidasPorMim(workspaceId, session.user.id),
     getHorasAcumuladasPorProjeto(workspaceId, session.user.id),
     listarMembrosWorkspace(workspaceId),
   ]);
+  // Lista pessoal mostra minhas tarefas + as que eu atribuí pra outras pessoas (mesma linha
+  // que elas veem) — "Meu trabalho"/horas acumuladas acima continuam só com tarefasProprias,
+  // porque tarefa atribuída a outra pessoa não é pendência MINHA.
+  const tarefas = [...tarefasProprias, ...tarefasAtribuidas].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
   const primeiroNome = (session.user.name ?? session.user.email ?? "").split(" ")[0];
 

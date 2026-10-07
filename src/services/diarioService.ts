@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db/client";
 import { tarefasPessoais, projetos, documentos, users } from "@/db/schema";
@@ -7,6 +7,7 @@ import { newId } from "@/lib/id";
 import { getMeusDocumentos } from "./painelService";
 
 const criadorPessoal = alias(users, "criador_tarefa_pessoal");
+const donoPessoal = alias(users, "dono_tarefa_pessoal");
 
 export type TarefaPessoal = {
   id: string;
@@ -37,6 +38,12 @@ export type TarefaPessoal = {
   // que criou, ou se quem criou saiu do workspace depois.
   criadoPorId: string | null;
   criadoPorNome: string | null;
+  // Quem é o responsável/dono da tarefa. Nas tarefas normais (listTarefasPessoais) é sempre
+  // quem está vendo a lista — donoNome fica null porque a UI já sabe que é "Eu". Já nas
+  // tarefas que EU atribuí pra outra pessoa (listTarefasAtribuidasPorMim), donoId é a pessoa
+  // que recebeu e donoNome vem preenchido, pra render da coluna "Atribuído".
+  donoId: string;
+  donoNome: string | null;
   estimativaMinutos: number | null;
   tempoRastreadoMinutos: number | null;
   createdAt: Date;
@@ -44,9 +51,11 @@ export type TarefaPessoal = {
 };
 
 // Lista pessoal é estritamente privada — TODA query aqui filtra por userId (o dono), sem
-// exceção nem pra administrador. Não existe "ver a lista de outra pessoa" no sistema.
+// exceção nem pra administrador. Não existe "ver a lista de outra pessoa" no sistema — o que
+// existe é listTarefasAtribuidasPorMim logo abaixo, que devolve só as tarefas que EU atribuí
+// (nunca as de terceiros).
 export async function listTarefasPessoais(workspaceId: string, userId: string): Promise<TarefaPessoal[]> {
-  return db
+  const linhas = await db
     .select({
       id: tarefasPessoais.id,
       nome: tarefasPessoais.nome,
@@ -82,6 +91,54 @@ export async function listTarefasPessoais(workspaceId: string, userId: string): 
     .leftJoin(criadorPessoal, eq(criadorPessoal.id, tarefasPessoais.criadoPorId))
     .where(and(eq(tarefasPessoais.workspaceId, workspaceId), eq(tarefasPessoais.userId, userId)))
     .orderBy(desc(tarefasPessoais.createdAt));
+
+  return linhas.map((l) => ({ ...l, donoId: userId, donoNome: null }));
+}
+
+// Tarefas que EU criei mas atribuí pra outra pessoa — é a "volta" da atribuição: confirma que
+// funcionou, mostra o status de quem recebeu e deixa editar (é a mesma linha que aparece na
+// lista pessoal de quem recebeu — mudar aqui muda lá também, não é uma cópia). Nunca inclui
+// tarefa de terceiros: só o que eu mesmo atribuí.
+export async function listTarefasAtribuidasPorMim(workspaceId: string, criadorId: string): Promise<TarefaPessoal[]> {
+  const linhas = await db
+    .select({
+      id: tarefasPessoais.id,
+      nome: tarefasPessoais.nome,
+      nomeNegrito: tarefasPessoais.nomeNegrito,
+      nomeCor: tarefasPessoais.nomeCor,
+      nomeFundo: tarefasPessoais.nomeFundo,
+      status: tarefasPessoais.status,
+      statusLivre: tarefasPessoais.statusLivre,
+      statusLivreNegrito: tarefasPessoais.statusLivreNegrito,
+      statusLivreCor: tarefasPessoais.statusLivreCor,
+      statusLivreFundo: tarefasPessoais.statusLivreFundo,
+      dataVencimento: tarefasPessoais.dataVencimento,
+      dataInicial: tarefasPessoais.dataInicial,
+      prioridade: tarefasPessoais.prioridade,
+      projetoId: tarefasPessoais.projetoId,
+      projetoNome: projetos.name,
+      documentoId: tarefasPessoais.documentoId,
+      documentoCodigo: documentos.codigoCompleto,
+      obs: tarefasPessoais.obs,
+      obsNegrito: tarefasPessoais.obsNegrito,
+      obsCor: tarefasPessoais.obsCor,
+      obsFundo: tarefasPessoais.obsFundo,
+      criadoPorId: tarefasPessoais.criadoPorId,
+      donoId: tarefasPessoais.userId,
+      donoNome: donoPessoal.name,
+      estimativaMinutos: tarefasPessoais.estimativaMinutos,
+      tempoRastreadoMinutos: tarefasPessoais.tempoRastreadoMinutos,
+      createdAt: tarefasPessoais.createdAt,
+      concluidaEm: tarefasPessoais.concluidaEm,
+    })
+    .from(tarefasPessoais)
+    .leftJoin(projetos, eq(projetos.id, tarefasPessoais.projetoId))
+    .leftJoin(documentos, eq(documentos.id, tarefasPessoais.documentoId))
+    .innerJoin(donoPessoal, eq(donoPessoal.id, tarefasPessoais.userId))
+    .where(and(eq(tarefasPessoais.workspaceId, workspaceId), eq(tarefasPessoais.criadoPorId, criadorId), ne(tarefasPessoais.userId, criadorId)))
+    .orderBy(desc(tarefasPessoais.createdAt));
+
+  return linhas.map((l) => ({ ...l, criadoPorNome: null }));
 }
 
 // `responsavelId` permite criar a tarefa já na lista de outra pessoa (atribuição) — criadoPorId
@@ -123,8 +180,9 @@ export type PatchTarefaPessoal = {
   tempoRastreadoMinutos?: number | null;
 };
 
-// `userId` no WHERE garante que ninguém edita tarefa alheia mesmo forjando o id no
-// formulário — mesmo padrão já usado no diário/chat do documento.
+// O WHERE aceita o dono OU quem criou/atribuiu a tarefa — garante que ninguém edita tarefa
+// alheia mesmo forjando o id no formulário, mas deixa quem atribuiu corrigir/acompanhar o que
+// atribuiu (mesma linha que o dono vê, não uma cópia).
 export async function updateTarefaPessoal(workspaceId: string, userId: string, tarefaId: string, patch: PatchTarefaPessoal) {
   const set: Partial<typeof tarefasPessoais.$inferInsert> = { updatedAt: new Date() };
 
@@ -163,18 +221,30 @@ export async function updateTarefaPessoal(workspaceId: string, userId: string, t
   const [tarefa] = await db
     .update(tarefasPessoais)
     .set(set)
-    .where(and(eq(tarefasPessoais.id, tarefaId), eq(tarefasPessoais.workspaceId, workspaceId), eq(tarefasPessoais.userId, userId)))
+    .where(
+      and(
+        eq(tarefasPessoais.id, tarefaId),
+        eq(tarefasPessoais.workspaceId, workspaceId),
+        or(eq(tarefasPessoais.userId, userId), eq(tarefasPessoais.criadoPorId, userId))
+      )
+    )
     .returning();
-  if (!tarefa) throw forbidden("TAREFA_EDIT_DENIED", "Você só pode editar as suas próprias tarefas.");
+  if (!tarefa) throw forbidden("TAREFA_EDIT_DENIED", "Você só pode editar tarefas suas ou que você atribuiu.");
   return tarefa;
 }
 
 export async function deleteTarefaPessoal(workspaceId: string, userId: string, tarefaId: string) {
   const res = await db
     .delete(tarefasPessoais)
-    .where(and(eq(tarefasPessoais.id, tarefaId), eq(tarefasPessoais.workspaceId, workspaceId), eq(tarefasPessoais.userId, userId)))
+    .where(
+      and(
+        eq(tarefasPessoais.id, tarefaId),
+        eq(tarefasPessoais.workspaceId, workspaceId),
+        or(eq(tarefasPessoais.userId, userId), eq(tarefasPessoais.criadoPorId, userId))
+      )
+    )
     .returning({ id: tarefasPessoais.id });
-  if (res.length === 0) throw forbidden("TAREFA_DELETE_DENIED", "Você só pode excluir as suas próprias tarefas.");
+  if (res.length === 0) throw forbidden("TAREFA_DELETE_DENIED", "Você só pode excluir tarefas suas ou que você atribuiu.");
 }
 
 export type HorasPorProjeto = { projeto: string; horas: number };
