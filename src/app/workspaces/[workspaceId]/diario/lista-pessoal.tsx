@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Check, Circle, CircleCheck, Trash2, Settings2, ClipboardList, Plus, Flag, Pencil, Ban, Bold, User, Users } from "lucide-react";
+import { Check, Circle, CircleCheck, Trash2, Settings2, ClipboardList, Plus, Flag, Pencil, Ban, Bold, User, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardAction, CardContent } from "@/components/ui/card";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -461,6 +461,12 @@ export function ListaPessoal({
     return () => obs.disconnect();
   }, []);
 
+  // Botões de ← → pra quem não notar/conseguir usar a barra de scroll do navegador — rolam a
+  // tabela horizontalmente em passos fixos, sem depender de achar/arrastar o scroll fino.
+  function rolarTabela(deltaX: number) {
+    containerRef.current?.scrollBy({ left: deltaX, behavior: "smooth" });
+  }
+
   function alternarColuna(id: ColunaId) {
     setColunas((prev) => {
       const proximo = prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id];
@@ -621,6 +627,25 @@ export function ListaPessoal({
           </CardTitle>
         </div>
         <CardAction className="flex items-center gap-2">
+          <div className="flex items-center overflow-hidden rounded-md border">
+            <button
+              type="button"
+              onClick={() => rolarTabela(-300)}
+              title="Rolar pra esquerda"
+              className="flex items-center px-1.5 py-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              <ChevronLeft className="size-3.5" />
+            </button>
+            <div className="h-4 w-px bg-border" />
+            <button
+              type="button"
+              onClick={() => rolarTabela(300)}
+              title="Rolar pra direita"
+              className="flex items-center px-1.5 py-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              <ChevronRight className="size-3.5" />
+            </button>
+          </div>
           {(souAdmin || souCoordenador) && membros.length > 1 && (
             <VisualizarComoAdmin
               userId={userId}
