@@ -408,6 +408,30 @@ export function ListaPessoal({
     }
   }
 
+  // Reatribuir é um `alterar` especial: se a tarefa deixar de ser minha (nem dono, nem quem
+  // criou), ela some da minha tela — é exatamente o que já acontecia na criação, só que agora
+  // pode rolar a qualquer momento via a coluna "Atribuído".
+  async function mudarResponsavel(t: TarefaPessoal, novoDonoId: string) {
+    if (novoDonoId === t.donoId) return;
+    const aindaApareceParaMim = novoDonoId === userId || t.criadoPorId === userId;
+    const novoDonoNome = novoDonoId === userId ? null : (membros.find((m) => m.userId === novoDonoId)?.name ?? null);
+    const original = tarefas;
+
+    setTarefas((prev) =>
+      aindaApareceParaMim
+        ? prev.map((x) => (x.id === t.id ? { ...x, donoId: novoDonoId, donoNome: novoDonoNome } : x))
+        : prev.filter((x) => x.id !== t.id)
+    );
+
+    const res = await atualizarTarefaAction(workspaceId, t.id, { donoId: novoDonoId });
+    if (!res.ok) {
+      toast.error(res.error);
+      setTarefas(original);
+    } else if (novoDonoId !== userId) {
+      toast.success(`Tarefa atribuída a ${novoDonoNome ?? "essa pessoa"}.`);
+    }
+  }
+
   async function excluir(id: string) {
     const original = tarefas;
     setTarefas((prev) => prev.filter((t) => t.id !== id));
@@ -559,9 +583,7 @@ export function ListaPessoal({
                 </td>
                 {colunas.includes("atribuido") && (
                   <td className="px-2 py-1">
-                    <span className={cn("text-xs", t.donoId !== userId && "font-medium text-primary")}>
-                      {t.donoId === userId ? "Eu" : (t.donoNome ?? "—")}
-                    </span>
+                    <ResponsavelPicker userId={userId} membros={membros} valor={t.donoId} onChange={(novoId) => mudarResponsavel(t, novoId)} />
                   </td>
                 )}
                 {colunas.includes("status") && (

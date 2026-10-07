@@ -155,6 +155,9 @@ export async function createTarefaPessoal(workspaceId: string, criadorId: string
 }
 
 export type PatchTarefaPessoal = {
+  // Reatribui a tarefa pra outra pessoa (ou de volta pra si) — vira a coluna `userId` no
+  // banco. Quem pode fazer isso é o mesmo WHERE de sempre: dono atual ou quem criou.
+  donoId?: string;
   nome?: string;
   nomeNegrito?: boolean;
   nomeCor?: string | null;
@@ -186,6 +189,7 @@ export type PatchTarefaPessoal = {
 export async function updateTarefaPessoal(workspaceId: string, userId: string, tarefaId: string, patch: PatchTarefaPessoal) {
   const set: Partial<typeof tarefasPessoais.$inferInsert> = { updatedAt: new Date() };
 
+  if (patch.donoId !== undefined) set.userId = patch.donoId;
   if (patch.nome !== undefined) {
     const nome = patch.nome.trim();
     if (!nome) throw badRequest("TAREFA_NOME_VAZIO", "Dê um nome pra tarefa antes de salvar.");
