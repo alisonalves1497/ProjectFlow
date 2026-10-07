@@ -28,29 +28,14 @@ body {
     text-decoration: none;
   }
 
-  /* Scrollbar sempre visível e fácil de "puxar" com o mouse — usada em tabelas largas
-     (ex: Lista pessoal) onde o scroll horizontal nativo do navegador é fino demais e some
-     quando o mouse não está sobre ele, dificultando ver/arrastar pro lado direito. Trilho com
-     fundo (não transparente) pra a barra inteira ficar visível, não só o polegar. */
-  .scrollbar-visivel {
-    scrollbar-width: auto;
-    scrollbar-color: var(--muted-foreground) var(--muted);
+  /* Esconde a barra de scroll NATIVA do navegador — usada em containers que têm uma barra
+     customizada feita na mão (ex: ScrollbarHorizontal na Lista pessoal), pra não ficar duas
+     barras competindo (a nativa é fina/inconsistente entre navegadores, por isso a troca). */
+  .scrollbar-escondida {
+    scrollbar-width: none;
   }
-  .scrollbar-visivel::-webkit-scrollbar {
-    height: 14px;
-    width: 14px;
-  }
-  .scrollbar-visivel::-webkit-scrollbar-track {
-    background: var(--muted);
-  }
-  .scrollbar-visivel::-webkit-scrollbar-thumb {
-    background-color: var(--muted-foreground);
-    border-radius: 9999px;
-    border: 3px solid var(--muted);
-    background-clip: padding-box;
-  }
-  .scrollbar-visivel::-webkit-scrollbar-thumb:hover {
-    background-color: var(--muted-foreground);
+  .scrollbar-escondida::-webkit-scrollbar {
+    display: none;
   }
 
   /* Checkbox com aparência 100% controlada por CSS (appearance: none) — sem isso, o

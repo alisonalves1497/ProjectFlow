@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Check, Circle, CircleCheck, Trash2, Settings2, ClipboardList, Plus, Flag, Pencil, Ban, Bold, User, Users, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, Circle, CircleCheck, Trash2, Settings2, ClipboardList, Plus, Flag, Pencil, Ban, Bold, User, Users } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardAction, CardContent } from "@/components/ui/card";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -361,6 +361,81 @@ function VisualizarComoAdmin({
   );
 }
 
+// Barra de scroll horizontal feita na mão (em vez de confiar no scroll nativo do navegador,
+// que em alguns ambientes/temas fica fino/pouco visível demais e passa despercebido) — sempre
+// visível, grossa, logo abaixo da tabela. Lê a posição/tamanho do scroll do container via
+// evento "scroll" + ResizeObserver, e arrasta mudando `scrollLeft` diretamente.
+function ScrollbarHorizontal({ containerRef }: { containerRef: React.RefObject<HTMLDivElement | null> }) {
+  const [thumb, setThumb] = useState({ larguraPct: 100, esquerdaPct: 0 });
+  const [arrastando, setArrastando] = useState(false);
+
+  const atualizar = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const { scrollWidth, clientWidth, scrollLeft } = el;
+    if (scrollWidth <= clientWidth) {
+      setThumb({ larguraPct: 100, esquerdaPct: 0 });
+      return;
+    }
+    setThumb({
+      larguraPct: (clientWidth / scrollWidth) * 100,
+      esquerdaPct: (scrollLeft / scrollWidth) * 100,
+    });
+  }, [containerRef]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    atualizar();
+    el.addEventListener("scroll", atualizar);
+    const obs = new ResizeObserver(atualizar);
+    obs.observe(el);
+    return () => {
+      el.removeEventListener("scroll", atualizar);
+      obs.disconnect();
+    };
+  }, [containerRef, atualizar]);
+
+  function onMouseDownThumb(e: React.MouseEvent) {
+    e.preventDefault();
+    const el = containerRef.current;
+    if (!el || el.scrollWidth <= el.clientWidth) return;
+    const inicioX = e.clientX;
+    const inicioScroll = el.scrollLeft;
+    const escala = el.scrollWidth / el.clientWidth;
+    setArrastando(true);
+
+    function onMove(ev: MouseEvent) {
+      el!.scrollLeft = inicioScroll + (ev.clientX - inicioX) * escala;
+    }
+    function onUp() {
+      setArrastando(false);
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    }
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }
+
+  if (thumb.larguraPct >= 100) return null;
+
+  return (
+    <div className="flex h-4 w-full shrink-0 items-center border-t bg-muted px-1">
+      <div className="relative h-2 w-full rounded-full bg-border">
+        <div
+          onMouseDown={onMouseDownThumb}
+          title="Arrastar pra rolar"
+          className={cn(
+            "absolute top-0 h-2 cursor-grab rounded-full bg-muted-foreground active:cursor-grabbing",
+            arrastando ? "bg-primary" : "hover:bg-primary/80"
+          )}
+          style={{ width: `${thumb.larguraPct}%`, left: `${thumb.esquerdaPct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function ListaPessoal({
   workspaceId,
   tarefasIniciais,
@@ -460,12 +535,6 @@ export function ListaPessoal({
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
-
-  // Botões de ← → pra quem não notar/conseguir usar a barra de scroll do navegador — rolam a
-  // tabela horizontalmente em passos fixos, sem depender de achar/arrastar o scroll fino.
-  function rolarTabela(deltaX: number) {
-    containerRef.current?.scrollBy({ left: deltaX, behavior: "smooth" });
-  }
 
   function alternarColuna(id: ColunaId) {
     setColunas((prev) => {
@@ -627,25 +696,6 @@ export function ListaPessoal({
           </CardTitle>
         </div>
         <CardAction className="flex items-center gap-2">
-          <div className="flex items-center overflow-hidden rounded-md border">
-            <button
-              type="button"
-              onClick={() => rolarTabela(-300)}
-              title="Rolar pra esquerda"
-              className="flex items-center px-1.5 py-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-            >
-              <ChevronLeft className="size-3.5" />
-            </button>
-            <div className="h-4 w-px bg-border" />
-            <button
-              type="button"
-              onClick={() => rolarTabela(300)}
-              title="Rolar pra direita"
-              className="flex items-center px-1.5 py-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-            >
-              <ChevronRight className="size-3.5" />
-            </button>
-          </div>
           {(souAdmin || souCoordenador) && membros.length > 1 && (
             <VisualizarComoAdmin
               userId={userId}
@@ -686,7 +736,7 @@ export function ListaPessoal({
         </CardAction>
       </CardHeader>
 
-      <CardContent ref={containerRef} style={{ height: altura }} className="scrollbar-visivel overflow-auto px-0 pt-2">
+      <CardContent ref={containerRef} style={{ height: altura }} className="scrollbar-escondida overflow-auto px-0 pt-2">
         <table className="table-fixed text-sm" style={{ width: larguraTabela }}>
           <thead className="sticky top-0 bg-card">
             <tr className="border-b text-xs text-muted-foreground">
@@ -901,6 +951,7 @@ export function ListaPessoal({
           </tbody>
         </table>
       </CardContent>
+      <ScrollbarHorizontal containerRef={containerRef} />
 
       <ResizeHandleVertical onResize={onResizeAltura} />
     </Card>
