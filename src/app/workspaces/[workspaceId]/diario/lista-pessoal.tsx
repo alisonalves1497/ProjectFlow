@@ -640,7 +640,7 @@ export function ListaPessoal({
         </CardAction>
       </CardHeader>
 
-      <CardContent ref={containerRef} style={{ height: altura }} className="overflow-auto px-0 pt-2">
+      <CardContent ref={containerRef} style={{ height: altura }} className="scrollbar-visivel overflow-auto px-0 pt-2">
         <table className="table-fixed text-sm" style={{ width: larguraTabela }}>
           <thead className="sticky top-0 bg-card">
             <tr className="border-b text-xs text-muted-foreground">

@@ -28,6 +28,29 @@ body {
     text-decoration: none;
   }
 
+  /* Scrollbar sempre visível e fácil de "puxar" com o mouse — usada em tabelas largas
+     (ex: Lista pessoal) onde o scroll horizontal nativo do navegador é fino demais e some
+     quando o mouse não está sobre ele, dificultando ver/arrastar pro lado direito. */
+  .scrollbar-visivel {
+    scrollbar-width: auto;
+  }
+  .scrollbar-visivel::-webkit-scrollbar {
+    height: 12px;
+    width: 12px;
+  }
+  .scrollbar-visivel::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-visivel::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+  .scrollbar-visivel::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
+  }
+
   /* Checkbox com aparência 100% controlada por CSS (appearance: none) — sem isso, o
      native rendering do checkbox segue `color-scheme` da página (ver abaixo, forçado
      pra "dark" via prefers-color-scheme) e o quadrado aparece escuro mesmo desmarcado,
