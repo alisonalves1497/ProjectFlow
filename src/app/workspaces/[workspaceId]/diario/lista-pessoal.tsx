@@ -455,14 +455,30 @@ export function ListaPessoal({ workspaceId, tarefasIniciais }: { workspaceId: st
                   </button>
                 </td>
                 <td className="px-2 py-1">
-                  <input
-                    defaultValue={t.nome}
-                    onBlur={(e) => {
-                      if (e.target.value.trim() && e.target.value !== t.nome) alterar(t.id, { nome: e.target.value }, { nome: e.target.value.trim() });
-                    }}
-                    onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-                    className={"w-full bg-transparent outline-none " + (t.status === "feito" ? "text-muted-foreground line-through" : "")}
-                  />
+                  <div
+                    className="flex min-h-6 items-center gap-1 rounded px-1"
+                    style={t.nomeFundo ? { backgroundColor: t.nomeFundo + "33" } : undefined}
+                  >
+                    <input
+                      defaultValue={t.nome}
+                      onBlur={(e) => {
+                        if (e.target.value.trim() && e.target.value !== t.nome) alterar(t.id, { nome: e.target.value }, { nome: e.target.value.trim() });
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                      style={t.status === "feito" ? undefined : { color: t.nomeCor ?? undefined }}
+                      className={cn(
+                        "w-full min-w-0 bg-transparent outline-none",
+                        t.nomeNegrito && "font-bold",
+                        t.status === "feito" && "text-muted-foreground line-through"
+                      )}
+                    />
+                    <FormatacaoPopover
+                      formatacao={{ negrito: t.nomeNegrito, cor: t.nomeCor, fundo: t.nomeFundo }}
+                      onChange={(f) =>
+                        alterar(t.id, { nomeNegrito: f.negrito, nomeCor: f.cor, nomeFundo: f.fundo }, { nomeNegrito: f.negrito, nomeCor: f.cor, nomeFundo: f.fundo })
+                      }
+                    />
+                  </div>
                 </td>
                 {colunas.includes("status") && (
                   <td className="px-2 py-1">

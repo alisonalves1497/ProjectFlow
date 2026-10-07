@@ -8,6 +8,9 @@ import { getMeusDocumentos } from "./painelService";
 export type TarefaPessoal = {
   id: string;
   nome: string;
+  nomeNegrito: boolean;
+  nomeCor: string | null;
+  nomeFundo: string | null;
   status: "pendente" | "feito";
   // Texto livre digitado pela pessoa (ex: "Aguardando retorno", "Em campo") — não vincula
   // com documento/projeto, é só controle individual de quem é dono da tarefa.
@@ -40,6 +43,9 @@ export async function listTarefasPessoais(workspaceId: string, userId: string): 
     .select({
       id: tarefasPessoais.id,
       nome: tarefasPessoais.nome,
+      nomeNegrito: tarefasPessoais.nomeNegrito,
+      nomeCor: tarefasPessoais.nomeCor,
+      nomeFundo: tarefasPessoais.nomeFundo,
       status: tarefasPessoais.status,
       statusLivre: tarefasPessoais.statusLivre,
       statusLivreNegrito: tarefasPessoais.statusLivreNegrito,
@@ -81,6 +87,9 @@ export async function createTarefaPessoal(workspaceId: string, userId: string, n
 
 export type PatchTarefaPessoal = {
   nome?: string;
+  nomeNegrito?: boolean;
+  nomeCor?: string | null;
+  nomeFundo?: string | null;
   status?: "pendente" | "feito";
   statusLivre?: string | null;
   statusLivreNegrito?: boolean;
@@ -112,6 +121,9 @@ export async function updateTarefaPessoal(workspaceId: string, userId: string, t
     if (!nome) throw badRequest("TAREFA_NOME_VAZIO", "Dê um nome pra tarefa antes de salvar.");
     set.nome = nome;
   }
+  if (patch.nomeNegrito !== undefined) set.nomeNegrito = patch.nomeNegrito;
+  if (patch.nomeCor !== undefined) set.nomeCor = patch.nomeCor;
+  if (patch.nomeFundo !== undefined) set.nomeFundo = patch.nomeFundo;
   if (patch.status !== undefined) {
     set.status = patch.status;
     set.concluidaEm = patch.status === "feito" ? new Date() : null;

@@ -16,6 +16,10 @@ export const tarefasPessoais = pgTable("tarefas_pessoais", {
   workspaceId: text("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   nome: text("nome").notNull(),
+  // Mesma formatação tipo Excel do statusLivre/obs, aplicada ao nome da tarefa.
+  nomeNegrito: boolean("nome_negrito").notNull().default(false),
+  nomeCor: text("nome_cor"),
+  nomeFundo: text("nome_fundo"),
   status: statusTarefaPessoalEnum("status").notNull().default("pendente"),
   // Texto livre, só de controle individual — não vincula com nada (nem documento, nem
   // projeto), só aparece pra quem é dono da tarefa. Diferente de `status` acima (que é o

@@ -253,6 +253,13 @@
       "when": 1790078937775,
       "tag": "0035_abnormal_baron_strucker",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1791399269850,
+      "tag": "0036_rapid_karma",
+      "breakpoints": true
     }
   ]
 }
