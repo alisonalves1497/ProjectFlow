@@ -365,7 +365,18 @@ function VisualizarComoAdmin({
 // que em alguns ambientes/temas fica fino/pouco visível demais e passa despercebido) — sempre
 // visível, grossa, logo abaixo da tabela. Lê a posição/tamanho do scroll do container via
 // evento "scroll" + ResizeObserver, e arrasta mudando `scrollLeft` diretamente.
-function ScrollbarHorizontal({ containerRef }: { containerRef: React.RefObject<HTMLDivElement | null> }) {
+function ScrollbarHorizontal({
+  containerRef,
+  gatilhoRecalculo,
+}: {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  // Qualquer número que muda quando a largura da tabela muda (ex: `larguraTabela` calculado
+  // pelo componente pai). Sem isso, a barra só mede o scroll uma vez no mount — nesse momento
+  // a tabela ainda pode não ter o tamanho final (a largura do container só é conhecida depois
+  // de um ResizeObserver próprio do pai rodar), então a barra "trava" num estado desatualizado
+  // (normalmente escondida) e nunca descobre que passou a ter overflow depois.
+  gatilhoRecalculo: number;
+}) {
   const [thumb, setThumb] = useState({ larguraPct: 100, esquerdaPct: 0 });
   const [arrastando, setArrastando] = useState(false);
 
@@ -384,9 +395,12 @@ function ScrollbarHorizontal({ containerRef }: { containerRef: React.RefObject<H
   }, [containerRef]);
 
   useEffect(() => {
+    atualizar();
+  }, [gatilhoRecalculo, atualizar]);
+
+  useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    atualizar();
     el.addEventListener("scroll", atualizar);
     const obs = new ResizeObserver(atualizar);
     obs.observe(el);
@@ -951,7 +965,7 @@ export function ListaPessoal({
           </tbody>
         </table>
       </CardContent>
-      <ScrollbarHorizontal containerRef={containerRef} />
+      <ScrollbarHorizontal containerRef={containerRef} gatilhoRecalculo={larguraTabela} />
 
       <ResizeHandleVertical onResize={onResizeAltura} />
     </Card>
