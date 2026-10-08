@@ -77,6 +77,8 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
   const [obraCriarFlags, setObraCriarFlags] = useState<Record<string, boolean>>({});
 
   const [resultado, setResultado] = useState<Resultado | null>(null);
+  // Mostrado durante `confirmar()` enquanto os lotes vão sendo enviados (ver comentário lá).
+  const [progresso, setProgresso] = useState<{ feito: number; total: number } | null>(null);
 
   function chaveGrupo(contrato: string, sistema: string) {
     return `${contrato}|${sistema}`;
@@ -251,8 +253,15 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
     0
   );
 
+  // Tamanho do lote: cada linha faz 2-3 idas ao banco (um documento existente é select +
+  // update, às vezes + insert na linha do tempo). Numa planilha grande (ex: 1882 linhas), uma
+  // chamada só estourava o limite de 300s da função serverless (visto em produção: "Vercel
+  // Runtime Timeout Error"). Em lotes de 150, cada chamada fica bem dentro do limite.
+  const TAMANHO_LOTE = 150;
+
   async function confirmar() {
     setPending(true);
+    setProgresso(null);
     try {
       const linhasParaAplicar = linhas
         .map((l) => {
@@ -281,17 +290,26 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
         })
         .filter((l) => l.documentoIdExistente || l.criar);
 
-      const res = await confirmarSincronizacaoPortfolioAction(workspaceId, linhasParaAplicar);
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
+      const resultadoAcumulado: Resultado = { atualizados: [], criados: [], ignorados: [] };
+      for (let inicio = 0; inicio < linhasParaAplicar.length; inicio += TAMANHO_LOTE) {
+        const lote = linhasParaAplicar.slice(inicio, inicio + TAMANHO_LOTE);
+        setProgresso({ feito: inicio, total: linhasParaAplicar.length });
+        const res = await confirmarSincronizacaoPortfolioAction(workspaceId, lote);
+        if (!res.ok) {
+          toast.error(res.error);
+          return;
+        }
+        resultadoAcumulado.atualizados.push(...res.data.atualizados);
+        resultadoAcumulado.criados.push(...res.data.criados);
+        resultadoAcumulado.ignorados.push(...res.data.ignorados);
       }
-      setResultado(res.data);
+      setResultado(resultadoAcumulado);
       setEtapa("concluido");
     } catch {
       toast.error("Não consegui aplicar a sincronização. Tente de novo.");
     } finally {
       setPending(false);
+      setProgresso(null);
     }
   }
 
@@ -395,7 +413,7 @@ export function SincronizarPortfolioWizard({ workspaceId }: { workspaceId: strin
             Voltar
           </Button>
           <Button type="button" onClick={confirmar} disabled={pending}>
-            {pending ? "Aplicando..." : `Confirmar (${totalAtualizar + totalCriar})`}
+            {pending ? (progresso ? `Aplicando... ${progresso.feito}/${progresso.total}` : "Aplicando...") : `Confirmar (${totalAtualizar + totalCriar})`}
           </Button>
         </div>
       </div>
